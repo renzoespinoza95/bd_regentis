@@ -1,0 +1,650 @@
+0) Datos de ejemplo
+Tablas
+
+reg_mercado
+
+    (1) “Mercado Huamantanga”
+
+    (2) “Unicachi Pro”
+
+reg_neg
+
+    (21) “Pollería El Dorado”, puesto “A-12”, mercado_id 1, activo 1
+
+    (22) “Jugos Mary”, puesto “B-05”, mercado_id 1, activo 1
+
+    (23) “Carnicería Don Lucho”, puesto “C-01”, mercado_id 2, activo 1
+
+reg_usu
+
+    (80) DNI “70223311” — “Renzo Castillo” — is_activo 1
+
+    (81) DNI “44556677” — “María Flores” — is_activo 1
+
+    (82) DNI “11112222” — “Pedro Soto” — is_activo 0
+
+reg_negxusu
+
+    (10) neg_id 21 ↔ usu_id 81 (María) activo 1
+
+    (11) neg_id 23 ↔ usu_id 80 (Renzo) activo 1
+
+    (neg_id 22) sin propietario
+
+1) Pantalla principal: Negocios (DataTable)
+
++--------------------------------------------------------------+
+|  NEGOCIOS                                                    |
+|  [ + Agregar Neg ]   [ Mercados ]                            |
++--------------------------------------------------------------+
+
+ Tabla: reg_neg (DataTable)
++------+------------------------+--------+-------------------+--------+-----------+
+| ID   | Nombre                 | Puesto | Mercado           | Activo | Acciones  |
++------+------------------------+--------+-------------------+--------+-----------+
+|  23  | Carnicería Don Lucho   | C-01   | Unicachi Pro      |  SI    | [Opciones]|
+|  22  | Jugos Mary             | B-05   | Mercado Huamantanga| SI    | [Opciones]|
+|  21  | Pollería El Dorado     | A-12   | Mercado Huamantanga| SI    | [Opciones]|
++------+------------------------+--------+-------------------+--------+-----------+
+
+[Opciones] dropdown por fila:
+- Editar
+- Eliminar
+-----------
+- Propietario
+
+Qué está pasando aquí
+
+    Tu DataTable carga reg_neg (endpoint /neg/listar)
+
+    Para mostrar el nombre del mercado, tu frontend también carga reg_mercado (/mercado/listar) y hace el match por mercado_id.
+
+    Cada fila tiene un dropdown con Editar, Eliminar, Propietario.
+
+2) Flujo A: Agregar Negocio
+
+(Desde pantalla principal)
+
+Usuario hace click: [ + Agregar Neg ]
+            |
+            v
++--------------------------------------------+
+| MODAL: Nuevo Negocio                       |
++--------------------------------------------+
+| Nombre:   [ Pollería El Dorado        ]    |
+| Puesto:   [ A-12                      ]    |
+| Mercado:  [ v Mercado Huamantanga     ]    |
+|                                            |
+| [ Crear ]  [ Cancelar ]                    |
++--------------------------------------------+
+            |
+            v
+POST /neg/crear
+Body:
+{ nombre:"Pollería El Dorado", puesto:"A-12", mercado_id:1 }
+            |
+            v
+apprise("¡Creado!")
+            |
+            v
+Refresca DataTable (listarNeg)
+
+Detalle importante
+
+    El mercado es vue-select (muestra nombre pero guarda mercado_id).
+
+    Solo estás llenando 3 campos: nombre, puesto, mercado_id.
+
+3) Flujo B: Editar Negocio
+
+Usuario abre dropdown (fila neg_id=21) -> Editar
+            |
+            v
++--------------------------------------------+
+| MODAL: Editar Negocio                      |
++--------------------------------------------+
+| Nombre:   [ Pollería El Dorado        ]    |
+| Puesto:   [ A-12                      ]    |
+| Mercado:  [ v Mercado Huamantanga     ]    |
+|                                            |
+| [ Guardar ] [ Cancelar ]                   |
++--------------------------------------------+
+            |
+            v
+POST /neg/editar
+Body:
+{ neg_id:21, nombre:"Pollería El Dorado", puesto:"A-12", mercado_id:1 }
+            |
+            v
+apprise("¡Actualizado!")
+            |
+            v
+Refresca DataTable (listarNeg)
+
+Qué valida el backend
+
+    Que exista neg_id
+
+    Que exista el mercado_id
+
+4) Flujo C: Eliminar Negocio (con apprise)
+
+Usuario abre dropdown (fila neg_id=22) -> Eliminar
+            |
+            v
+apprise("¿Eliminar negocio #22?", confirm=true)
+            |
+        +---+---+
+        |       |
+       NO      SÍ
+        |       |
+        v       v
+   (no hace)  POST /neg/eliminar
+              Body: { neg_id:22 }
+                    |
+                    v
+              apprise("Eliminado")
+                    |
+                    v
+              Refresca DataTable
+
+Lo más importante
+
+    No se borra sin confirmación.
+
+    El backend borra también reg_negxusu de ese negocio para no dejar basura.
+
+5) Flujo D: Gestión de Propietario (lo último que implementamos)
+5.1 Abrir modal Propietario
+
+Usuario dropdown (neg_id=22) -> Propietario
+            |
+            v
+GET /negxusu/obtener?neg_id=22
+            |
+            v
+Si existe asignación: muestra panel con datos del propietario
+Si NO existe: muestra aviso "Escribe DNI y Buscar"
+
+5.2 Buscar DNI
+
++------------------------------------------------+
+| MODAL: Propietario del Negocio                 |
+| Negocio: Jugos Mary (#22)                      |
++------------------------------------------------+
+| DNI: [ 44556677 ] [ Buscar ]                   |
++------------------------------------------------+
+             |
+             v
+POST /usu/buscar-dni
+Body: { dni:"44556677", neg_id:22 }
+             |
+             v
+Respuesta ejemplo (usuario encontrado, sin asignación):
+{ status:"ok", data:{ usu_id:81, dni:"44556677",
+  nombres_apellidos:"María Flores", is_activo:1, negxusu_id:0 } }
+
+5.3 Panel con botón ASIGNAR (nuevo)
+
+Panel (cuando encontró usuario y NO está asignado):
++----------------------------------------------+
+| Usuario                                      |
++----------------------------------------------+
+| DNI:            44556677                     |
+| Nombres:        María Flores                 |
+| Activo:         SI                           |
+| Asignado:       NO                           |
++----------------------------------------------+
+| [ Asignar propietario ]                      |
++----------------------------------------------+
+
+Qué pasa cuando presionas “Asignar propietario”
+
+Click [ Asignar propietario ]
+        |
+        v
+apprise("¿Asignar como propietario del negocio #22?", confirm=true)
+        |
+    +---+---+
+    |       |
+   NO      SÍ
+    |       |
+    v       v
+ (nada)   POST /negxusu/asignar
+          Body: { neg_id:22, usu_id:81 }
+                |
+                v
+          apprise("Propietario asignado correctamente")
+                |
+                v
+          panelUsu.negxusu_id = <nuevo id>
+          refresca DataTable negocios
+
+5.4 Panel con botón ELIMINAR asignación
+
+Si el negocio ya tiene propietario:
+
+GET /negxusu/obtener?neg_id=21  -> devuelve negxusu_id=10, usu_id=81
+
+Panel:
++----------------------------------------------+
+| Usuario                                      |
++----------------------------------------------+
+| DNI:            44556677                     |
+| Nombres:        María Flores                 |
+| Activo:         SI                           |
+| Asignado:       SI (negxusu_id=10)           |
++----------------------------------------------+
+| [ Eliminar asignación ]                      |
++----------------------------------------------+
+
+Al presionar eliminar:
+
+Click [ Eliminar asignación ]
+        |
+        v
+apprise("¿Eliminar asignación del negocio #21?", confirm=true)
+        |
+    +---+---+
+    |       |
+   NO      SÍ
+    |       |
+    v       v
+ (nada)   POST /negxusu/eliminar
+          Body: { negxusu_id:10 }
+                |
+                v
+          apprise("Asignación eliminada")
+                |
+                v
+          limpia panel + refresca DataTable
+
+6) Flujo E: Mercados (modal con DataTable + “cerrar y volver”)
+6.1 Abrir lista de mercados
+
+Usuario click [ Mercados ]
+      |
+      v
++----------------------------------------------+
+| MODAL: Mercados                              |
++----------------------------------------------+
+| [ + Agregar ]                                |
+|                                              |
+| Tabla: reg_mercado (DataTable)               |
+| ID | Nombre                | Activo | (...)  |
+| 2  | Unicachi Pro          | SI     |Opciones|
+| 1  | Mercado Huamantanga   | SI     |Opciones|
++----------------------------------------------+
+
+6.2 Agregar mercado (cerrar modal actual y abrir el otro)
+
+En modal Mercados click [ + Agregar ]
+      |
+      v
+(cierra modal Mercados)
+      |
+      v
++----------------------------------------------+
+| MODAL: Nuevo Mercado                         |
++----------------------------------------------+
+| Nombre:    [ Mercado Central            ]    |
+| Dirección: [ Av. Perú 123               ]    |
+| Activo:    [ SI v ]                          |
+|                                              |
+| [ Guardar ] [ Cancelar ]                     |
++----------------------------------------------+
+      |
+      v
+POST /mercado/crear
+Body: { nombre:"Mercado Central", direccion:"Av. Perú 123", is_activo:1 }
+      |
+      v
+(cierra modal Nuevo Mercado)
+      |
+      v
+(vuelve a abrir modal Mercados + recarga datatable)
+
+6.3 Editar mercado (misma mecánica “ir y volver”)
+
+Modal Mercados -> Opciones -> Editar
+      |
+      v
+(cierra modal Mercados)
+      |
+      v
+Modal Editar Mercado
+      |
+      v
+POST /mercado/editar
+      |
+      v
+(cierra editar)
+      |
+      v
+(abrir Mercados + refrescar)
+
+6.4 Eliminar mercado con apprise
+
+Modal Mercados -> Opciones -> Eliminar
+      |
+      v
+apprise("¿Eliminar mercado #2?", confirm=true)
+      |
+      v
+POST /mercado/eliminar
+      |
+      v
+apprise("Mercado eliminado")
+      |
+      v
+refresca lista
+
+7) “Mapa mental” del módulo (mega resumen)
+
+            +---------------------+
+            |  Pantalla NEGOCIOS  |
+            |  DataTable reg_neg  |
+            +----------+----------+
+                       |
+        +--------------+------------------+
+        |              |                  |
+        v              v                  v
+  +-----------+   +-----------+     +----------------+
+  | Agregar   |   | Editar    |     | Eliminar       |
+  | Modal     |   | Modal     |     | apprise + POST |
+  +-----------+   +-----------+     +----------------+
+        |
+        v
+ POST /neg/crear
+
+-----------------------------------------------
+Propietario (por negocio):
+Pantalla Negocios -> dropdown -> Propietario
+        |
+        v
+GET /negxusu/obtener
+        |
+        +-----------------------------+
+        |                             |
+        v                             v
+Hay asignación                  No hay asignación
+panel con eliminar              Buscar DNI
+        |                             |
+        v                             v
+POST /negxusu/eliminar          POST /usu/buscar-dni
+                                      |
+                                      v
+                               panel con [Asignar]
+                                      |
+                                      v
+                               POST /negxusu/asignar
+
+-----------------------------------------------
+Mercados:
+Pantalla Negocios -> botón Mercados
+        |
+        v
+Modal Mercados (DataTable)
+   |         |         |
+   v         v         v
+Agregar    Editar    Eliminar
+(cierra)   (cierra)  apprise
+   |         |
+   v         v
+Modal form  Modal form
+   |         |
+   v         v
+POST crear  POST editar
+   \         /
+    \       /
+     v     v
+Reabrir Modal Mercados + refrescar
+
+1️⃣ Vista general del módulo
+
+MÓDULO ADMIN NEGOCIOS
+
+TABLAS:
+
+reg_mercado
+reg_neg
+reg_usu
+reg_negxusu
+
+2️⃣ Diagrama de estados global
+
+                                     +--------------------+
+                                     |  INICIO MODULO     |
+                                     |  /neg/inicio       |
+                                     +---------+----------+
+                                               |
+                                               v
+                                  +----------------------------+
+                                  | ESTADO A                   |
+                                  | PANTALLA NEGOCIOS          |
+                                  | DataTable reg_neg          |
+                                  +-----+-----------+----------+
+                                        |           |
+                                        |           |
+                                        v           v
+                          +------------------+   +-------------------+
+                          | ESTADO B         |   | ESTADO C          |
+                          | MODAL CREAR NEG  |   | MODAL MERCADOS    |
+                          +--------+---------+   +---------+---------+
+                                   |                       |
+                                   v                       v
+                            POST /neg/crear        DataTable reg_mercado
+                                   |                       |
+                                   v                       |
+                             vuelve a A                    |
+                                                           |
+                                                           |
+                                                           v
+                                             +-----------------------------+
+                                             | ESTADO D                    |
+                                             | CREAR / EDITAR MERCADO     |
+                                             +-------------+---------------+
+                                                           |
+                                                           v
+                                                    POST mercado
+                                                           |
+                                                           v
+                                                    vuelve a C
+                                                           |
+                                                           v
+                                                    vuelve a A
+
+3️⃣ Estados dentro de la tabla Negocios
+
+Cuando estás en ESTADO A (Pantalla Negocios):
+
++-----------------------------------------------------------+
+| ESTADO A                                                  |
+| Tabla: reg_neg                                            |
+|                                                           |
+| ID | Nombre | Puesto | Mercado | Activo | Opciones        |
+|                                                           |
++-----------------------------------------------------------+
+
+Opciones dropdown:
+
+Editar
+Eliminar
+Propietario
+
+4️⃣ Submáquina de estados: CRUD Negocios
+
+                (desde tabla negocios)
+                       |
+                       v
+
+             +-----------------------+
+             | ESTADO B              |
+             | MODAL CREAR NEGOCIO   |
+             +-----------+-----------+
+                         |
+                         v
+                   POST /neg/crear
+                         |
+                         v
+                     vuelve A
+
+
+             +-----------------------+
+             | ESTADO E              |
+             | MODAL EDITAR NEGOCIO  |
+             +-----------+-----------+
+                         |
+                         v
+                   POST /neg/editar
+                         |
+                         v
+                     vuelve A
+
+
+             +-----------------------+
+             | ESTADO F              |
+             | CONFIRMAR ELIMINAR    |
+             +-----------+-----------+
+                         |
+                         v
+                   POST /neg/eliminar
+                         |
+                         v
+                     vuelve A
+
+5️⃣ Submáquina de estados: Gestión Propietario
+
+Cuando el usuario hace click:
+
+Opciones -> Propietario
+
+               +---------------------------+
+               | ESTADO G                  |
+               | MODAL PROPIETARIO NEGOCIO |
+               +-------------+-------------+
+                             |
+                             v
+                    GET /negxusu/obtener
+                             |
+                             v
+                   ¿Existe propietario?
+
+6️⃣ Estados internos del panel Propietario
+
+                     +----------------------+
+                     | ESTADO H             |
+                     | SIN PROPIETARIO      |
+                     |                      |
+                     | Buscar DNI           |
+                     +-----------+----------+
+                                 |
+                                 v
+                          POST /usu/buscar-dni
+                                 |
+                  +--------------+---------------+
+                  |                              |
+                  v                              v
+        +--------------------+       +-----------------------+
+        | ESTADO I           |       | ESTADO J              |
+        | Usuario no existe  |       | Usuario encontrado    |
+        |                    |       | SIN asignación        |
+        +---------+----------+       +----------+------------+
+                  |                             |
+                  |                             |
+                  v                             v
+            volver a H                 botón "Asignar propietario"
+                                                    |
+                                                    v
+                                             POST /negxusu/asignar
+                                                    |
+                                                    v
+                                           +-----------------------+
+                                           | ESTADO K              |
+                                           | PROPIETARIO ASIGNADO  |
+                                           +-----------+-----------+
+                                                       |
+                                                       v
+                                           botón "Eliminar asignación"
+                                                       |
+                                                       v
+                                            POST /negxusu/eliminar
+                                                       |
+                                                       v
+                                                 vuelve a H
+
+7️⃣ Submáquina de estados: Gestión Mercados
+
+                 +----------------------+
+                 | ESTADO C             |
+                 | MODAL MERCADOS       |
+                 | DataTable mercado    |
+                 +-----+---------+------+
+                       |         |
+                       |         |
+                       v         v
+
+         +----------------+   +----------------+
+         | ESTADO D       |   | ESTADO L       |
+         | CREAR MERCADO  |   | EDITAR MERCADO |
+         +--------+-------+   +--------+-------+
+                  |                    |
+                  v                    v
+           POST /mercado/crear  POST /mercado/editar
+                  |                    |
+                  +---------+----------+
+                            |
+                            v
+                        vuelve a C
+
+8️⃣ Vista simplificada tipo "árbol de estados"
+
+INICIO
+  |
+  v
+PANTALLA NEGOCIOS
+  |
+  +---- Crear Negocio
+  |
+  +---- Editar Negocio
+  |
+  +---- Eliminar Negocio
+  |
+  +---- Propietario
+  |        |
+  |        +--- Buscar DNI
+  |        |
+  |        +--- Usuario encontrado
+  |        |        |
+  |        |        +--- Asignar propietario
+  |        |
+  |        +--- Usuario asignado
+  |                 |
+  |                 +--- Eliminar asignación
+  |
+  +---- Mercados
+           |
+           +--- Crear mercado
+           |
+           +--- Editar mercado
+           |
+           +--- Eliminar mercado
+
+9️⃣ Qué tan grande es este módulo
+
+Este módulo ya tiene:
+
+4 tablas
+12 endpoints
+6 modales
+3 datatables
+3 submáquinas de estado
+
+Y controla:
+
+Mercados
+Negocios
+Usuarios
+Propietarios
+
+Es básicamente el núcleo administrativo de Regentis.

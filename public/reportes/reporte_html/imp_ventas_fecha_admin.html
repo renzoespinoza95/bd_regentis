@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Reporte de Ventas</title>
+
+<style>
+body { font-family: Arial; font-size: 12px; }
+table { border-collapse: collapse; width: 100%; margin-bottom: 10px; }
+th, td { border: 1px solid #000; padding: 6px; }
+th { background: #1997AD; color: #fff; }
+.header { margin-bottom: 10px; }
+.titulo { text-align: center; font-size: 18px; font-weight: bold; }
+.subtitulo { font-size: 13px; margin: 5px 0; }
+.total { font-weight: bold; text-align: right; }
+</style>
+</head>
+
+<body>
+
+<!-- =========================
+     CABECERA
+========================== -->
+<div class="header">
+
+  <div class="header-left">
+    {{#informacion}}
+    <table width="100%" cellspacing="0" cellpadding="0" style="border:none">
+      <tr>
+        <td style="border:none; width:80px;">
+          <img src="{{ logo }}" style="width:140px;">
+        </td>
+        <td style="border:none;">
+          <div class="titulo-empresa">{{ razon_social }}</div>
+          <div class="titulo">{{ titulo_reporte }}</div>
+        </td>
+      </tr>
+    </table>
+    {{/informacion}}
+  </div>
+
+  <div class="header-right">
+    {{#informacion}}
+      <div><strong>Fecha:</strong> {{ fecha }}</div>
+      <div><strong>Total ventas:</strong> {{ total_items }}</div>
+      <div><strong>RUC:</strong> {{ ruc }}</div>
+    {{/informacion}}
+  </div>
+
+</div>
+
+
+<!-- =========================
+     LISTADO DE VENTAS
+========================== -->
+{{#listado}}
+
+<table>
+<tr>
+  <th colspan="4">
+    VENTA #{{ indice }} |
+    Cliente: {{ cliente }} |
+    Administrador: {{ administrador }} |
+    Total: S/ {{ total_fees }}
+  </th>
+</tr>
+<tr>
+  <th>Producto</th>
+  <th>Cantidad</th>
+  <th>Precio</th>
+  <th>Subtotal</th>
+</tr>
+
+{{#detalles}}
+<tr>
+  <td>{{ producto }}</td>
+  <td>{{ cantidad }}</td>
+  <td>{{ precio }}</td>
+  <td>{{ subtotal }}</td>
+</tr>
+{{/detalles}}
+
+</table>
+
+{{/listado}}
+
+<!-- =========================
+     TOTAL GENERAL
+========================== -->
+{{#informacion}}
+<div class="total">
+  TOTAL GENERAL VENDIDO: S/ {{ total_general }}
+</div>
+{{/informacion}}
+
+</body>
+</html>

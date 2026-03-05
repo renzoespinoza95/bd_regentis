@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Resumen de Ventas</title>
+<style>
+body{ font-family: Arial; font-size: 12px; }
+table{ width:100%; border-collapse: collapse; }
+th,td{ border:1px solid #000; padding:6px; }
+th{ background:#1997AD; color:#fff; }
+.titulo{ text-align:center; font-size:18px; font-weight:bold; }
+.total{ font-weight:bold; background:#eee; }
+</style>
+</head>
+
+<body>
+
+<div class="titulo">
+  Resumen de Ventas<br>
+  {{ fecha_ini }} al {{ fecha_fin }}
+</div>
+
+<table>
+<tr>
+  <th>Modo</th>
+  <th>Total</th>
+</tr>
+
+<tr>
+  <td>PAGO DIRECTO</td>
+  <td>S/ {{ pago_directo }}</td>
+</tr>
+
+{{#mesas}}
+<tr>
+  <td>{{ mesa }}</td>
+  <td>S/ {{ total }}</td>
+</tr>
+{{/mesas}}
+
+<tr class="total">
+  <td>TOTAL GENERAL</td>
+  <td>S/ {{ total_general }}</td>
+</tr>
+</table>
+
+</body>
+</html>

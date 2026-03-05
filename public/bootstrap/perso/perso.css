@@ -1,0 +1,62 @@
+/* Modal Full */
+.modal.modal-full {
+  position: fixed;      /* ya lo es en BS2, reforzamos */
+  top: 2%;
+  left: 2% !important;  /* evitamos el centrar por margin-left negativo */
+  margin-left: 0 !important;
+  width: 96%;
+  max-width: 96%;
+  height: 96%;
+  z-index: 1050;
+}
+
+.modal.modal-full .modal-body {
+  max-height: none;                 /* quitar límite de 400px en BS2 */
+  height: calc(100vh - 250px);      /* header + footer aprox. */
+  overflow: auto;
+}
+
+/* Ajustes responsivos */
+@media (max-width: 980px) {
+  .modal.modal-full {
+    top: 1%;
+    left: 1% !important;
+    width: 98%;
+    height: 98%;
+  }
+  .modal.modal-full .modal-body {
+    height: calc(100vh - 160px);
+  }
+}
+
+/* Modal Fullscreen Opcion 2 */
+.modal.fullscreen {
+    width: 80%;
+    height: 80%;
+    top: 10% !important;
+    left: 10% !important;
+    margin: 0 !important;
+}
+
+.modal.fullscreen .modal-body {
+        height: calc(100% - 120px); /* Ajusta según el alto de header y footer */
+    overflow-y: auto;
+}
+
+.modal.fullscreen .modal-header,
+.modal.fullscreen .modal-footer {
+  height: auto;
+}
+
+.v-select .selected-tag {
+  display: flex;
+  align-items: center;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  color: #FFF !important;     /* ← antes era #333 */
+  line-height: 1.42857143;
+  margin: 4px 2px 0;
+  padding: 0 .25em;
+  transition: opacity .25s;
+  background-color: #C2B238;
+}  

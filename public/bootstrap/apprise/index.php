@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html><head>
+<meta http-equiv="content-type" content="text/html; charset=windows-1252">
+	<title>Apprise - The attractive alert alternative for jQuery</title>
+	<meta name="generator" content="BBEdit 9.6">
+	<script type="text/javascript" src="Apprise%20-%20The%20attractive%20alert%20alternative%20for%20jQuery_files/jquery-1.js"></script>
+	<script type="text/javascript" src="Apprise%20-%20The%20attractive%20alert%20alternative%20for%20jQuery_files/apprise.js"></script>
+	<link rel="stylesheet" href="Apprise%20-%20The%20attractive%20alert%20alternative%20for%20jQuery_files/index.css" type="text/css">
+	<link rel="stylesheet" href="Apprise%20-%20The%20attractive%20alert%20alternative%20for%20jQuery_files/apprise.css" type="text/css">
+	<link rel="shortcut icon" href="http://www.ymic3dworld.com/favicon.png" type="image/x-icon"> 
+	<link rel="icon" href="http://www.ymic3dworld.com/favicon.png" type="image/x-icon">
+<script src="Apprise%20-%20The%20attractive%20alert%20alternative%20for%20jQuery_files/embed.js" async="" type="text/javascript"></script><script charset="UTF-8" async="" src="Apprise%20-%20The%20attractive%20alert%20alternative%20for%20jQuery_files/alfie.js"></script></head>
+<body><div class="top">
+	<h1>Apprise</h1>
+	<h2>The attractive alert alternative for jQuery</h2>
+</div>
+<div class="content">
+	<div class="l-column">
+	
+		<h2>Apprise is</h2>
+		<p>Sexy. An alert alternative for jQuery that looks good. Apprise is a
+ very simple, fast, attractive, and unobtrusive way to communicate with 
+your users. Also, this gives you complete control over style, content, 
+position, and functionality. Apprise is, more or less, for the developer
+ who wants an attractive alert or dialog box without having to download a
+ massive UI framework.</p>
+		
+		<h2>Demo</h2>
+		<div style="margin-right:60px;">
+		<li class="tryit" onclick="tryit('Hello')">apprise('Hello');</li>
+		<li class="tryit" onclick="tryit('Hello?', {'confirm':true});">apprise('Hello?', {'confirm':true});</li>
+		<li class="tryit" onclick="tryit('Hello now?', {'verify':true});">apprise('Hello now?', {'verify':true});</li>
+		<li class="tryit" onclick="tryit('Hello', {'animate':true});">apprise('Hello', {'animate':true});</li>
+		<li class="tryit" onclick="tryit('What\'s your name?', {'input':true});">apprise('What's your name?', {'input':true});</li>
+		<li class="tryit" onclick="tryit('Lorem ipsum dolor sit amet, consectetur adipiscing elit. Pellentesque dolor diam, lobortis eu volutpat in, accumsan vel massa. Curabitur justo mauris, tempus ut feugiat nec, pellentesque et felis. Proin aliquam varius mi a ultrices. Nam purus tellus, posuere hendrerit tristique at, blandit eu tellus. Curabitur egestas diam at nunc volutpat rhoncus. Cras elementum, magna id tristique porta, justo leo ultrices nisl, et rhoncus magna odio id purus. Aenean pretium augue ut metus congue sed lobortis urna varius. Duis augue diam, posuere sit amet viverra vel, facilisis ac odio. Vestibulum nisi orci, luctus vitae luctus eget, lacinia ut dui. Ut imperdiet, enim nec mattis laoreet, tellus elit bibendum elit, non imperdiet enim mauris eu risus. Curabitur faucibus urna sed turpis tincidunt pulvinar. Etiam tristique nisl eu nibh sodales at convallis mi mattis. Fusce imperdiet posuere lorem quis vulputate. Ut in leo in lorem fermentum hendrerit quis vitae velit. Phasellus tristique mi ac neque tempus sollicitudin. In nec interdum enim. Fusce id magna et ipsum lobortis cursus. Nunc eleifend volutpat elit, a adipiscing tellus posuere et. Phasellus id mauris ante, vehicula suscipit leo.');">apprise('Lorem ipsum...');</li>
+		<div style="clear:both;"></div>
+		<p>Returned: <b><span id="returns" style="color:#eb5847;">False</span></b></p>
+		</div>
+		
+		<h2>Download</h2>
+		<p>Apprise is tiny. Like, really tiny. 8kb in total for the full and 4kb for the minified version.</p>
+		<div style="margin:20px 0px 30px 0px;"><a href="http://cl.ly/61v3" class="download">Download full</a> <a href="http://cl.ly/62LO" class="download">Download minified</a></div>
+		
+		<h2>Implementing</h2>
+		<p>To function properly, Apprise requires the javascript framework <a href="http://jquery.com/">jQuery</a>. One of the easiest ways to add jQuery is to include the hosted version by adding the following line to your <b>head</b> section.</p>
+		<p class="code">&lt;script type="text/javascript" src="http://code.jquery.com/jquery-1.4.4.min.js"&gt;&lt;/script&gt;</p>
+		<p>Don't forget to add the Apprise source files to the <b>head</b> section as well.</p>
+		<p class="code">&lt;script type="text/javascript" src="js/apprise.js"&gt;&lt;/script&gt;<br>
+		&lt;link rel="stylesheet" href="css/apprise.css" type="text/css" /&gt;</p>
+		<p>Now that everything is in it's place, you can call the apprise() 
+function anywhere you would have typically called the alert() function.</p>
+		<p class="code">&lt;a href="http://google.com" onclick="apprise('You are now leaving our site');"&gt;Leave the site&lt;/a&gt;</p>
+		<p>Callbacks work similarly to the standard confirm function, 
+returning true if "Ok" or "Yes" is clicked and false if "Cancel" or "No"
+ is clicked. If the input is used, only the user inputted text or false 
+will be returned.</p>
+		<p class="code">
+		&lt;script&gt;<br>
+		$(document).ready(function()<br>
+		&nbsp;&nbsp;{<br>
+		&nbsp;&nbsp;apprise('Ready to begin?', {'verify':true}, function(r)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;{<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;if(r)<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// user clicked 'Yes'<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;...<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;else<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{ <br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;// user clicked 'No'<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;...<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+		&nbsp;&nbsp;&nbsp;&nbsp;});<br>
+		&nbsp;&nbsp;});<br>
+		&lt;/script&gt;</p>
+		<p>Make sure you pass in altered variables to get the effect you 
+desire. By default, the apprise box will show only an "Ok" button along 
+with your message. The confirm option adds the "Cancel" button, whereas 
+the verify option uses "Yes" and "No" buttons instead. Input is just 
+that, an input box. Animate is a simple slide down effect, and can be 
+set to true or the desired speed, with the default being 400.</p>
+		<p class="code">
+		{<br>
+			'confirm'	:	false, 	// Ok and Cancel buttons<br>
+			'verify'	:	false,	// Yes and No buttons<br>
+			'input'		:	false, 	// Returns with user inputed text<br>
+			'animate'	:	false	// Groovy animation (can be true or number, default is 400)<br>
+		}
+		</p>
+		
+		<h2>Customization</h2>
+		<p>The stylesheet (apprise.css) is the key everything; simply edit the
+ styles declared within to adjust the look and feel. Because this is 
+actually injecting elements into the DOM, you want to make sure you 
+close all tags as these can cause apprise to fail and give you an 
+unnecessary headache.</p>
+		<p>The interface is supposed to resemble that of an OS but appear 
+web-ish. I do plan on releasing some more themes, but that will depend 
+on whether or not anyone actually downloads and uses Apprise. I tried to
+ keep everything as simple as possible, with only 5 (at most) elements 
+being injected. The downside of that is the style is limited to those 
+few elements.</p>
+		
+		<h2>Discussion</h2>
+		<div id="disqus_thread"><iframe verticalscrolling="no" horizontalscrolling="no" src="Apprise%20-%20The%20attractive%20alert%20alternative%20for%20jQuery_files/a.htm" style="width: 100% ! important; border: medium none ! important; overflow: hidden ! important; height: 6972px ! important;" title="Disqus" tabindex="0" allowtransparency="true" data-disqus-uid="2" id="dsq-2" frameborder="0" scrolling="no" width="100%"></iframe></div>
+		<script type="text/javascript">
+			/* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+			var disqus_shortname = 'thrivingkings'; 
+			var disqus_url = 'http://thrivingkings.com/apprise/';
+		
+			/* * * DON'T EDIT BELOW THIS LINE * * */
+			(function() {
+				var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+				dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
+				(document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+			})();
+		</script>
+		<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+		
+			
+	</div>
+	
+	<div class="r-column">
+	
+		<h2>About</h2>
+		<p>Apprise was created by me (<a href="http://thrivingkings.com/">Daniel Raftery</a>),
+ a web developer, located in Portland, Maine. Apprise was a simple 
+project that I felt compelled enough to develop to the point of 
+distribution. Feel free to manipulate, improve upon, and use however 
+you'd like.</p>
+		<p>I'm on <a href="http://twitter.com/">twitter</a> under the handle @<a href="http://twitter.com/thrivingkings">ThrivingKings</a> if you have any questions or comments.</p>
+		<p>This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-sa/2.5/">Creative Commons Attribution-ShareAlike 2.5 Generic License</a>.</p>
+		
+		<h2>Browser compatibility</h2>
+		<p>My testing resulted the following. If you find different, please let me know and I will adjust.</p>
+		Chrome 8.0+<br>
+		Firefox 3.0+<br>
+		Safari 4.0+<br>
+		Internet Explorer 9.0<br>
+		<i style="font-size:13px">Internet Explorer 7 &amp; 8 work with minor styling mishaps</i>
+		
+		<h2>Change log</h2>
+		<p class="code">
+		4/15/11 : Initial release, v1.0<br>
+		4/14/11 : After whining like a 5 year old, realized it was a typo that was causing callbacks to fail.<br>
+		4/13/11 : Built, tested, thought I was done. I was wrong.<br>
+		4/12/11 : Conjured up the idea while eating a sandwich.<br>
+		</p>
+	
+	</div>
+</div>
+<script>
+function tryit(string, args)
+	{
+	apprise(string, args, function(r)
+		{
+		if(r) 
+			{ 
+			if(typeof(r)=='string')
+				{ $('#returns').text(r); }
+			else
+				{ $('#returns').text('True'); }
+			}
+		else 
+			{ $('#returns').text('False'); }
+		});
+	}
+</script>
+
+
+</body></html>
