@@ -1,27 +1,49 @@
 <div class="row-fluid" id="appProduct">
 <!-- este es mi frontend usando boostrap2.3.2, vuejs2 modo estandalone y jquery2.0 -->
-  <div class="span12">
-    <h2>Productos</h2>
+<div class="span12">
+  <div class="titulo-fijo clearfix">
 
-    <div class="form-actions">
-      <button class="btn btn-success" @click="abrirModalCrear">
-        <i class="icon-plus icon-white"></i> Nuevo Producto
-      </button>
-
-      <button class="btn btn-warning" style="margin-left:10px" @click="abrirReporteProductos">
-        <i class="icon-print icon-white"></i> Reporte Productos
-      </button>
-
-      <button class="btn btn-info" style="margin-left:10px" @click="abrirReporteCategoria">
-        <i class="icon-list icon-white"></i> Reporte x Categoría
-      </button>
-
+    <div style="float:left;">
+      <h2 style="margin:0;">Productos</h2>
     </div>
+
+    <div class="btn-group pull-right">
+      <button class="btn btn-info dropdown-toggle" data-toggle="dropdown">
+        <i class="fa fa-bandcamp"></i>
+        <span class="caret"></span>
+      </button>
+
+      <ul class="dropdown-menu pull-right">
+        <li>
+          <a href="#" @click.prevent="abrirModalCrear">
+            <i class="fa fa-plus"></i> Nuevo Producto
+          </a>
+        </li>
+
+        <li>
+          <a href="#" @click.prevent="abrirReporteProductos">
+            <i class="fa fa-plus"></i> Reporte Productos
+          </a>
+        </li>
+
+
+        <li>
+          <a href="#" @click.prevent="abrirReporteCategoria">
+            <i class="fa fa-plus"></i> Reporte x Categoría
+          </a>
+        </li>
+
+
+
+      </ul>
+    </div>
+
+  </div>
 
     <!-- ===========================
           TABLA PRODUCTOS
     ============================ -->
-    <table id="tablaProduct" class="table table-bordered table-striped">
+    <table id="tablaProduct" class="table table-bordered">
       <thead>
         <tr>
           <th>ID</th>
@@ -53,7 +75,7 @@
 
         <h4>Imágenes:</h4>
         <img v-for="img in detalle.images"
-             :src="img.image" style="width:80px;margin:5px;border:1px solid #ccc;">
+        :src="img.image" style="width:80px;margin:5px;border:1px solid #ccc;">
       </div>
       <div class="modal-footer">
         <button class="btn" data-dismiss="modal">Cerrar</button>
@@ -68,37 +90,72 @@
       <div class="modal-body">
 
         <div class="control-group">
-          <label>Nombre</label>
-          <div class="controls"><input v-model="nuevo.name" class="input-xxlarge"></div>
-        </div>
+          <label>Producto global</label>
+          <div class="controls" style="position:relative">
 
-        <div class="control-group">
-          <label>Precio</label>
-          <div class="controls"><input v-model="nuevo.price"></div>
-        </div>
+            <input
+            v-model="buscarGlobal"
+            @keyup="buscarProductoGlobal"
+            class="input-xxlarge"
+            placeholder="Escribe 4 letras para buscar">
 
-        <div class="control-group">
-          <label>Categorías</label>
-          <v-select multiple :options="categorias"
-                    label="descripcion"
-                    v-model="nuevo.categorias"
-                    class="input-xxlarge">
-          </v-select>
-        </div>
+            <ul v-if="resultadosGlobal.length"
+            style="position:absolute;
+            background:#195D72;
+            border:1px solid #ccc;
+            width:400px;
+            max-height:200px;
+            overflow:auto;
+            z-index:9999;
+            list-style:none;
+            margin:0;
+            padding:0">
 
-        <div class="control-group">
-          <label>Descripción</label>
-          <div class="controls">
-            <textarea v-model="nuevo.description" class="input-xxlarge"></textarea>
-          </div>
-        </div>
+            <li v-for="p in resultadosGlobal"
+            @click="seleccionarProductoGlobal(p)"
+            style="padding:6px;cursor:pointer">
 
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-primary" @click="crearProduct">Crear</button>
-        <button class="btn" data-dismiss="modal">Cancelar</button>
+            {{ p.nombre }}
+
+          </li>
+
+        </ul>
+
       </div>
     </div>
+
+    <div class="control-group">
+      <label>Nombre</label>
+      <div class="controls"><input v-model="nuevo.name" class="input-xxlarge"></div>
+    </div>
+
+    <div class="control-group">
+      <label>Precio</label>
+      <div class="controls"><input v-model="nuevo.price"></div>
+    </div>
+
+    <div class="control-group">
+      <label>Categorías</label>
+      <v-select multiple :options="categorias"
+      label="descripcion"
+      v-model="nuevo.categorias"
+      class="input-xxlarge">
+    </v-select>
+  </div>
+
+  <div class="control-group">
+    <label>Descripción</label>
+    <div class="controls">
+      <textarea v-model="nuevo.description" class="input-xxlarge"></textarea>
+    </div>
+  </div>
+
+</div>
+<div class="modal-footer">
+  <button class="btn btn-primary" @click="crearProduct">Crear</button>
+  <button class="btn" data-dismiss="modal">Cancelar</button>
+</div>
+</div>
 
     <!-- ===========================
           MODAL EDITAR PRODUCTO
@@ -120,29 +177,29 @@
         <div class="control-group">
           <label>Categorías</label>
           <v-select
-            multiple
-            :options="categorias"
-            label="descripcion"
-            v-model="form.categorias"
-            class="input-xxlarge">
-          </v-select>
+          multiple
+          :options="categorias"
+          label="descripcion"
+          v-model="form.categorias"
+          class="input-xxlarge">
+        </v-select>
 
-
-        </div>
-
-        <div class="control-group">
-          <label>Descripción</label>
-          <div class="controls">
-            <textarea v-model="form.description" class="input-xxlarge"></textarea>
-          </div>
-        </div>
 
       </div>
-      <div class="modal-footer">
-        <button class="btn btn-primary" @click="guardarEdicion">Guardar</button>
-        <button class="btn" data-dismiss="modal">Cancelar</button>
+
+      <div class="control-group">
+        <label>Descripción</label>
+        <div class="controls">
+          <textarea v-model="form.description" class="input-xxlarge"></textarea>
+        </div>
       </div>
+
     </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" @click="guardarEdicion">Guardar</button>
+      <button class="btn" data-dismiss="modal">Cancelar</button>
+    </div>
+  </div>
 
 
     <!-- ===========================
@@ -198,27 +255,27 @@
           <div class="control-group">
             <label>Categorías</label>
             <v-select
-              multiple
-              :options="categorias"
-              label="descripcion"
-              v-model="reporteCategorias"
-              class="input-xxlarge">
-            </v-select>
+            multiple
+            :options="categorias"
+            label="descripcion"
+            v-model="reporteCategorias"
+            class="input-xxlarge">
+          </v-select>
 
-            <p class="help-block">
-              Si no seleccionas ninguna, se incluirán <b>todas</b>.
-            </p>
-          </div>
-
+          <p class="help-block">
+            Si no seleccionas ninguna, se incluirán <b>todas</b>.
+          </p>
         </div>
 
-        <div class="modal-footer">
-          <button class="btn btn-primary" @click="generarReporteCategoria">
-            <i class="icon-print icon-white"></i> PDF
-          </button>
-          <button class="btn" data-dismiss="modal">Cancelar</button>
-        </div>
       </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-primary" @click="generarReporteCategoria">
+          <i class="icon-print icon-white"></i> PDF
+        </button>
+        <button class="btn" data-dismiss="modal">Cancelar</button>
+      </div>
+    </div>
 
 
 
@@ -226,34 +283,36 @@
 </div>
 
 <script>
-Vue.component('v-select', VueSelect.VueSelect);
+  Vue.component('v-select', VueSelect.VueSelect);
 
-new Vue({
-  el: '#appProduct',
-  data:{
-    apphost: (typeof apphost !== 'undefined' ? apphost : ''),
-    productos: [],
-    catNueva: { name:'', icon:'', color:'#999999', brief:'' },
-    categorias: [],
-    nuevo: { name:'', price:0, description:'', categorias:[] },
-    form: {},
-    reporteCategorias: [],
-    detalle:{},
-    dt:null
-  },
-  methods:{
-    listar(){
-      axios.get(`${this.apphost}/product/listar`).then(r=>{
-        this.productos = r.data;
-        this.$nextTick(()=>{
+  new Vue({
+    el: '#appProduct',
+    data:{
+      apphost: (typeof apphost !== 'undefined' ? apphost : ''),
+      productos: [],
+      catNueva: { name:'', icon:'', color:'#999999', brief:'' },
+      categorias: [],
+      nuevo: { name:'', price:0, description:'', categorias:[] },
+      form: {},
+      buscarGlobal:'',
+      resultadosGlobal:[],
+      reporteCategorias: [],
+      detalle:{},
+      dt:null
+    },
+    methods:{
+      listar(){
+        axios.get(`${this.apphost}/product/listar`).then(r=>{
+          this.productos = r.data;
+          this.$nextTick(()=>{
 
-          if(!this.dt){
-            this.dt = $('#tablaProduct').DataTable({
-              dom:'frtip', order:[[0,'desc']]
-            });
+            if(!this.dt){
+              this.dt = $('#tablaProduct').DataTable({
+                dom:'frtip', order:[[0,'desc']]
+              });
 
-            const self=this;
-            $('#tablaProduct tbody')
+              const self=this;
+              $('#tablaProduct tbody')
               .on('click','a.detalle',function(e){
                 const id = $(this).data("id");
                 const p = self.productos.find(x => x.product_id == id);
@@ -269,11 +328,11 @@ new Vue({
                 const p = self.productos.find(x => x.product_id == id);
                 self.eliminar(p);
               });
-          }
+            }
 
-          this.dt.clear();
-          this.productos.forEach(p=>{
-            const actions = `
+            this.dt.clear();
+            this.productos.forEach(p=>{
+              const actions = `
                <div class="btn-group">
                  <button class="btn btn-mini btn-primary dropdown-toggle" data-toggle="dropdown">Opciones <span class="caret"></span></button>
                  <ul class="dropdown-menu">
@@ -281,79 +340,122 @@ new Vue({
                    <li><a href="#" class="editar"  data-id="${p.product_id}">Editar</a></li>
                    <li><a href="#" class="eliminar" data-id="${p.product_id}">Eliminar</a></li>
                  </ul>
-               </div>`;
-            this.dt.row.add([
-              p.product_id, p.name, p.price, p.stock,
-              p.categories_names, actions
-            ]);
+              </div>`;
+              this.dt.row.add([
+                p.product_id, p.name, p.price, p.stock,
+                p.categories_names, actions
+              ]);
+            });
+            this.dt.draw(false);
+
           });
-          this.dt.draw(false);
-
         });
-      });
-    },
+      },
 
-    mapearCategoriasEditar(p){
-      this.form.categorias = this.categorias.filter(c =>
-        p.categories_ids.includes(c.category_id)
-      );
-    },
-
-    abrirModalCrear(){
-      this.nuevo = {name:'',price:0,description:'',categorias:[]};
-      $('#modalCrearProduct').modal('show');
-    },
-
-    crearProduct(){
-      axios.post(`${this.apphost}/product/crear`, this.nuevo)
-      .then(()=>{ $('#modalCrearProduct').modal('hide'); this.listar(); });
-    },
-
-    abrirEditar(p){
-
-      console.group('✏️ abrirEditar');
-      console.log('Producto:', p);
-      console.log('categories_ids RAW:', p.categories_ids);
-      console.groupEnd();
-
-      this.form = {
-        product_id: p.product_id,
-        name: p.name,
-        price: p.price,
-        description: p.description || '',
-        categorias: this.categorias.filter(c =>
+      mapearCategoriasEditar(p){
+        this.form.categorias = this.categorias.filter(c =>
           p.categories_ids.includes(c.category_id)
-        )
-      };
+          );
+      },
 
-      console.log('form.categorias (NUMBERS):', this.form.categorias);
+      abrirModalCrear(){
 
-      $('#modalEditarProduct').modal('show');
-    },
+        this.nuevo = {
+          name:'',
+          price:0,
+          description:'',
+          categorias:[]
+        };
+
+        this.buscarGlobal = '';
+        this.resultadosGlobal = [];
+
+        $('#modalCrearProduct').modal('show');
+
+      },
+      buscarProductoGlobal(){
+
+        if(this.buscarGlobal.length < 4){
+          this.resultadosGlobal = [];
+          return;
+        }
+
+        axios.get(`${this.apphost}/pet/product/buscar_global`,{
+          params:{ q:this.buscarGlobal }
+        })
+        .then(r=>{
+          this.resultadosGlobal = r.data;
+        });
+
+      },      
+
+      seleccionarProductoGlobal(p){
+
+        this.nuevo.name = p.nombre;
+
+        const cat = this.categorias.find(c =>
+          c.category_id == p.categoria_global_id
+          );
+
+        if(cat){
+          this.nuevo.categorias = [cat];
+        }
+
+        this.buscarGlobal = p.nombre;
+        this.resultadosGlobal = [];
+
+      },      
+
+      crearProduct(){
+        axios.post(`${this.apphost}/product/crear`, this.nuevo)
+        .then(()=>{ $('#modalCrearProduct').modal('hide'); this.listar(); });
+      },
+
+      abrirEditar(p){
+
+        console.group('✏️ abrirEditar');
+        console.log('Producto:', p);
+        console.log('categories_ids RAW:', p.categories_ids);
+        console.groupEnd();
+
+        this.form = {
+          product_id: p.product_id,
+          name: p.name,
+          price: p.price,
+          description: p.description || '',
+          categorias: this.categorias.filter(c =>
+            p.categories_ids.includes(c.category_id)
+            )
+        };
+
+        console.log('form.categorias (NUMBERS):', this.form.categorias);
+
+        $('#modalEditarProduct').modal('show');
+      },
 
 
-    guardarEdicion(){
-      axios.post(`${this.apphost}/product/editar`, this.form)
-      .then(()=>{ $('#modalEditarProduct').modal('hide'); this.listar(); });
-    },
+      guardarEdicion(){
+        axios.post(`${this.apphost}/product/editar`, this.form)
+        .then(()=>{ $('#modalEditarProduct').modal('hide'); this.listar(); });
+      },
 
-    abrirDetalle(p){
-      axios.get(`${this.apphost}/product/detalle/${p.product_id}`).then(r=>{
-        this.detalle = r.data;
-        $('#modalDetalleProduct').modal('show');
-      });
-    },
+      abrirDetalle(p){
+        axios.get(`${this.apphost}/product/detalle/${p.product_id}`).then(r=>{
+          this.detalle = r.data;
+          $('#modalDetalleProduct').modal('show');
+        });
+      },
 
-    eliminar(p){
-      apprise(`¿Eliminar producto <b>${p.name}</b>?`, {confirm:true}, ok=>{
-        if(!ok) return;
-        axios.post(`${this.apphost}/product/eliminar`, { product_id: p.product_id })
-        .finally(()=>this.listar());
-      });
-    },
+      eliminar(p){
+        apprise(`¿Eliminar producto <b>${p.name}</b>?`, {confirm:true}, ok=>{
+          if(!ok) return;
+          axios.post(`${this.apphost}/product/eliminar`, { product_id: p.product_id })
+          .finally(()=>this.listar());
+        });
+      },
 
-    cargarCategorias(){
-      axios.get(`${this.apphost}/product/listar_categorias`)
+      cargarCategorias(){
+        axios.get(`${this.apphost}/product/listar_categorias`)
         .then(r => {
           this.categorias = r.data.map(c => ({
             category_id: Number(c.category_id), // 🔥 CLAVE ABSOLUTA
@@ -362,66 +464,74 @@ new Vue({
 
           console.log('✅ Categorías normalizadas:', this.categorias);
         });
-    },
+      },
 
 
-    abrirModalCrearCategoria(){
-      this.catNueva = { name:'', icon:'', color:'#999999', brief:'' };
-      $('#modalCrearCategoria').modal('show');
-    },
+      abrirModalCrearCategoria(){
+        this.catNueva = { name:'', icon:'', color:'#999999', brief:'' };
+        $('#modalCrearCategoria').modal('show');
+      },
 
-    crearCategoria(){
-      if(!this.catNueva.name.trim()){
-        apprise("Escribe un nombre para la categoría");
-        return;
-      }
+      crearCategoria(){
+        if(!this.catNueva.name.trim()){
+          apprise("Escribe un nombre para la categoría");
+          return;
+        }
 
-      axios.post(`${this.apphost}/product/categoria_crear`, this.catNueva)
-      .then(() => {
+        axios.post(`${this.apphost}/product/categoria_crear`, this.catNueva)
+        .then(() => {
           $('#modalCrearCategoria').modal('hide');
           apprise("Categoría creada correctamente");
 
           // recargar categorías para el v-select
           this.cargarCategorias();
-      });
-    },
+        });
+      },
 
-    getCategoriaLabel(id) {
-      const cat = this.categorias.find(c => c.category_id === id);
-      return cat ? cat.descripcion : id;
-    },
+      getCategoriaLabel(id) {
+        const cat = this.categorias.find(c => c.category_id === id);
+        return cat ? cat.descripcion : id;
+      },
 
-    abrirReporteProductos(){
-      const url = `${this.apphost}/imp_lista_prod`;
-      window.open(url, '_blank');
-    },
+      abrirReporteProductos(){
+        const url = `${this.apphost}/imp_lista_prod`;
+        window.open(url, '_blank');
+      },
 
-    abrirReporteCategoria(){
-      this.reporteCategorias = [];
-      $('#modalReporteCategoria').modal('show');
-    },
+      abrirReporteCategoria(){
+        this.reporteCategorias = [];
+        $('#modalReporteCategoria').modal('show');
+      },
 
-    generarReporteCategoria(){
+      generarReporteCategoria(){
 
       // si no selecciona nada → todas
-      const ids = this.reporteCategorias.length
+        const ids = this.reporteCategorias.length
         ? this.reporteCategorias.map(c => c.category_id)
         : ['ALL'];
 
-      const query = encodeURIComponent(JSON.stringify(ids));
-      const url = `${this.apphost}/producto/reporteCategoriaProducto?categorias=${query}`;
+        const query = encodeURIComponent(JSON.stringify(ids));
+        const url = `${this.apphost}/producto/reporteCategoriaProducto?categorias=${query}`;
 
-      window.open(url, '_blank');
-      $('#modalReporteCategoria').modal('hide');
+        window.open(url, '_blank');
+        $('#modalReporteCategoria').modal('hide');
+      },
+
+
     },
 
+    mounted(){
+      this.cargarCategorias();
+      this.listar();
 
-  },
+      $('#modalCrearProduct').on('hidden', () => {
 
-  mounted(){
-    this.cargarCategorias();
-    this.listar();
-  }
+        this.nuevo = { name:'', price:0, description:'', categorias:[] };
+        this.buscarGlobal = '';
+        this.resultadosGlobal = [];
 
-});
+      });
+    }
+
+  });
 </script>

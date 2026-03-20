@@ -1,23 +1,38 @@
 <!-- este es mi frontend usando boostrap2.3.2, vuejs2 modo estandalone y jquery2.0 -->
 <div class="row-fluid" id="appCompra">
   <div class="span12">
-    <h2>Compras</h2>
+    <div class="titulo-fijo clearfix">
 
-    <div class="form-actions">
-      <button class="btn btn-success" @click="abrirModalCrear">
-        <i class="icon-plus icon-white"></i> Nueva Compra
-      </button>
-
-      <button class="btn btn-info" @click="abrirReporteFechas">
-        <i class="icon-print icon-white"></i> Reporte por Fechas
-      </button>
-
+    <div style="float:left;">
+      <h2 style="margin:0;">Compras</h2>
     </div>
 
+    <div class="btn-group pull-right">
+      <button class="btn btn-info dropdown-toggle" data-toggle="dropdown">
+        <i class="fa fa-bandcamp"></i>
+        <span class="caret"></span>
+      </button>
+
+      <ul class="dropdown-menu pull-right">
+        <li>
+          <a href="#" @click.prevent="abrirModalCrear">
+            <i class="fa fa-plus"></i> Nueva Compra
+          </a>
+        </li>
+
+        <li>
+          <a href="#" @click.prevent="abrirReporteFechas">
+            <i class="fa fa-plus"></i> Reporte por Fechas
+          </a>
+        </li>
+      </ul>
+    </div>
+
+  </div>
     <!-- ===========================
             TABLA
     ============================ -->
-    <table id="tablaCompra" class="table table-bordered table-striped">
+    <table id="tablaCompra" class="table table-bordered">
       <thead>
         <tr>
           <th>ID</th>

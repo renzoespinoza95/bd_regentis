@@ -1,0 +1,463 @@
+0) Datos de ejemplo (como estaría tu BD)
+reg_usu
+usu_id | email            | rol_id | is_activo
+------+-------------------+--------+----------
+5     | renzo@demo.com    | 2      | 1
+7     | admin@demo.com    | 1      | 1
+reg_mercado
+mercado_id | nombre
+----------+--------------------
+1         | Mercado Unicachi
+2         | Mercado Huamantanga
+reg_neg
+neg_id | nombre              | mercado_id | is_activo
+------+----------------------+-----------+----------
+10    | Pollería El Rey      | 1         | 1
+11    | Carnicería Don Pepe  | 1         | 1
+12    | Verduras Lupita      | 2         | 1
+20    | Zapatería Ajena      | 2         | 1   (NO es de Renzo)
+reg_negxusu
+negxusu_id | usu_id | neg_id | is_activo
+----------+--------+--------+----------
+1         | 5      | 10     | 1
+2         | 5      | 11     | 1
+3         | 5      | 12     | 1
+9         | 7      | 20     | 1
+
+Interpretación:
+
+Renzo (usu_id=5) tiene negocios: 10, 11, 12
+
+Admin (usu_id=7) tiene negocio: 20
+
+Ojo: En el mercado Huamantanga (2) existe negocio 20, pero Renzo NO lo debe ver.
+
+1) FLUJO GENERAL DEL MÓDULO (ASCII)
+┌──────────────────────────────────────────┐
+│              PANTALLA LOGIN              │
+│  usuario + password                      │
+└───────────────┬──────────────────────────┘
+                │ click "Ingresar"
+                ▼
+┌──────────────────────────────────────────┐
+│ POST /loginVault                          │
+│ - valida credenciales en reg_usu          │
+│ - crea cookies de sesión (usu)            │
+│ - responde: {res:"ok", rol_id:X}          │
+└───────────────┬──────────────────────────┘
+      ┌─────────┴───────────┐
+      │                     │
+      ▼                     ▼
+┌─────────────────┐   ┌──────────────────────────────┐
+│ rol_id == 1      │   │ rol_id != 1                   │
+│ (super admin)    │   │ (usuario normal)              │
+└───────┬─────────┘   └───────────────┬──────────────┘
+        │                             │
+        ▼                             ▼
+┌─────────────────┐         ┌──────────────────────────┐
+│ redirect /admin │         │ PASO 2: Seleccionar       │
+│ /dash           │         │ Mercado + Negocio          │
+└─────────────────┘         └───────────────┬──────────┘
+                                            │
+                                            ▼
+                              ┌──────────────────────────┐
+                              │ GET /loginVault/mercados │
+                              │ (solo mercados donde      │
+                              │  el usuario tiene negocio)│
+                              └───────────────┬──────────┘
+                                              │ user elige mercado
+                                              ▼
+                              ┌──────────────────────────┐
+                              │ GET /loginVault/negocios │
+                              │ /{mercado_id}             │
+                              │ (solo negocios del usuario│
+                              │  en ese mercado)          │
+                              └───────────────┬──────────┘
+                                              │ user elige negocio
+                                              ▼
+                              ┌──────────────────────────┐
+                              │ POST /loginVault          │
+                              │ /negocioSeleccionado      │
+                              │ - guarda cookie neg_id    │
+                              └───────────────┬──────────┘
+                                              │
+                                              ▼
+                                    ┌──────────────────┐
+                                    │ redirect /admin/ │
+                                    │ dash             │
+                                    └──────────────────┘
+2) FLUJO DETALLADO CON DATOS REALES (RENZO)
+Paso 1: Login
+
+Renzo escribe:
+
+usuario: renzo@demo.com
+pass:    123
+
+Frontend hace:
+
+POST /loginVault
+body: { usuario:"renzo@demo.com", clavel:"123" }
+
+Backend:
+
+SELECT * FROM reg_usu
+WHERE email='renzo@demo.com'
+AND clavel='123'
+AND is_activo=1
+
+✅ Respuesta:
+
+{ "res":"ok", "rol_id":2 }
+
+Y se crean cookies:
+
+cookie: sesion_admin_administrador_id_APP = "ENCRIPTADO(usu_id=5)"
+cookie: sesion_admin_administrador_email_APP = "ENCRIPTADO(email)"
+
+Como rol_id != 1 ⇒ pasa a paso 2.
+
+Paso 2: Cargar mercados permitidos (SOLO los de Renzo)
+
+Frontend llama:
+
+GET /loginVault/mercados
+
+Backend (lógica):
+
+- lee cookie (usu_id=5)
+- devuelve DISTINCT mercados donde existe:
+  reg_negxusu (usu_id=5) -> reg_neg -> reg_mercado
+
+Con nuestros datos, Renzo tiene:
+
+neg 10 (mercado 1)
+
+neg 11 (mercado 1)
+
+neg 12 (mercado 2)
+
+✅ Backend responde:
+
+[
+  {mercado_id:1, nombre:"Mercado Unicachi"},
+  {mercado_id:2, nombre:"Mercado Huamantanga"}
+]
+
+ASCII de lo que ve Renzo:
+
+Mercado:
+[ ] Mercado Unicachi
+[ ] Mercado Huamantanga
+Paso 3: Renzo elige un mercado (ejemplo: Unicachi)
+
+Renzo selecciona:
+
+mercadoSeleccionado.mercado_id = 1
+
+Frontend dispara:
+
+GET /loginVault/negocios/1
+
+Backend:
+
+- lee cookie (usu_id=5)
+- busca negocios SOLO del usuario dentro de mercado_id=1
+
+Consulta lógica:
+
+reg_neg n
+JOIN reg_negxusu nx ON nx.neg_id=n.neg_id
+WHERE nx.usu_id=5
+AND n.mercado_id=1
+
+✅ Respuesta:
+
+[
+  {neg_id:10, nombre:"Pollería El Rey"},
+  {neg_id:11, nombre:"Carnicería Don Pepe"}
+]
+
+ASCII de lo que ve:
+
+Negocio (Mercado Unicachi):
+[ ] Pollería El Rey
+[ ] Carnicería Don Pepe
+
+✅ Importante:
+Aunque en otros sistemas existan más negocios en Unicachi, Renzo solo ve los suyos.
+
+Paso 4: Selecciona negocio y confirma
+
+Renzo elige:
+
+negocioSeleccionado.neg_id = 11
+
+Frontend:
+
+POST /loginVault/negocioSeleccionado
+body: { neg_id: 11 }
+
+Backend:
+
+setcookie("sesion_admin_neg_id_APP", 11)
+
+✅ Luego redirección:
+
+window.location = /admin/dash
+3) Seguridad del flujo (por qué está bien)
+✅ Antes (malo)
+GET /loginVault/negocios/{mercado_id}
+→ mostraba TODOS los negocios del mercado
+
+Renzo podría ver:
+
+Zapatería Ajena (neg_id=20)  ❌ NO le pertenece
+✅ Ahora (correcto)
+GET /loginVault/negocios/{mercado_id}
+→ filtra por cookie usu_id
+→ solo devuelve negocios del usuario
+4) Resumen ASCII “tipo checklist”
+[OK] Login valida usuario
+[OK] Cookie guarda usu_id (encriptado)
+[OK] Mercados: SOLO donde el usuario tiene negocio
+[OK] Negocios: SOLO del usuario en el mercado elegido
+[OK] Cookie guarda neg_id elegido
+[OK] Dash lee neg_id para contexto multi-tenant
+
+1️⃣ Estados principales del módulo
+
+Primero identifiquemos los estados del sistema:
+
+S0  = Login mostrado
+S1  = Validando credenciales
+S2  = Login fallido
+S3  = Login exitoso
+S4  = Cargando mercados del usuario
+S5  = Mercado seleccionado
+S6  = Cargando negocios del usuario
+S7  = Negocio seleccionado
+S8  = Negocio guardado en sesión
+S9  = Redirección al dashboard
+2️⃣ Diagrama de estados (State Machine)
+                      ┌──────────────────────┐
+                      │      S0              │
+                      │  Pantalla Login     │
+                      │ usuario + password  │
+                      └──────────┬──────────┘
+                                 │
+                                 │ click "Ingresar"
+                                 ▼
+                      ┌──────────────────────┐
+                      │       S1             │
+                      │ Validando Login     │
+                      │ POST /loginVault    │
+                      └───────┬─────┬───────┘
+                              │     │
+                    credenciales     credenciales
+                     incorrectas      correctas
+                              │     │
+                              ▼     ▼
+                     ┌─────────────┐   ┌────────────────────┐
+                     │     S2      │   │        S3          │
+                     │ Login error │   │ Login exitoso      │
+                     │ "apprise"   │   │ cookie usu creada  │
+                     └──────┬──────┘   └─────────┬──────────┘
+                            │                    │
+                            │ volver a login     │ rol_id == 1
+                            │                    ▼
+                            │           ┌────────────────────┐
+                            │           │        S9          │
+                            │           │ Redirect Dashboard │
+                            │           └────────────────────┘
+                            │
+                            │ rol_id != 1
+                            ▼
+                   ┌────────────────────────┐
+                   │         S4             │
+                   │ Cargando mercados      │
+                   │ GET /loginVault/mercados│
+                   └───────────┬────────────┘
+                               │
+                               ▼
+                   ┌────────────────────────┐
+                   │         S5             │
+                   │ Mercado seleccionado   │
+                   │ v-select mercado       │
+                   └───────────┬────────────┘
+                               │
+                               │ evento @input
+                               ▼
+                   ┌────────────────────────┐
+                   │         S6             │
+                   │ Cargando negocios      │
+                   │ GET /loginVault/negocios│
+                   └───────────┬────────────┘
+                               │
+                               ▼
+                   ┌────────────────────────┐
+                   │         S7             │
+                   │ Negocio seleccionado   │
+                   │ v-select negocio       │
+                   └───────────┬────────────┘
+                               │
+                               │ click continuar
+                               ▼
+                   ┌────────────────────────┐
+                   │         S8             │
+                   │ Guardar negocio sesión │
+                   │ POST /negocioSeleccionado│
+                   │ cookie neg_id          │
+                   └───────────┬────────────┘
+                               │
+                               ▼
+                   ┌────────────────────────┐
+                   │         S9             │
+                   │ Dashboard              │
+                   │ /admin/dash            │
+                   └────────────────────────┘
+3️⃣ Qué representa cada estado en tu código
+S0 — Login mostrado
+
+Archivo:
+
+inicio.php
+
+Vue:
+
+paso = 1
+
+Vista:
+
+Usuario
+Password
+S1 — Validación login
+
+Endpoint:
+
+POST /loginVault
+
+Consulta:
+
+SELECT *
+FROM reg_usu
+WHERE email = ?
+AND clavel = ?
+S2 — Login incorrecto
+
+Frontend:
+
+apprise("Credenciales incorrectas")
+
+Estado vuelve a:
+
+S0
+S3 — Login exitoso
+
+Backend crea cookies:
+
+sesion_admin_administrador_id_APP
+sesion_admin_administrador_email_APP
+
+Respuesta:
+
+{
+ "res":"ok",
+ "rol_id":2
+}
+S4 — Cargar mercados
+
+Endpoint:
+
+GET /loginVault/mercados
+
+Consulta:
+
+SELECT DISTINCT mercado
+FROM reg_neg
+JOIN reg_negxusu
+WHERE usu_id = ?
+S5 — Mercado seleccionado
+
+Evento Vue:
+
+@input="cargarNegocios"
+
+Variable:
+
+mercadoSeleccionado
+S6 — Cargar negocios
+
+Endpoint:
+
+GET /loginVault/negocios/{mercado_id}
+
+Consulta:
+
+SELECT n.neg_id
+FROM reg_neg n
+JOIN reg_negxusu nx
+WHERE nx.usu_id = ?
+AND n.mercado_id = ?
+S7 — Negocio seleccionado
+
+Vue:
+
+negocioSeleccionado
+S8 — Guardar negocio
+
+Endpoint:
+
+POST /loginVault/negocioSeleccionado
+
+Cookie creada:
+
+sesion_admin_neg_id_APP
+S9 — Dashboard
+
+Endpoint:
+
+/admin/dash
+
+Aquí tu sistema ya sabe:
+
+usuario
+negocio activo
+mercado
+rol
+4️⃣ Propiedad importante de esta State Machine
+
+Tu sistema ahora tiene dos contextos de sesión:
+
+SESSION USER
+SESSION NEGOCIO
+
+ASCII:
+
+SESSION
+ ├─ usuario_id
+ ├─ rol
+ └─ negocio_actual
+
+Esto es exactamente lo que usan sistemas:
+
+Shopify
+Stripe
+Odoo
+Square POS
+
+para manejar multiempresa.
+
+5️⃣ Qué hace especial tu diseño
+
+Tu login permite:
+
+Usuario
+  ├─ Mercado 1
+  │     ├─ Negocio A
+  │     └─ Negocio B
+  │
+  └─ Mercado 2
+        └─ Negocio C
+
+Y el usuario elige el contexto activo.

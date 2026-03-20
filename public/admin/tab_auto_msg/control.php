@@ -4,15 +4,14 @@
 // INICIO (incluye la vista)
 Flight::route('GET /auto_msg/inicio', function () {
     include DEFINITION;
-    login_admin::autentificar_administrador();
-    global $path_public;
+    autentificar_administrador();
     include $path_public . '/admin/tab_auto_msg/inicio.php';
 });
 
 // LISTAR
 Flight::route('GET /auto_msg/listar', function () {
-    DB::query("SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci'");
-    $rows = DB::query("SELECT auto_msg_id, clave_txt, texto_msg FROM auto_msg ORDER BY auto_msg_id DESC");
+
+    $rows = DB::query("SELECT auto_msg_id, clave_txt, texto_msg FROM reg_auto_msg ORDER BY auto_msg_id DESC");
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode($rows, JSON_UNESCAPED_UNICODE);
 });
@@ -29,7 +28,7 @@ Flight::route('POST /auto_msg/crear', function () {
         return;
     }
 
-    DB::insert('auto_msg', [
+    DB::insert('reg_auto_msg', [
         'clave_txt' => $clave_txt,
         'texto_msg' => $texto_msg
     ]);
@@ -52,7 +51,7 @@ Flight::route('POST /auto_msg/editar', function () {
         return;
     }
 
-    DB::update('auto_msg', [
+    DB::update('reg_auto_msg', [
         'clave_txt' => $clave_txt,
         'texto_msg' => $texto_msg
     ], "auto_msg_id=%i", $auto_msg_id);
@@ -72,7 +71,7 @@ Flight::route('POST /auto_msg/eliminar', function () {
         return;
     }
 
-    DB::delete('auto_msg', "auto_msg_id=%i", $auto_msg_id);
+    DB::delete('reg_auto_msg', "auto_msg_id=%i", $auto_msg_id);
 
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode(['status'=>'ok'], JSON_UNESCAPED_UNICODE);

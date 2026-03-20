@@ -34,7 +34,7 @@ DB::query("SET NAMES utf8mb4");
 $path_public = VARPATH . "/public";
 
 $sesion_admin_administrador_id = $_COOKIE['sesion_admin_administrador_id_' . $nombre_app] ?? null;
-$sesion_admin_administrador_email = $_COOKIE['sesion_admin_administrador_email_' . $nombre_app] ?? null;
+$sesion_admin_administrador_sobrenombre = $_COOKIE['sesion_admin_administrador_sobrenombre_' . $nombre_app] ?? null;
 
 
 if (perso::_es_apache()) {
@@ -104,6 +104,8 @@ if (!empty($sesion_admin_administrador_id) && is_string($sesion_admin_administra
                     u.usu_id,
                     u.nombres_apellidos,
                     u.email,
+                    u.sobrenombre,
+                    u.cod_usu,
                     u.img_perfil,
                     u.rol_id,
                     r.nombre AS rol_nombre,

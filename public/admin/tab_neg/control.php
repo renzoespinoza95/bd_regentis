@@ -465,7 +465,8 @@ Flight::route('POST /negxusu/asignar', function() {
         ---------------------------------- */
 
         $usu = DB::queryFirstRow("
-            SELECT usu_id
+            SELECT 
+                *
             FROM reg_usu
             WHERE usu_id=%i
         ", $usu_id);
@@ -500,12 +501,26 @@ Flight::route('POST /negxusu/asignar', function() {
         }
 
         /* ----------------------------------
+           VALIDAR SI YA EXISTE COMO TRABAJADOR
+        ---------------------------------- */
+
+        $trabajador_existente = DB::queryFirstRow("
+            SELECT deli_trabajador_id
+            FROM deli_trabajador
+            WHERE neg_id=%i
+            AND usu_id=%i
+        ", $neg_id, $usu_id);
+
+
+        /* ----------------------------------
            INSERTAR
         ---------------------------------- */
 
         DB::startTransaction();
 
         try {
+
+            /* insertar propietario del negocio */
 
             DB::insert('reg_negxusu', [
 
@@ -515,6 +530,28 @@ Flight::route('POST /negxusu/asignar', function() {
                 'fecha_creacion' => date('Y-m-d H:i:s')
 
             ]);
+
+            $negxusu_id = DB::insertId();
+
+
+            /* insertar trabajador delivery
+               SOLO SI NO EXISTE
+            */
+
+            if (!$trabajador_existente) {
+
+                DB::insert('deli_trabajador', [
+
+                    'neg_id' => $neg_id,
+                    'usu_id' => $usu_id,
+                    'nombre' => $usu['nombres_apellidos'],
+                    'telefono' => $usu['celular'],
+                    'is_activo' => 1
+
+                ]);
+
+            }
+
 
             DB::commit();
 
@@ -527,7 +564,7 @@ Flight::route('POST /negxusu/asignar', function() {
 
         Flight::json([
             'status'=>'ok',
-            'negxusu_id'=>DB::insertId()
+            'negxusu_id'=>$negxusu_id
         ]);
 
     }

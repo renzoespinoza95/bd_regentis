@@ -60,3 +60,33 @@
   transition: opacity .25s;
   background-color: #C2B238;
 }  
+
+/* titulos de las vistas */
+.titulo-fijo{
+  position: sticky;
+  top: 66px;
+  background: #fff;
+  z-index: 1000;
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+@media (max-width: 976px){
+
+  .titulo-fijo{
+    padding-bottom: 14px;
+  }
+
+  #appCaja table{
+    margin-top: 66px;
+  }
+  .dataTables_wrapper {
+    padding-top: 70px;
+  }
+
+}
+
+thead {
+  background-color: #2C94B7;
+
+}

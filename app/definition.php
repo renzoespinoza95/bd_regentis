@@ -22,8 +22,8 @@
   
   global $path_public;
   global $path_data;
-  global $path_api;
-  global $path_tpl;
+  global $apikey_openai;
+  global $apiKey;
   
   global $varhost_html;
   global $varhost_admin;

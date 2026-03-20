@@ -14,7 +14,10 @@ require_once VARPATH."/public/admin/tab_menu/control.php";
 require_once VARPATH."/public/admin/tab_caja/control.php";
 require_once VARPATH."/public/admin/tab_slider/control.php";
 require_once VARPATH."/public/admin/tab_chat/control.php";
-require_once VARPATH."/public/admin/tab_mod/control.php";
 require_once VARPATH."/public/admin/tab_tipoxmod/control.php";
 require_once VARPATH."/public/admin/tab_neg/control.php";
+require_once VARPATH."/public/admin/tab_trabajador/control.php";
+require_once VARPATH."/public/admin/tab_usu/control.php";
+require_once VARPATH."/public/admin/tab_auto_msg/control.php";
+require_once VARPATH."/public/admin/tab_master/control.php";
 

@@ -1,4 +1,10 @@
 <?php
+Flight::route('GET /nn', function () {
+    categorias_nuevo_negocio(1);
+    echo poke();
+
+});
+
 Flight::route('GET /tt/phpi', function () {
     phpinfo();
 });

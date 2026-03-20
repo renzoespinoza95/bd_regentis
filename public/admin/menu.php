@@ -3,8 +3,8 @@ $usu_id = $administrador_actual['usu_id'];
 $rol_id = (int)$administrador_actual['rol_id'];
 $admin_nombre = $administrador_actual['nombres_apellidos'];
 
-var_dump($administrador_actual);
-exit;
+//var_dump($administrador_actual);
+//exit;
 ?>
 
 <div id="masterMenuApp">
@@ -168,19 +168,35 @@ exit;
       </div>
 
       <table v-else class="table table-bordered">
+
+        <tr>
+          <th>Sobrenombre</th>
+          <td>{{ misDatos.email }}</td>
+        </tr>
+
+        <tr>
+          <th>Nombres apellidos</th>
+          <td>{{ misDatos.nombres_apellidos }}</td>
+        </tr>
+        
+        <tr>
+          <th>Descripcion</th>
+          <td>{{ misDatos.descripcion }}</td>
+        </tr>        
+
         <tr>
           <th>Rol</th>
-          <td>{{ misDatos.rol }}</td>
+          <td>{{ misDatos.rol_nombre }}</td>
         </tr>
 
         <tr>
           <th>Mercado</th>
-          <td>{{ misDatos.mercado }}</td>
+          <td>{{ misDatos.mercado_nombre }}</td>
         </tr>
 
         <tr>
           <th>Negocio</th>
-          <td>{{ misDatos.negocio }}</td>
+          <td>{{ misDatos.negocio_nombre }}</td>
         </tr>
       </table>
     </div>

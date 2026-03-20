@@ -1,41 +1,61 @@
 <div class="row-fluid" id="appOrder">
 <!-- este es mi frontend usando boostrap2.3.2, vuejs2 modo estandalone y jquery2.0 -->
   <div class="span12">
-    <h2>Ventas</h2>
+    <div class="titulo-fijo clearfix">
 
-    <div class="form-actions">
-      <button class="btn btn-success" @click="abrirModalCrear">
-        <i class="icon-plus icon-white"></i> Nueva venta
-      </button>
-      <button class="btn btn-info" @click="abrirModalClientes">
-        <i class="icon-user icon-white"></i> Clientes
-      </button>
-      <div class="btn-group">
-        <button class="btn btn-warning dropdown-toggle" data-toggle="dropdown">
-          <i class="icon-list icon-white"></i> Reportes <span class="caret"></span>
-        </button>
-        <ul class="dropdown-menu">
-          <li>
-            <a href="#" @click="abrirReporteVentas">Ventas por Fecha</a>
-          </li>
-          <li>
-            <a href="#" @click="abrirReporteVentasAdmin">Ventas por Fecha + Admin</a>
-          </li>
-          <li>
-            <a href="#" @click="abrirReporteResumenVentas">
-              Resumen Ventas
-            </a>
-          </li>
-        </ul>
+      <div style="float:left;">
+        <h2 style="margin:0;">Ventas</h2>
       </div>
 
-      <button class="btn btn-info" style="margin-left:5px" @click="abrirModalMesas">
-        <i class="icon-th-large icon-white"></i> Mesas
-      </button>
+      <div class="btn-group pull-right">
 
+        <button class="btn btn-info dropdown-toggle" data-toggle="dropdown">
+          <i class="fa fa-bandcamp"></i>
+          <span class="caret"></span>
+        </button>
 
+        <ul class="dropdown-menu pull-right">
+          <li>
+            <a href="#" @click.prevent="abrirModalCrear">
+              <i class="fa fa-plus"></i> Nueva venta
+            </a>
+          </li>
+          <li>
+            <a href="#" @click.prevent="abrirModalClientes">
+              <i class="fa fa-plus"></i> Clientes
+            </a>
+          </li>
+          <li>
+            <a href="#" @click.prevent="abrirReporteVentas">
+              <i class="fa fa-plus"></i> Ventas por Fecha
+            </a>
+          </li>
+          <li>
+            <a href="#" @click.prevent="abrirModalAgregar">
+              <i class="fa fa-plus"></i> Agregar trabajador
+            </a>
+          </li>
+          <li>
+            <a href="#" @click.prevent="abrirReporteVentasAdmin">
+              <i class="fa fa-plus"></i> Ventas por Fecha x trab.
+            </a>
+          </li>
+          <li>
+            <a href="#" @click.prevent="abrirReporteResumenVentas">
+              <i class="fa fa-plus"></i> Resumen Ventas
+            </a>
+          </li>   
+          <li>
+            <a href="#" @click.prevent="abrirModalMesas">
+              <i class="fa fa-plus"></i> Mesas
+            </a>
+          </li>                         
 
-    </div>
+        </ul>
+
+      </div>
+
+    </div>  
 
     <table id="tablaOrder" class="table table-bordered table-striped">
       <thead>
@@ -57,7 +77,7 @@
     <!-- ===============================
          MODAL DETALLE (incluye CRUD detail)
     ================================ -->
-    <div id="modalDetalleOrder" class="modal hide fade">
+    <div id="modalDetalleOrder" class="modal hide fade fullscreen">
       <div class="modal-header">
         <h3>Detalle de Orden #{{ detalle.product_order_id }}</h3>
       </div>
@@ -126,7 +146,7 @@
     </div>
 
     <!-- MODAL NUEVA ORDEN -->
-    <div id="modalCrearOrder" class="modal hide fade">
+    <div id="modalCrearOrder" class="modal hide fade fullscreen">
       <div class="modal-header"><h3>Nueva Orden</h3></div>
       <div class="modal-body">
 
@@ -152,7 +172,7 @@
       </div>
 
       <div class="control-group">
-        <label>Mesa</label>
+        <label>Caja/Mesa</label>
         <v-select
           :options="opcionesMesa"
           label="label"
@@ -956,7 +976,7 @@ new Vue({
     },
 
     abrirDetalle(o){
-      axios.get(`${this.apphost}/product_order/detalle/${o.product_order_id}`).then(r=>{
+      axios.get(`${this.apphost}/yup/product_order/detalle/${o.product_order_id}`).then(r=>{
         this.detalle     = r.data.order;
         this.detallesOrder = r.data.detalles;
         $('#modalDetalleOrder').modal('show');
@@ -1148,7 +1168,7 @@ new Vue({
     axios.get(`${this.apphost}/tipo_pago/listar`)
     .then(r => this.tiposPago = r.data);  
 
-    axios.get(`${this.apphost}/administrador/listar`)
+    axios.get(`${this.apphost}/order/administrador/listar`)
     .then(r => {
       this.administradores = r.data;
     });

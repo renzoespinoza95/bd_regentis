@@ -144,113 +144,6 @@ function diferencia_de_horas_y_dias($startDate, $endDate, $format = 3) {
     }
 }
 
-
-function diferencia_de_horas_y_dias2($time1, $time2, $precision = 6) {
-    // If not numeric then convert texts to unix timestamps
-    if (!is_int($time1)) {
-        $time1 = strtotime($time1);
-    }
-    if (!is_int($time2)) {
-        $time2 = strtotime($time2);
-    }
-
-    // If time1 is bigger than time2
-    // Then swap time1 and time2
-    if ($time1 > $time2) {
-        $ttime = $time1;
-        $time1 = $time2;
-        $time2 = $ttime;
-    }
-
-    // Set up intervals and diffs arrays
-    $intervals = array('year', 'month', 'day', 'hour', 'minute', 'second');
-    $diffs = array();
-
-    // Loop thru all intervals
-    foreach ($intervals as $interval) {
-        // Set default diff to 0
-        $diffs[$interval] = 0;
-        // Create temp time from time1 and interval
-        $ttime = strtotime("+1 " . $interval, $time1);
-        // Loop until temp time is smaller than time2
-        while ($time2 >= $ttime) {
-            $time1 = $ttime;
-            $diffs[$interval] ++;
-            // Create new temp time from time1 and interval
-            $ttime = strtotime("+1 " . $interval, $time1);
-        }
-    }
-
-    $count = 0;
-    $times = array();
-    // Loop thru all diffs
-    foreach ($diffs as $interval => $value) {
-        // Break if we have needed precission
-        if ($count >= $precision) {
-            break;
-        }
-        // Add value and interval 
-        // if value is bigger than 0
-        if ($value > 0) {
-            // Add s if value is not 1
-            
-              //if ($value != 1) {
-              //$interval .= "s";
-              //}
-             
-            // Add value and interval to times array
-            $times[] = $value . " " . $interval;
-            $count++;
-        }
-    }
-
-    $tmp_var = array_pop($times);
-
-    // Return string with times
-    $final_string = implode(", ", $times);
-    $final_string = str_replace("month", "mes(es)", $final_string);
-    $final_string = str_replace("day", "dia(s)", $final_string);
-    $final_string = str_replace("hour", "hora(s)", $final_string);
-    $final_string = str_replace("minute", "minuto(s)", $final_string);
-
-    return $final_string;
-    //return $times;
-}
-
-
-function is_decimal( $val )
-{
-    return is_numeric( $val ) && floor( $val ) != $val;
-}
-
-function convertir_decimal_a_hora($dia_id, $hora_decimal) {
-    
-    if($dia_id < 10) {
-        $dia_id = "0". $dia_id;
-    } 
-    
-    $dia_convertido = "2016-08-$dia_id";
-    
-    if($hora_decimal < 10) {
-
-        if(is_decimal($hora_decimal)) {
-            $hora_decimal = str_replace(".", ":", $hora_decimal);
-            $tiempo_convertido = "0" . $hora_decimal . "0:00";
-        } else {
-            $tiempo_convertido = "0" . $hora_decimal . ":00:00";
-        }
-    } else {
-        if(is_decimal($hora_decimal)) {
-            $hora_decimal = str_replace(".", ":", $hora_decimal);
-            $tiempo_convertido = $hora_decimal . "0:00";
-        } else {
-            $tiempo_convertido = $hora_decimal . ":00:00";
-        }
-    }
-    
-    return $dia_convertido. "T" .$tiempo_convertido;
-}
-
 // devuelve la fecha y hora en texto  
 
 function fecha_hora_en_texto($raw_date) {
@@ -530,7 +423,7 @@ function dd($value, $name = "") {
 }
 
 function poke() {
-    return util::ok() . time() ;
+    return perso::ok() . time() ;
 }
 
 function require_jwt() {
@@ -611,3 +504,70 @@ function autentificar_administrador()
 
     return $usu_id;
 }
+
+function categorias_nuevo_negocio($neg_id){
+
+    $now_unix = time()*1000;
+
+    $cats = DB::query("
+        SELECT *
+        FROM reg_categoria_global
+        WHERE is_activo=1
+        ORDER BY orden ASC
+    ");
+
+    foreach($cats as $c){
+
+        DB::insert('pos_category',[
+            'neg_id'      => $neg_id,
+            'name'        => $c['nombre'],
+            'icon'        => $c['icono'],
+            'priority'    => $c['orden'],
+            'categoria_global_id'    => $c['categoria_global_id'],
+            'created_at'  => $now_unix,
+            'last_update' => $now_unix
+        ]);
+
+    }
+
+}
+
+// Usa la misma clave en Base64 (32 bytes al decodificar)
+function barsi_key(): string {
+    $b64 = BARSI_AES_KEY_B64;
+    $key = base64_decode($b64, true);
+    if ($key === false || strlen($key) !== 32) {
+        throw new RuntimeException('BARSI_AES_KEY_B64 inválida: se requieren 32 bytes al decodificar.');
+    }
+    return $key;
+}
+
+function enc_barsi(string $texto): string {
+    $key = barsi_key();
+    $iv = random_bytes(12); // 96-bit IV
+    $cipher = 'aes-256-gcm';
+    $tag = '';
+    $ciphertext = openssl_encrypt($texto, $cipher, $key, OPENSSL_RAW_DATA, $iv, $tag);
+    if ($ciphertext === false) {
+        throw new RuntimeException('Fallo en openssl_encrypt');
+    }
+    // Unificamos formato con Python/TS: Base64(iv || ciphertext || tag)
+    return base64_encode($iv . $ciphertext . $tag);
+}
+
+function des_barsi(string $tokenB64): string {
+    $key = barsi_key();
+    $raw = base64_decode($tokenB64, true);
+    if ($raw === false || strlen($raw) < 12 + 16) {
+        throw new RuntimeException('Token inválido');
+    }
+    $iv = substr($raw, 0, 12);
+    $tag = substr($raw, -16);                 // 128-bit tag al final
+    $ciphertext = substr($raw, 12, -16);      // medio: solo ciphertext
+    $cipher = 'aes-256-gcm';
+    $plaintext = openssl_decrypt($ciphertext, $cipher, $key, OPENSSL_RAW_DATA, $iv, $tag);
+    if ($plaintext === false) {
+        throw new RuntimeException('Fallo en openssl_decrypt (tag/clave/token inválidos)');
+    }
+    return $plaintext;
+}    

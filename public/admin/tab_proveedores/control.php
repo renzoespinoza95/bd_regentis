@@ -1,103 +1,165 @@
 <?php
 /* -------------------------------
- * Vista /tab3
+ * Vista /prov
  * ------------------------------- */
 Flight::route('GET /prov', function () {
+
     include DEFINITION;
-    login_admin::autentificar_administrador();
-    global $path_public;                          // asegúrate de tener esta var en tu bootstrap
+    autentificar_administrador();
+
+    global $path_public;
+    global $administrador_actual;
+
     include $path_public . '/admin/tab_proveedores/inicio.php';
+
 });
+
 
 /* ============================================
  * VISTA PRINCIPAL /proveedores
  * ============================================ */
 Flight::route('GET /proveedores', function () {
+
     include DEFINITION;
-    login_admin::autentificar_administrador();
+    autentificar_administrador();
 
     global $path_public;
+    global $administrador_actual;
+
     include $path_public . '/admin/tab_proveedores/inicio.php';
+
 });
 
 
 /* ============================================
- * GET /proveedor/listar
+ * GET /pos_proveedor/listar
  * ============================================ */
 Flight::route('GET /proveedor/listar', function () {
+
+    autentificar_administrador();
+    global $administrador_actual;
+
+    $neg_id = intval($administrador_actual['neg_id']);
+
     $rows = DB::query("
-        SELECT proveedor_id, nombre, ruc, direccion, telefono, email, is_activo
-        FROM proveedor
+        SELECT 
+            proveedor_id,
+            nombre,
+            ruc,
+            direccion,
+            telefono,
+            email,
+            is_activo
+        FROM pos_proveedor
+        WHERE neg_id=%i
         ORDER BY proveedor_id DESC
-    ");
+    ",$neg_id);
+
     Flight::json($rows);
+
 });
 
 
 /* ============================================
- * POST /proveedor/crear
+ * POST /pos_proveedor/crear
  * ============================================ */
 Flight::route('POST /proveedor/crear', function () {
 
+    autentificar_administrador();
+    global $administrador_actual;
+
+    $neg_id = intval($administrador_actual['neg_id']);
+
     $d = Flight::request()->data;
 
-    DB::insert("proveedor", [
-        'nombre'    => $d['nombre'],
-        'ruc'       => $d['ruc'],
-        'direccion' => $d['direccion'],
-        'telefono'  => $d['telefono'],
-        'email'     => $d['email'],
-        'is_activo' => 1
+    DB::insert("pos_proveedor", [
+
+        'neg_id'     => $neg_id,
+        'nombre'     => $d['nombre'],
+        'ruc'        => $d['ruc'],
+        'direccion'  => $d['direccion'],
+        'telefono'   => $d['telefono'],
+        'email'      => $d['email'],
+        'is_activo'  => 1
+
     ]);
 
     Flight::json(['status'=>'ok']);
+
 });
 
 
 /* ============================================
- * GET /proveedor/detalle/@id
+ * GET /pos_proveedor/detalle/@id
  * ============================================ */
 Flight::route('GET /proveedor/detalle/@id', function ($id) {
 
+    autentificar_administrador();
+    global $administrador_actual;
+
+    $neg_id = intval($administrador_actual['neg_id']);
+
     $item = DB::queryFirstRow("
+
         SELECT *
-        FROM proveedor
+        FROM pos_proveedor
         WHERE proveedor_id=%i
-    ", $id);
+        AND neg_id=%i
+
+    ",$id,$neg_id);
 
     Flight::json($item);
+
 });
 
 
 /* ============================================
- * POST /proveedor/editar
+ * POST /pos_proveedor/editar
  * ============================================ */
 Flight::route('POST /proveedor/editar', function () {
 
+    autentificar_administrador();
+    global $administrador_actual;
+
+    $neg_id = intval($administrador_actual['neg_id']);
+
     $d = Flight::request()->data;
 
-    DB::update("proveedor", [
-        'nombre'    => $d['nombre'],
-        'ruc'       => $d['ruc'],
-        'direccion' => $d['direccion'],
-        'telefono'  => $d['telefono'],
-        'email'     => $d['email'],
-        'is_activo' => $d['is_activo']
-    ], "proveedor_id=%i", $d['proveedor_id']);
+    DB::update("pos_proveedor",[
+
+        'nombre'     => $d['nombre'],
+        'ruc'        => $d['ruc'],
+        'direccion'  => $d['direccion'],
+        'telefono'   => $d['telefono'],
+        'email'      => $d['email'],
+        'is_activo'  => $d['is_activo']
+
+    ],"proveedor_id=%i AND neg_id=%i",$d['proveedor_id'],$neg_id);
 
     Flight::json(['status'=>'ok']);
+
 });
 
 
 /* ============================================
- * POST /proveedor/eliminar
+ * POST /pos_proveedor/eliminar
  * ============================================ */
 Flight::route('POST /proveedor/eliminar', function () {
 
+    autentificar_administrador();
+    global $administrador_actual;
+
+    $neg_id = intval($administrador_actual['neg_id']);
+
     $id = intval(Flight::request()->data->proveedor_id);
 
-    DB::delete("proveedor", "proveedor_id=%i", $id);
+    DB::delete(
+        "pos_proveedor",
+        "proveedor_id=%i AND neg_id=%i",
+        $id,
+        $neg_id
+    );
 
     Flight::json(['status'=>'ok']);
-});
 
+});

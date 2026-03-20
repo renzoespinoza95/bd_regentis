@@ -1,10 +1,16 @@
 <div class="row-fluid" id="appInventario">
 
   <div class="span12">
-    <h2>Inventario</h2>
+      <div class="titulo-fijo clearfix">
+
+    <div style="float:left;">
+      <h2 style="margin:0;">Inventario</h2>
+    </div>
+
+  </div>
 
     <!-- TABLA -->
-    <table id="tablaInv" class="table table-bordered table-striped">
+    <table id="tablaInv" class="table table-bordered">
       <thead>
         <tr>
           <th>ID</th>

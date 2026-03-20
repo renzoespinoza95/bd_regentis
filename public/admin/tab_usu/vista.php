@@ -792,16 +792,6 @@ new Vue({
     }
   },
   mounted() {
-
-    // 1) Recuperar el token de login
-    const token = localStorage.getItem('jwt');
-    if (!token) {
-      console.warn('No hay token – redirigiendo a login');
-      return window.location.href = `${this.apphost}/login`;
-    }
-    // 2) Configurar Axios
-    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-
     this.obtenerUsuarios();
     this.obtenerTipousuarios();
   }

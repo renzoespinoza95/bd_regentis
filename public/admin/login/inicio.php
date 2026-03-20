@@ -23,7 +23,7 @@
 
   <!-- LOGIN NORMAL -->
   <fieldset v-if="paso==1">
-    <legend class="legend">Ingreso</legend>
+    <legend class="legend">REGENTIS - ACCESO</legend>
 
     <div class="input">
       <input type="text" placeholder="Usuario" v-model="usuario">
@@ -103,6 +103,9 @@
       },
       cargarNegocios(){
 
+        this.negocios=[]
+        this.negocioSeleccionado=null
+
         axios.get(`${this.apphost}/loginVault/negocios/${this.mercadoSeleccionado.mercado_id}`)
         .then(r=>{
           this.negocios=r.data
@@ -111,11 +114,20 @@
       },
       continuar(){
 
+        if(!this.negocioSeleccionado){
+
+          apprise("Debe seleccionar un negocio")
+          return
+
+        }
+
         axios.post(`${this.apphost}/loginVault/negocioSeleccionado`,{
           neg_id:this.negocioSeleccionado.neg_id
         })
         .then(()=>{
+
           window.location.href=`${this.apphost}/admin/dash`
+
         })
 
       },

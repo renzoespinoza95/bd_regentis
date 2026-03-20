@@ -1,0 +1,234 @@
+{
+  "catalogo": {
+    "type": "list",
+
+    "features": {
+      "carrito": true,
+      "busqueda": true
+    },
+
+    "roles": {
+      "CONSUMIDOR": {
+        "actions": [
+          { "type": "ver_detalle" },
+          { "type": "agregar_carrito" }
+        ]
+      },
+      "NEGOCIO_ADMIN": {
+        "actions": [
+          { "type": "crear" },
+          { "type": "editar" },
+          {
+            "type": "eliminar",
+            "endpoint": "/reg/eliminarProducto",
+            "method": "POST"
+          }
+        ]
+      }
+    },
+
+    "data": {
+      "source": "/api/item/list"
+    },
+
+    "layout": {
+      "hero": {
+        "type": "carousel",
+        "autoplay": true,
+        "items": [
+          { "imagen": "banner1.jpg", "titulo": "Ofertas del día" },
+          { "imagen": "banner2.jpg", "titulo": "Nuevos productos" }
+        ]
+      },
+
+      "navigation": {
+        "type": "pills",
+        "data_source": {
+          "type": "api",
+          "url": "/reg/categorias/listadoPills",
+          "method": "GET"
+        },
+        "label": "nombre",
+        "value": "categoria_id"
+      },
+
+      "content": {
+        "type": "grid",
+        "columns": 2
+      },
+
+      "columns": [
+        { "name": "nombre", "label": "Nombre" },
+        { "name": "precio_base", "label": "Precio" }
+      ]
+    }
+  },
+
+  "detalle_item": {
+    "type": "detail",
+
+    "roles": {
+      "CONSUMIDOR": {
+        "actions": [
+          {
+            "type": "agregar_carrito",
+            "label": "Agregar al carrito"
+          },
+          {
+            "type": "favorito",
+            "label": "Agregar a favoritos",
+            "endpoint": "/reg/agregarfavorito",
+            "method": "POST"
+          }
+        ]
+      },
+
+      "NEGOCIO_ADMIN": {
+        "actions": [
+          { "type": "editar", "label": "Editar" },
+          {
+            "type": "eliminar",
+            "label": "Eliminar",
+            "endpoint": "/reg/eliminarProducto",
+            "method": "POST"
+          }
+        ]
+      },
+
+      "NEGOCIO_STAFF": {
+        "actions": [
+          { "type": "editar", "label": "Editar" }
+        ]
+      }
+    },
+
+    "data": {
+      "source": "/api/item/obtener",
+      "params": {
+        "item_id": "{{id}}"
+      }
+    }
+  },
+
+  "carrito": {
+    "type": "cart",
+    "data": {
+      "source": "/api/carrito/listar"
+    }
+  },
+
+  "checkout": {
+    "type": "form",
+
+    "features": {
+      "CONSUMIDOR": {
+        "txt_direccion": { "visible": true },
+        "select_metodo_pago": {
+          "visible": true,
+          "source": "/api/pago/metodos"
+        },
+        "btn_confirmar": {
+          "visible": true,
+          "action": "pedido.guardar"
+        }
+      }
+    },
+
+    "data": {
+      "source": "/api/pedido/crear",
+      "params": {
+        "direccion": "txt_direccion",
+        "tipo_pago_id": "select_metodo_pago"
+      }
+    }
+  },
+
+  "agenda": {
+    "type": "list",
+    "data": {
+      "source": "/api/agenda/listar"
+    },
+    "layout": {
+      "columns": [
+        { "name": "fecha", "label": "Fecha" },
+        { "name": "hora_inicio", "label": "Hora" }
+      ]
+    }
+  },
+
+  "reserva": {
+    "type": "form",
+
+    "features": {
+      "CONSUMIDOR": {
+        "txt_fecha": { "visible": true },
+        "txt_hora": { "visible": true },
+        "btn_reservar": {
+          "visible": true,
+          "action": "reserva.guardar"
+        }
+      }
+    },
+
+    "data": {
+      "source": "/api/reserva/crear",
+      "params": {
+        "fecha": "txt_fecha",
+        "hora": "txt_hora"
+      }
+    }
+  },
+
+  "clientes": {
+    "type": "list",
+    "data": {
+      "source": "/api/cliente/listar"
+    }
+  },
+
+  "stock": {
+    "type": "list",
+    "data": {
+      "source": "/api/stock/listar"
+    }
+  },
+
+  "pagos": {
+    "type": "list",
+    "data": {
+      "source": "/api/pago/listar"
+    }
+  },
+
+  "credito": {
+    "type": "list",
+    "data": {
+      "source": "/api/credito/listar"
+    }
+  },
+
+  "reserva_hotel": {
+    "type": "form",
+
+    "features": {
+      "CONSUMIDOR": {
+        "txt_fecha_inicio": { "visible": true },
+        "txt_fecha_fin": { "visible": true },
+        "txt_huesped": { "visible": true },
+        "btn_reservar": {
+          "visible": true,
+          "action": "reserva_hotel.guardar"
+        }
+      }
+    },
+
+    "data": {
+      "source": "/api/reserva_hotel/crear",
+      "params": {
+        "fecha_inicio": "txt_fecha_inicio",
+        "fecha_fin": "txt_fecha_fin",
+        "huesped": "txt_huesped"
+      }
+    }
+  }
+}

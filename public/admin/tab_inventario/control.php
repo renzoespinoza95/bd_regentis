@@ -1,17 +1,26 @@
 <?php
 // este es mi backend usando php8.1, flightphp y meekrodb2 
+
 Flight::route('GET /inventario', function () {
+
     include DEFINITION;
-    login_admin::autentificar_administrador();
+    autentificar_administrador();
     global $path_public;
 
     include $path_public . '/admin/tab_inventario/inicio.php';
 });
 
+
 /* ============================================================
  * LISTAR INVENTARIO
  * ============================================================ */
 Flight::route('GET /inventario/listar', function () {
+
+    include DEFINITION;
+    autentificar_administrador();
+    global $administrador_actual;
+
+    $neg_id = intval($administrador_actual['neg_id']);
 
     $sql = "
         SELECT 
@@ -21,98 +30,157 @@ Flight::route('GET /inventario/listar', function () {
             i.stock_actual,
             i.stock_min,
             i.stock_max
-        FROM inventario i
-        INNER JOIN product p ON p.product_id = i.product_id
+        FROM pos_inventario i
+        INNER JOIN pos_product p ON p.product_id = i.product_id
+        WHERE i.neg_id=%i
         ORDER BY p.name ASC
     ";
 
-    Flight::json(DB::query($sql));
+    Flight::json(DB::query($sql,$neg_id));
 });
+
 
 /* ============================================================
  * LISTAR PRODUCTOS (para combos)
  * ============================================================ */
 Flight::route('GET /inventario/productos', function () {
-    $rows = DB::query("SELECT product_id, name FROM product ORDER BY name ASC");
+
+    include DEFINITION;
+    autentificar_administrador();
+    global $administrador_actual;
+
+    $neg_id = intval($administrador_actual['neg_id']);
+
+    $rows = DB::query("
+        SELECT product_id,name
+        FROM pos_product
+        WHERE neg_id=%i
+        ORDER BY name ASC
+    ",$neg_id);
+
     Flight::json($rows);
 });
+
 
 /* ============================================================
  * CREAR INVENTARIO
  * ============================================================ */
 Flight::route('POST /inventario/crear', function () {
 
+    include DEFINITION;
+    autentificar_administrador();
+    global $administrador_actual;
+
+    $neg_id = intval($administrador_actual['neg_id']);
+
     $d = Flight::request()->data;
 
-    DB::insert("inventario", [
-        "product_id"  => $d["product_id"],
-        "stock_actual" => $d["stock_actual"],
-        "stock_min"    => $d["stock_min"],
-        "stock_max"    => $d["stock_max"]
+    DB::insert("pos_inventario",[
+        "neg_id"=>$neg_id,
+        "product_id"=>$d["product_id"],
+        "stock_actual"=>$d["stock_actual"],
+        "stock_min"=>$d["stock_min"],
+        "stock_max"=>$d["stock_max"]
     ]);
 
-    Flight::json(["status" => "ok"]);
+    Flight::json(["status"=>"ok"]);
 });
+
 
 /* ============================================================
  * DETALLE INVENTARIO (trae movimientos)
  * ============================================================ */
 Flight::route('GET /inventario/detalle/@id', function ($id) {
 
+    include DEFINITION;
+    autentificar_administrador();
+    global $administrador_actual;
+
+    $neg_id = intval($administrador_actual['neg_id']);
+
     $inv = DB::queryFirstRow("
         SELECT 
             i.*, 
             p.name AS producto
-        FROM inventario i
-        INNER JOIN product p ON p.product_id = i.product_id
-        WHERE inventario_id=%i
-    ", $id);
+        FROM pos_inventario i
+        INNER JOIN pos_product p ON p.product_id = i.product_id
+        WHERE i.inventario_id=%i
+        AND p.neg_id=%i
+    ", $id,$neg_id);
+
+
+    if(!$inv){
+        Flight::json(['status'=>'error','msg'=>'Inventario no encontrado'],404);
+        return;
+    }
+
 
     $mov = DB::query("
         SELECT *
-        FROM inventario_movimiento
+        FROM pos_inventario_movimiento
         WHERE product_id=%i
         ORDER BY fecha DESC
-    ", $inv['product_id']);
+    ",$inv['product_id']);
+
 
     Flight::json([
-        'inventario' => $inv,
-        'movimientos' => $mov
+        'inventario'=>$inv,
+        'movimientos'=>$mov
     ]);
 });
+
 
 /* ============================================================
  * EDITAR INVENTARIO
  * ============================================================ */
 Flight::route('POST /inventario/editar', function () {
 
+    include DEFINITION;
+    autentificar_administrador();
+    global $administrador_actual;
+
+    $neg_id = intval($administrador_actual['neg_id']);
+
     $d = Flight::request()->data;
 
-    DB::update("inventario", [
-        "stock_min" => $d["stock_min"],
-        "stock_max" => $d["stock_max"]
-    ], "inventario_id=%i", $d["inventario_id"]);
+    DB::update("pos_inventario",[
+        "stock_min"=>$d["stock_min"],
+        "stock_max"=>$d["stock_max"]
+    ],"inventario_id=%i AND neg_id=%i",$d["inventario_id"],$neg_id);
 
-    Flight::json(["status" => "ok"]);
+    Flight::json(["status"=>"ok"]);
 });
+
 
 /* ============================================================
  * ELIMINAR INVENTARIO
  * ============================================================ */
 Flight::route('POST /inventario/eliminar', function () {
 
+    include DEFINITION;
+    autentificar_administrador();
+    global $administrador_actual;
+
+    $neg_id = intval($administrador_actual['neg_id']);
+
     $id = intval(Flight::request()->data->inventario_id);
 
-    DB::delete("inventario", "inventario_id=%i", $id);
+    DB::delete(
+        "pos_inventario",
+        "inventario_id=%i AND neg_id=%i",
+        $id,
+        $neg_id
+    );
 
-    Flight::json(["status" => "ok"]);
+    Flight::json(["status"=>"ok"]);
 });
+
 
 /* ============================================================
  * REGISTRAR MOVIMIENTO
    BODY:
    {
-     producto_id: 3,
+     product_id: 3,
      tipo: 'ENTRADA',
      origen: 'AJUSTE',
      cantidad: 10,
@@ -123,61 +191,89 @@ Flight::route('POST /inventario/eliminar', function () {
  * ============================================================ */
 Flight::route('POST /inventario/movimiento', function () {
 
+    include DEFINITION;
+    autentificar_administrador();
+    global $administrador_actual;
+
+    $neg_id = intval($administrador_actual['neg_id']);
+
     $d = Flight::request()->data;
     $prod = intval($d['product_id']);
     $cant = intval($d['cantidad']);
 
-    /* Obtener stock actual */
-    $inv = DB::queryFirstRow("SELECT * FROM inventario WHERE product_id=%i", $prod);
 
-    if (!$inv) {
-        Flight::json(['status'=>'error','msg'=>'Inventario no encontrado'], 400);
+    /* Obtener inventario */
+    $inv = DB::queryFirstRow("
+        SELECT *
+        FROM pos_inventario
+        WHERE product_id=%i
+        AND neg_id=%i
+    ",$prod,$neg_id);
+
+
+    if(!$inv){
+        Flight::json(['status'=>'error','msg'=>'Inventario no encontrado'],400);
         return;
     }
 
+
     $nuevo_stock = $inv['stock_actual'];
 
-    if ($d['tipo'] === 'ENTRADA') {
+    if($d['tipo']==='ENTRADA'){
         $nuevo_stock += $cant;
-    } elseif ($d['tipo'] === 'SALIDA') {
+    }
+    elseif($d['tipo']==='SALIDA'){
         $nuevo_stock -= $cant;
     }
 
+
     DB::startTransaction();
 
-    try {
+    try{
 
-        /* Registrar movimiento */
-        DB::insert("inventario_movimiento", [
-            "product_id"      => $prod,
-            "tipo"             => $d["tipo"],
-            "origen"           => $d["origen"],
-            "cantidad"         => $cant,
-            "precio_unitario"  => $d["precio_unitario"],
-            "referencia_id"    => $d["referencia_id"],
-            "referencia_tabla" => $d["referencia_tabla"],
-            "stock_resultante" => $nuevo_stock
+        DB::insert("pos_inventario_movimiento",[
+            "product_id"=>$prod,
+            "tipo"=>$d["tipo"],
+            "origen"=>$d["origen"],
+            "cantidad"=>$cant,
+            "precio_unitario"=>$d["precio_unitario"],
+            "referencia_id"=>$d["referencia_id"],
+            "referencia_tabla"=>$d["referencia_tabla"],
+            "stock_resultante"=>$nuevo_stock
         ]);
 
-        /* Actualizar inventario */
-        DB::update("inventario", [
-            "stock_actual" => $nuevo_stock
-        ], "inventario_id=%i", $inv['inventario_id']);
+
+        DB::update("pos_inventario",[
+            "stock_actual"=>$nuevo_stock
+        ],"inventario_id=%i",$inv['inventario_id']);
+
 
         DB::commit();
+
         Flight::json(["status"=>"ok"]);
 
-    } catch(Exception $e) {
+    }catch(Exception $e){
+
         DB::rollback();
-        Flight::json(['status'=>'error','msg'=>$e->getMessage()], 500);
+
+        Flight::json([
+            'status'=>'error',
+            'msg'=>$e->getMessage()
+        ],500);
     }
 });
 
 
+/* ============================================================
+ * ACTUALIZAR LIMITES
+ * ============================================================ */
 Flight::route('POST /inventario/limites', function () {
 
     include DEFINITION;
-    login_admin::autentificar_administrador();
+    autentificar_administrador();
+    global $administrador_actual;
+
+    $neg_id = intval($administrador_actual['neg_id']);
 
     $d = Flight::request()->data;
 
@@ -186,10 +282,10 @@ Flight::route('POST /inventario/limites', function () {
         return;
     }
 
-    DB::update('inventario',[
-        'stock_min' => (int)$d['stock_min'],
-        'stock_max' => (int)$d['stock_max']
-    ], "inventario_id=%i", $d['inventario_id']);
+    DB::update('pos_inventario',[
+        'stock_min'=>(int)$d['stock_min'],
+        'stock_max'=>(int)$d['stock_max']
+    ],"inventario_id=%i AND neg_id=%i",$d['inventario_id'],$neg_id);
 
     Flight::json(['status'=>'ok']);
 });

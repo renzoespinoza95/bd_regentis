@@ -4,36 +4,8 @@
  * ------------------------------- */
 Flight::route('GET /usu/inicio', function () {
     include DEFINITION;
-    login_admin::autentificar_administrador();
-    global $path_public;
+    autentificar_administrador();
     include $path_public . '/admin/tab_usu/inicio.php';
-});
-
-/* -------------------------------
- * CRUD /usuario  (tabla `usu`)
- * ------------------------------- */
-
-/* ---- Listar ---- */
-/* ---- Listar (con URLs de imagen) ---- */
-Flight::route('GET /usuario/listar', function () {
-    include DEFINITION; // para $varhost y vari()
-    DB::query("SET NAMES 'utf8'");
-
-    // Bases para construir URLs
-    $pics_mini_base = rtrim($varhost . '/' . trim(vari('PICS_USU_MINI'), '/'), '/') . '/';
-    $pics_full_base = rtrim($varhost . '/' . trim(vari('PICS_USU_FULL'), '/'), '/') . '/';
-    $avatar_default = $varhost . '/assets/avatar.jpg';
-
-    $rows = DB::query('SELECT * FROM usu ORDER BY usu_id DESC');
-
-    foreach ($rows as &$r) {
-        $fname = trim($r['img_perfil'] ?? '');
-        $r['avatar_mini'] = $fname !== '' ? ($pics_mini_base . $fname) : $avatar_default;
-        $r['avatar_full'] = $fname !== '' ? ($pics_full_base . $fname) : $avatar_default;
-    }
-    unset($r);
-
-    Flight::json($rows);
 });
 
 

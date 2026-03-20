@@ -1,7 +1,28 @@
 <div class="row-fluid" id="appCaja">
 <!-- este es mi frontend usando boostrap2.3.2, vuejs2 modo estandalone y jquery2.0 -->
-  <div class="span12">
-    <h2>Gestión de Caja</h2>
+<div class="span12">
+  <div class="titulo-fijo clearfix">
+
+    <div style="float:left;">
+      <h2 style="margin:0;">Gestión de Caja</h2>
+    </div>
+
+    <div class="btn-group pull-right">
+      <button class="btn btn-info dropdown-toggle" data-toggle="dropdown">
+        <i class="fa fa-bandcamp"></i>
+        <span class="caret"></span>
+      </button>
+
+      <ul class="dropdown-menu pull-right">
+        <li>
+          <a href="#" @click.prevent="abrirModalAbrir">
+            <i class="fa fa-plus"></i> Abrir caja nueva
+          </a>
+        </li>
+      </ul>
+    </div>
+
+  </div>
 
     <!-- ALERTA -->
     <div class="alert alert-info" v-if="cajasAbiertas.length==0">
@@ -9,16 +30,10 @@
       <button class="btn btn-success pull-right" @click="abrirModalAbrir">
         Abrir Caja
       </button>
-    </div>
-
-    <div class="form-actions">
-        <button class="btn btn-success" @click="abrirModalAbrir">
-              Abrir Caja Nueva
-        </button>      
-    </div>          
+    </div>    
 
     <!-- LISTADO CAJAS ABIERTAS -->
-    <table class="table table-bordered table-striped" v-if="cajasAbiertas.length">
+    <table class="table table-bordered" v-if="cajasAbiertas.length">
       <thead>
         <tr>
           <th>ID Caja</th>
