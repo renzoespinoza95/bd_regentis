@@ -5,9 +5,8 @@ Flight::route('GET /inventario', function () {
 
     include DEFINITION;
     autentificar_administrador();
-    global $path_public;
 
-    include $path_public . '/admin/tab_inventario/inicio.php';
+    require_once VARPATH . '/public/admin/tab_inventario/inicio.php';
 });
 
 

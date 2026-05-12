@@ -7,8 +7,8 @@
 Flight::route('GET /usuxreg/inicio', function () {
     include DEFINITION;
     login_admin::autentificar_administrador();
-    global $path_public;
-    include $path_public . '/admin/tab_usuxreg/inicio.php';
+    global VARPATH;
+    include VARPATH . '/admin/tab_usuxreg/inicio.php';
 });
 
 /* /usuxreg/listar */

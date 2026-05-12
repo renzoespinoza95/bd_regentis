@@ -35,6 +35,12 @@ class perso {
    echo "<script src='" . self::$boot . "/assets/js/jquery2.0.0.js'></script>" . "\n";  
   }
 
+  public static function jquery_ui() 
+  {
+   com("boot jquery UI");
+   echo "<script src='" . self::$boot . "/assets/js/jquery-ui.min.js'></script>" . "\n";  
+  }
+
   public static function _es_apache(): bool {
         $sv = strtolower($_SERVER['SERVER_SOFTWARE'] ?? '');
         if ($sv) {
@@ -99,7 +105,6 @@ $aplicar = <<<EOF
    let apphost = '$apphost';  
    let varhost = '$varhost';
    let cdn_base_url = '$bunny_storage_url';
-   let adminhost = varhost + '/public/admin/';
    $adicional
    let dt_language = {
     search: "Buscar:",
@@ -131,7 +136,7 @@ $aplicar = <<<EOF
   // Configura axios globalmente
   axios.defaults.headers.common['Authorization'] = 'Bearer ' + token;
 
-})();  
+})(); 
 </script>
 EOF;
     echo $aplicar;
@@ -188,11 +193,11 @@ public static function preparar_para_encriptar($string) {
     n();
   }
 
-  public static function perso()
+  public static function perso($version = null)
   {
-  com("PERSO");
-  css(self::$boot . "/perso/perso.css");
-  js(self::$boot . "/perso/perso.js");
+    com("PERSO");
+    css(self::$boot . "/perso/perso.css?version=" . $version);
+    js(self::$boot . "/perso/perso.js?version=" . $version);
   }
 
   public static function datatables()

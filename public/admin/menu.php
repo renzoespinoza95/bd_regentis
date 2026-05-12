@@ -191,12 +191,12 @@ $admin_nombre = $administrador_actual['nombres_apellidos'];
 
         <tr>
           <th>Mercado</th>
-          <td>{{ misDatos.mercado_nombre }}</td>
+          <td>{{ misDatos.mercado_id }} → {{ misDatos.mercado_nombre }}</td>
         </tr>
 
         <tr>
           <th>Negocio</th>
-          <td>{{ misDatos.negocio_nombre }}</td>
+          <td>{{ misDatos.neg_id }} → {{ misDatos.negocio_nombre }}</td>
         </tr>
       </table>
     </div>

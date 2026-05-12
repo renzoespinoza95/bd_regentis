@@ -31,8 +31,8 @@
         <h3>Detalle Variable</h3>
       </div>
       <div class="modal-body">
-        <p><strong>ID:</strong> {{ detalle.variables_sistema_id }}</p>
-        <p><strong>Nombre:</strong> {{ detalle.nombre_variable }}</p>
+        <p><strong>ID:</strong> {{ detalle.vari_id }}</p>
+        <p><strong>Nombre:</strong> {{ detalle.nombre }}</p>
         <p><strong>Valor:</strong> {{ detalle.valor }}</p>
       </div>
       <div class="modal-footer">
@@ -50,7 +50,7 @@
       <div class="modal-body">
         <div class="control-group">
           <label>Nombre</label>
-          <input v-model="nuevo.nombre_variable" class="input-xxlarge">
+          <input v-model="nuevo.nombre" class="input-xxlarge">
         </div>
 
         <div class="control-group">
@@ -74,7 +74,7 @@
       <div class="modal-body">
         <div class="control-group">
           <label>Nombre</label>
-          <input v-model="form.nombre_variable" class="input-xxlarge">
+          <input v-model="form.nombre" class="input-xxlarge">
         </div>
 
         <div class="control-group">
@@ -100,7 +100,7 @@ const appVariables = new Vue({
     apphost: (typeof apphost !== 'undefined' ? apphost : ''),
     variables: [],
     nuevo: {
-      nombre_variable: '',
+      nombre: '',
       valor: ''
     },
     form: {},
@@ -123,7 +123,7 @@ const appVariables = new Vue({
       axios.get(`${this.apphost}/variables/listar`)
         .then(r => {
 
-          this.variables = r.data;
+          this.variables = r.data.data || [];
 
           this.$nextTick(() => {
 
@@ -142,21 +142,21 @@ const appVariables = new Vue({
                 .on('click','a.detalle-variable', function(e){
                   e.preventDefault();
                   const id = $(this).data('id');
-                  const v = self.variables.find(x=>x.variables_sistema_id==id);
+                  const v = self.variables.find(x=>x.vari_id==id);
                   if(v) self.abrirModalDetalle(v);
                 })
 
                 .on('click','a.editar-variable', function(e){
                   e.preventDefault();
                   const id = $(this).data('id');
-                  const v = self.variables.find(x=>x.variables_sistema_id==id);
+                  const v = self.variables.find(x=>x.vari_id==id);
                   if(v) self.abrirModalEditar(v);
                 })
 
                 .on('click','a.eliminar-variable', function(e){
                   e.preventDefault();
                   const id = $(this).data('id');
-                  const v = self.variables.find(x=>x.variables_sistema_id==id);
+                  const v = self.variables.find(x=>x.vari_id==id);
                   if(v) self.eliminarVariable(v);
                 });
 
@@ -172,15 +172,15 @@ const appVariables = new Vue({
                     Opciones <span class="caret"></span>
                   </button>
                   <ul class="dropdown-menu">
-                    <li><a href="#" class="detalle-variable" data-id="${v.variables_sistema_id}">Detalle</a></li>
-                    <li><a href="#" class="editar-variable" data-id="${v.variables_sistema_id}">Editar</a></li>
-                    <li><a href="#" class="eliminar-variable" data-id="${v.variables_sistema_id}">Eliminar</a></li>
+                    <li><a href="#" class="detalle-variable" data-id="${v.vari_id}">Detalle</a></li>
+                    <li><a href="#" class="editar-variable" data-id="${v.vari_id}">Editar</a></li>
+                    <li><a href="#" class="eliminar-variable" data-id="${v.vari_id}">Eliminar</a></li>
                   </ul>
                 </div>`;
 
               this.dt.row.add([
-                v.variables_sistema_id,
-                v.nombre_variable,
+                v.vari_id,
+                v.nombre,
                 v.valor,
                 actions
               ]);
@@ -206,13 +206,13 @@ const appVariables = new Vue({
        CREAR
     ========================= */
     abrirModalCrear(){
-      this.nuevo = { nombre_variable:'', valor:'' };
+      this.nuevo = { nombre:'', valor:'' };
       $('#modalCrearVariable').modal('show');
     },
 
     crearVariable(){
 
-      if(!this.nuevo.nombre_variable.trim())
+      if(!this.nuevo.nombre.trim())
         return apprise('Escribe un nombre');
 
       $.blockUI({
@@ -241,7 +241,7 @@ const appVariables = new Vue({
 
     guardarEdicion(){
 
-      if(!this.form.nombre_variable.trim())
+      if(!this.form.nombre.trim())
         return apprise('Escribe un nombre');
 
       $.blockUI({
@@ -265,13 +265,13 @@ const appVariables = new Vue({
     ========================= */
     eliminarVariable(v){
 
-      apprise(`¿Eliminar variable <b>#${v.variables_sistema_id}</b>?`,
+      apprise(`¿Eliminar variable <b>#${v.vari_id}</b>?`,
       {confirm:true},
       ok=>{
         if(!ok) return;
 
         axios.post(`${this.apphost}/variables/eliminar`, {
-          variables_sistema_id: v.variables_sistema_id
+          vari_id: v.vari_id
         })
         .finally(()=> this.listar());
       });

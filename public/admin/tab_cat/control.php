@@ -9,9 +9,7 @@ Flight::route('GET /cat', function () {
     include DEFINITION;
     autentificar_administrador();
 
-    global $path_public;
-
-    include $path_public . '/admin/tab_cat/inicio.php';
+    require_once VARPATH . '/public/admin/tab_cat/inicio.php';
 
 });
 
@@ -40,9 +38,7 @@ Flight::route('GET /category/listar', function () {
             icon,
             brief,
             color,
-            priority,
-            created_at,
-            last_update
+            priority
         FROM pos_category
         WHERE neg_id = %i
         ORDER BY category_id DESC
@@ -73,13 +69,10 @@ Flight::route('POST /category/crear', function () {
 
         'neg_id'      => $neg_id,
         'name'        => $d['name'],
-        'icon'        => "icon_cat.jpg",
+        'icon'        => $d['icon'],
         'brief'       => $d['brief'],
         'color'       => $d['color'],
-        'priority'    => 0,
-        'created_at'  => $now,
-        'last_update' => $now
-
+        'priority'    => 0
     ]);
 
     Flight::json([
@@ -112,7 +105,7 @@ Flight::route('POST /category/editar', function () {
             'name'        => $d['name'],
             'brief'       => $d['brief'],
             'color'       => $d['color'],
-            'last_update' => $now
+            'icon'        => $d['icon']
         ],
         "category_id=%i AND neg_id=%i",
         $d['category_id'],
@@ -151,5 +144,68 @@ Flight::route('POST /category/eliminar', function () {
     Flight::json([
         'status'=>'ok'
     ]);
+
+});
+
+Flight::route('GET /Vy74/crearCategorias/@neg_id', function($neg_id){
+
+    include DEFINITION;
+    autentificar_administrador();
+
+    $neg_id = intval($neg_id);
+
+    if(!$neg_id){
+        Flight::json([
+            'status'=>'error',
+            'msg'=>'neg_id requerido'
+        ],400);
+        return;
+    }
+
+    DB::startTransaction();
+
+    try{
+
+        // 🔥 traer todas las categorías globales activas
+        $cats = DB::query("
+            SELECT *
+            FROM reg_categoria_global
+            WHERE is_activo = 1
+            ORDER BY orden ASC
+        ");
+
+        $insertados = 0;
+
+        foreach($cats as $c){
+
+            DB::insert('pos_category',[
+                'neg_id'               => $neg_id,
+                'name'                 => $c['nombre'],
+                'icon'                 => $c['icono'],
+                'priority'             => $c['orden'],
+                'categoria_global_id'  => $c['categoria_global_id']
+            ]);
+
+            $insertados++;
+        }
+
+        DB::commit();
+
+        Flight::json([
+            'status'=>'ok',
+            'msg'=>"Categorías creadas correctamente",
+            'total'=>$insertados,
+            'neg_id'=>$neg_id
+        ]);
+
+    }catch(Exception $e){
+
+        DB::rollback();
+
+        Flight::json([
+            'status'=>'error',
+            'msg'=>$e->getMessage()
+        ],500);
+    }
 
 });

@@ -7,35 +7,11 @@ date_default_timezone_set('America/Lima');
 define('VARPATH', dirname(__FILE__));
 define ('DEFINITION', VARPATH . "/app/definition.php");
 
-require 'flight/Flight.php';
-
-require_once VARPATH."/inc/config.inc.php";
-//require_once VARPATH."/classes/util.class.php";
-require_once VARPATH."/classes/perso.class.php";
 require_once VARPATH."/classes/Meekrodb2.class.php";
-require_once VARPATH."/classes/JWT.class.php";
-//require_once VARPATH."/classes/paginator.class.php";
-require_once VARPATH."/classes/amarilis.class.php";
-require_once VARPATH."/classes/Mustache.class.php";
-require_once VARPATH."/classes/Lorem.class.php";
-//require_once VARPATH."/classes/boot.class.php";
-require_once VARPATH."/classes/commons.php";
-
-
-perso::config($varhost);   
-
-// Meekro
-DB::$user = $username;
-DB::$password = $password;
-DB::$dbName = $dbname;
-DB::$host = $host;
-DB::query("SET NAMES utf8mb4");
-
-$path_public = VARPATH . "/public";
-
-$sesion_admin_administrador_id = $_COOKIE['sesion_admin_administrador_id_' . $nombre_app] ?? null;
-$sesion_admin_administrador_sobrenombre = $_COOKIE['sesion_admin_administrador_sobrenombre_' . $nombre_app] ?? null;
-
+require_once VARPATH."/classes/perso.class.php";
+require_once VARPATH."/inc/config.inc.php";
+require 'flight/Flight.php';
+$version = 1;
 
 if (perso::_es_apache()) {
     // Headers CORS (una sola vez)
@@ -59,37 +35,27 @@ if (perso::_es_apache()) {
     });
 }
 
+perso::config($varhost);
+$ssa_id = $_COOKIE['ssa_id_' . $nombre_app] ?? null;
+$ssa_sobrenombre = $_COOKIE['ssa_sobrenombre_' . $nombre_app] ?? null;
 
-include VARPATH. "/classes/SimpleImage.class.php";
-include VARPATH. "/classes/upload.class.php";
+// Meekro
+DB::$user = $username;
+DB::$password = $password;
+DB::$dbName = $dbname;
+DB::$host = $host;
+DB::query("SET NAMES utf8mb4");
 
-require_once VARPATH."/app/gatti.control.php";
-
-$upload = new Upload;
-$simple_image = new SimpleImage();
-
-//=== WKHTML ===
-require_once VARPATH."/classes/WkHtmlToPdf.php";
-
-if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-    //echo 'This is a server using Windows!';
-    $options['bin'] = 'C:\wkhtmltopdf\bin\wkhtmltopdf.exe';
-} else {
-    //echo 'This is a server not using Windows!';
-    $options['bin'] = '/usr/bin/wkhtmltopdf';
-}
-
-$wkh_pdf = new WkHtmlToPdf($options);
-
+require_once VARPATH."/classes/commons.php";
 
 $valor_key = $nombre_app . vari("KEY");
 
 $administrador_actual = null;
 
-if (!empty($sesion_admin_administrador_id) && is_string($sesion_admin_administrador_id)) {
+if (!empty($ssa_id) && is_string($ssa_id)) {
 
     // 🔐 desencriptar id usuario de la sesión
-    $usu_id = perso::decrypt($sesion_admin_administrador_id, $valor_key);
+    $usu_id = perso::decrypt($ssa_id, $valor_key);
 
     if (!empty($usu_id)) {
 
@@ -162,7 +128,28 @@ if (!empty($sesion_admin_administrador_id) && is_string($sesion_admin_administra
 
     }
 
+};
+
+require_once VARPATH."/public/admin/login/login_admin.control.php";
+
+require_once VARPATH."/app/gatti.control.php";
+
+if (class_exists('WkHtmlToPdf')) {
+
+    //=== WKHTML ===
+
+    if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+        //echo 'This is a server using Windows!';
+        $options['bin'] = 'C:\wkhtmltopdf\bin\wkhtmltopdf.exe';
+    } else {
+        //echo 'This is a server not using Windows!';
+        $options['bin'] = '/usr/bin/wkhtmltopdf';
+    }
+
+    $wkh_pdf = new WkHtmlToPdf($options);
 }
+
+
 
 // var_dump($administrador_actual);
 // exit;

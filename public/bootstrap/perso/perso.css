@@ -80,7 +80,7 @@
   #appCaja table{
     margin-top: 66px;
   }
-  .dataTables_wrapper {
+  .tabla_esp_sup {
     padding-top: 70px;
   }
 
@@ -89,4 +89,41 @@
 thead {
   background-color: #2C94B7;
 
+}
+/* FILA SELECCIONADA DATATABLE */
+.fila-seleccionada {
+  background-color: #fff3cd !important; /* amarillo suave */
+}
+
+/* BOTONES FLOTANTES DATATABLES */
+.scroll-btn-left,
+.scroll-btn-right {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 35px;
+  height: 35px;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  border-radius: 50%;
+  text-align: center;
+  line-height: 35px;
+  cursor: pointer;
+  z-index: 999;
+}
+
+.scroll-btn-left { left: 5px; }
+.scroll-btn-right { right: 5px; }
+
+.dataTables_scrollBody {
+  min-height: 500px;
+}
+
+/* BLOCK UI */
+.blockUI.blockOverlay {
+    z-index: 2000 !important;
+}
+
+.blockUI.blockMsg {
+    z-index: 2001 !important;
 }

@@ -5,7 +5,7 @@
 Flight::route('GET /auto_msg/inicio', function () {
     include DEFINITION;
     autentificar_administrador();
-    include $path_public . '/admin/tab_auto_msg/inicio.php';
+    include VARPATH . '/admin/tab_auto_msg/inicio.php';
 });
 
 // LISTAR

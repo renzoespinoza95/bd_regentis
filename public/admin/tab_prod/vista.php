@@ -16,20 +16,20 @@
       <ul class="dropdown-menu pull-right">
         <li>
           <a href="#" @click.prevent="abrirModalCrear">
-            <i class="fa fa-plus"></i> Nuevo Producto
+            <i class="fa fa-arrow-circle-right"></i> Nuevo Producto
           </a>
         </li>
 
         <li>
           <a href="#" @click.prevent="abrirReporteProductos">
-            <i class="fa fa-plus"></i> Reporte Productos
+            <i class="fa fa-arrow-circle-right"></i> Reporte Productos
           </a>
         </li>
 
 
         <li>
           <a href="#" @click.prevent="abrirReporteCategoria">
-            <i class="fa fa-plus"></i> Reporte x Categoría
+            <i class="fa fa-arrow-circle-right"></i> Reporte x Categoría
           </a>
         </li>
 
@@ -40,6 +40,7 @@
 
   </div>
 
+<div class="span12 tabla_esp_sup">
     <!-- ===========================
           TABLA PRODUCTOS
     ============================ -->
@@ -55,7 +56,7 @@
         </tr>
       </thead>
     </table>
-
+</div>
     <!-- ===========================
           MODAL DETALLE
     ============================ -->
@@ -129,10 +130,49 @@
       <div class="controls"><input v-model="nuevo.name" class="input-xxlarge"></div>
     </div>
 
-    <div class="control-group">
-      <label>Precio</label>
-      <div class="controls"><input v-model="nuevo.price"></div>
+    <div class="row-fluid">
+
+      <!-- PRECIO REF -->
+      <div class="span4">
+        <label>Precio ref</label>
+        <div class="controls" style="display:flex;gap:5px">
+
+          <input v-model="nuevo.price_ref" disabled style="width:80%">
+
+          <!-- BOTÓN COPIAR -->
+          <button class="btn btn-mini btn-info"
+          @click="copiarPrecio">
+          ➡
+          </button>
+
+        </div>
+      </div>
+
+      <!-- PRECIO -->
+      <div class="span4">
+        <label>Precio</label>
+        <div class="controls">
+          <input v-model="nuevo.price" style="width:80%">
+        </div>
+      </div>
+
+      <!-- STOCK -->
+      <div class="span4">
+        <label>Stock</label>
+        <div class="controls">
+          <input 
+          v-model="nuevo.stock" 
+          type="number"
+          step="1"
+          min="0"
+          @input="validarStock"
+          style="width:80%">
+        </div>
+      </div>
+
     </div>
+
+
 
     <div class="control-group">
       <label>Categorías</label>
@@ -152,7 +192,15 @@
 
 </div>
 <div class="modal-footer">
+  <!--
+  <button class="btn btn-success pull-left" @click="crearAutomatico">
+    <i class="fa fa-bolt"></i> automático
+  </button>  
   <button class="btn btn-primary" @click="crearProduct">Crear</button>
+  -->
+  <button class="btn btn-primary" @click="crearAutomatico">
+    <i class="fa fa-bolt"></i> automático
+  </button>
   <button class="btn" data-dismiss="modal">Cancelar</button>
 </div>
 </div>
@@ -295,6 +343,7 @@
       nuevo: { name:'', price:0, description:'', categorias:[] },
       form: {},
       buscarGlobal:'',
+      nuevo: { name:'', price:0, price_ref:0, description:'',stock:99, categorias:[] },
       resultadosGlobal:[],
       reporteCategorias: [],
       detalle:{},
@@ -357,12 +406,16 @@
           p.categories_ids.includes(c.category_id)
           );
       },
-
+      copiarPrecio(){
+        this.nuevo.price = this.nuevo.price_ref;
+      },
       abrirModalCrear(){
 
         this.nuevo = {
           name:'',
           price:0,
+          stock:99,
+          price_ref:0,
           description:'',
           categorias:[]
         };
@@ -392,10 +445,11 @@
       seleccionarProductoGlobal(p){
 
         this.nuevo.name = p.nombre;
+        this.nuevo.price_ref = Number(p.precio); // 🔥 AQUÍ
 
         const cat = this.categorias.find(c =>
           c.category_id == p.categoria_global_id
-          );
+        );
 
         if(cat){
           this.nuevo.categorias = [cat];
@@ -410,6 +464,53 @@
         axios.post(`${this.apphost}/product/crear`, this.nuevo)
         .then(()=>{ $('#modalCrearProduct').modal('hide'); this.listar(); });
       },
+
+      validarStock(){
+        if(this.nuevo.stock === '' || this.nuevo.stock === null){
+          return;
+        }
+
+        // 🔥 eliminar decimales y texto
+        let val = this.nuevo.stock.toString().replace(/[^0-9]/g, '');
+
+        this.nuevo.stock = val ? parseInt(val) : '';
+      },
+
+      crearAutomatico(){
+
+        if(!this.nuevo.name){
+          apprise("Primero selecciona un producto global");
+          return;
+        }
+
+        const payload = {
+          name: this.nuevo.name,
+          price: this.nuevo.price || this.nuevo.price_ref,
+          price_ref: this.nuevo.price_ref,
+          stock: this.nuevo.stock ? parseInt(this.nuevo.stock) : 9999, // 🔥 FIX
+          description: this.nuevo.description,
+          categorias: this.nuevo.categorias
+        };
+
+        $.blockUI({ message: 'Procesando...' });
+
+        axios.post(`${this.apphost}/tito/producto/agregar`, payload)
+        .then(r=>{
+
+          apprise("Producto creado automáticamente 🚀");
+
+          $('#modalCrearProduct').modal('hide');
+          this.listar();
+
+        })
+        .catch(e=>{
+          apprise("Error: " + (e.response?.data?.msg || 'Error desconocido'));
+        })
+        .finally(()=>{
+          $.unblockUI();
+        });
+
+      },      
 
       abrirEditar(p){
 
@@ -526,7 +627,7 @@
 
       $('#modalCrearProduct').on('hidden', () => {
 
-        this.nuevo = { name:'', price:0, description:'', categorias:[] };
+        this.nuevo = { name:'', price:0, stock:99, description:'', categorias:[] };
         this.buscarGlobal = '';
         this.resultadosGlobal = [];
 

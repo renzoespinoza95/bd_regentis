@@ -6,8 +6,8 @@
 Flight::route('GET /deli-trabajador/inicio', function () {
     include DEFINITION;
     autentificar_administrador();
-    global $path_public;
-    include $path_public . '/admin/tab_tipoxmod/inicio.php';
+
+    require_once VARPATH . '/public/admin/tab_tipoxmod/inicio.php';
 });
 
 /* ===============================

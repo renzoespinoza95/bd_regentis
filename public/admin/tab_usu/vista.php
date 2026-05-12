@@ -14,36 +14,46 @@
       </button>
     </div>
 
-    <table id="tablaUsuarios" class="table table-bordered table-striped">
+    <table id="tablaUsuarios" class="table table-bordered table-condensed sel-fila">
           <thead>
             <tr>
               <th></th>
               <th>ID</th>
               <th>Código</th>
+              <th>Google</th>
               <th>Sobrenombre</th>
+              <th>Nom. Ape.</th>
               <th>Celular</th>
-              <th>Provincia</th>
+              <th>DNI</th>
               <th>Creación</th>
+              <th>Rol</th>
               <th>Tipo Usuario</th>
+              <th>Negocio</th>
               <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="u in usuarios" :key="u.usu_id">
               <td>
-                <img :src="u.avatar_mini" alt="avatar" class="avatar-mini">
+                <div class="avatar-mini">
+                  <img :src="u.img_perfil" alt="avatar">
+                 </div> 
               </td>
               <td>{{ u.usu_id }}</td>
               <td>{{ u.cod_usu }}</td>
+              <td>{{ u.google_uid }}</td>
               <td>{{ u.sobrenombre }}</td>
+              <td>{{ u.nombres_apellidos }}</td>
               <td>{{ u.celular }}</td>
-              <td>{{ u.provincia }}</td>
+              <td>{{ u.dni }}</td>
               <td>{{ u.fecha_creacion }}</td>
+              <td>{{ u.rol_nombre }}</td>
               <td>{{ getTipoDescripcion(u.tipoxusu_id) }}</td>
+              <td>{{ u.negocio_nombre  }}</td>
               <td>
                 <div class="btn-group">
-                  <button class="btn btn-mini btn-primary dropdown-toggle" data-toggle="dropdown">
-                    Opciones <span class="caret"></span>
+                  <button class="btn btn-mini dropdown-toggle" data-toggle="dropdown">
+                  ⚙ <span class="caret"></span>
                   </button>
                   <ul class="dropdown-menu">
                     <li><a href="#" @click.prevent="abrirModalEditar(u)">Editar</a></li>
@@ -63,35 +73,128 @@
       <div class="modal-header"><h3>Nuevo Usuario</h3></div>
       <div class="modal-body">
         <form class="form-horizontal">
-          <div class="control-group">
-            <label class="control-label">Código Usuario</label>
-            <div class="controls">
-              <input v-model="nuevo.cod_usu" class="input-small">
-            </div>
+           <div class="control-group">
+              <label class="control-label">Código Usuario</label>
+              <div class="controls" style="display:flex; gap:5px;">
+                
+                <input v-model="nuevo.cod_usuario" class="input-small">
+
+                <button type="button" class="btn btn-mini" @click="generarCodigo">
+                  🎲
+                </button>
+
+              </div>
           </div>
           <div class="control-group">
-            <label class="control-label">Google UID</label>
-            <div class="controls">
-              <input v-model="nuevo.google_uid" class="input-xxlarge">
+            <label class="control-label">DNI</label>
+            <div class="controls" style="display:flex; gap:5px;">
+              
+              <input v-model="nuevo.dni" class="input-small">
+
+              <button type="button" class="btn btn-mini" @click="generarDni">
+                🎲
+              </button>
+
             </div>
+          </div>          
+
+        <div class="control-group">
+          <label class="control-label">Google UID</label>
+          <div class="controls" style="display:flex; gap:5px;">
+            
+            <input v-model="nuevo.google_uid" class="input-xxlarge">
+
+            <button type="button" class="btn btn-mini" @click="generarUid">
+              🎲
+            </button>
+
           </div>
-          <div class="control-group">
-            <label class="control-label">URL Perfil</label>
-            <div class="controls">
-              <input v-model="nuevo.img_perfil" class="input-xxlarge">
+        </div>
+            <div class="control-group">
+
+                <label class="control-label">
+                    URL Perfil
+                </label>
+
+                <div class="controls">
+
+                    <div style="display:flex; gap:5px; margin-bottom:10px;">
+
+                        <input
+                            type="text"
+                            v-model="formulario.img_perfil"
+                            class="input-xxlarge"
+                        >
+
+                        <button
+                            type="button"
+                            class="btn"
+                            @click="generarAvatarRandom"
+                        >
+                            🎲
+                        </button>
+
+                    </div>
+
+                    <!-- PREVIEW -->
+                    <div
+                        v-if="avatarPreview"
+                        style="margin-bottom:10px;"
+                    >
+                        <img
+                            :src="avatarPreview"
+                            style="
+                                width:120px;
+                                height:120px;
+                                border-radius:10px;
+                                object-fit:cover;
+                                border:1px solid #ccc;
+                            "
+                        >
+                    </div>
+
+                    <!-- GUARDAR -->
+                    <button
+                        type="button"
+                        class="btn btn-success"
+                        @click="guardarAvatarBunny"
+                    >
+                        Guardar en Bunny
+                    </button>
+
+                </div>
+
             </div>
-          </div>
           <div class="control-group">
             <label class="control-label">Sobrenombre</label>
             <div class="controls">
-              <input v-model="nuevo.sobrenombre" class="input-xxlarge">
+              <input v-model="nuevo.sobrenombre" class="input-large">
             </div>
           </div>
           <div class="control-group">
-            <label class="control-label">Celular</label>
-            <div class="controls">
-              <input v-model="nuevo.celular" class="input-small">
-            </div>
+              <label class="control-label">Celular</label>
+
+              <div class="controls">
+
+                  <div style="display:flex; gap:5px; align-items:center;">
+
+                      <input
+                          type="text"
+                          v-model="formulario.celular"
+                          class="input-medium"
+                      >
+
+                      <button
+                          type="button"
+                          class="btn"
+                          @click="generarCelularRandom"
+                      >
+                          🎲
+                      </button>
+
+                  </div>
+
+              </div>
           </div>
           <div class="control-group">
             <label class="control-label">Provincia</label>
@@ -154,26 +257,97 @@
   </div>
   <div class="modal-body">
     <form class="form-horizontal">
+
       <div class="control-group">
         <label class="control-label">Código Usuario</label>
-        <div class="controls">
-          <input v-model="formulario.cod_usuario" class="input-small">
+        <div class="controls" style="display:flex; gap:5px;">
+          
+          <input v-model="formulario.cod_usuario">
+
+          <button type="button" @click="generarCodigoEditar">🎲</button>
+
         </div>
       </div>
+
+      <div class="control-group">
+        <label class="control-label">DNI</label>
+        <div class="controls" style="display:flex; gap:5px;">
+          
+          <input v-model="formulario.dni">
+
+          <button type="button" @click="generarDniEditar">🎲</button>
+
+        </div>
+      </div>      
 
       <div class="control-group">
         <label class="control-label">Google UID</label>
-        <div class="controls">
+        <div class="controls" style="display:flex; gap:5px;">
+          
           <input v-model="formulario.google_uid" class="input-xxlarge">
+
+          <button type="button" class="btn btn-mini" @click="generarUidEditar">
+            🎲
+          </button>
+
         </div>
       </div>
 
-      <div class="control-group">
-        <label class="control-label">URL Perfil</label>
-        <div class="controls">
-          <input v-model="formulario.img_perfil" class="input-xxlarge">
-        </div>
-      </div>
+          <div class="control-group">
+
+              <label class="control-label">
+                  URL Perfil
+              </label>
+
+              <div class="controls">
+
+                  <div style="display:flex; gap:5px; margin-bottom:10px;">
+
+                      <input
+                          type="text"
+                          v-model="formulario.img_perfil"
+                          class="input-xxlarge"
+                      >
+
+                      <button
+                          type="button"
+                          class="btn"
+                          @click="generarAvatarRandom"
+                      >
+                          🎲
+                      </button>
+
+                  </div>
+
+                  <!-- PREVIEW -->
+                  <div
+                      v-if="avatarPreview"
+                      style="margin-bottom:10px;"
+                  >
+                      <img
+                          :src="avatarPreview"
+                          style="
+                              width:120px;
+                              height:120px;
+                              border-radius:10px;
+                              object-fit:cover;
+                              border:1px solid #ccc;
+                          "
+                      >
+                  </div>
+
+                  <!-- GUARDAR -->
+                  <button
+                      type="button"
+                      class="btn btn-success"
+                      @click="guardarAvatarBunny"
+                  >
+                      Guardar en Bunny
+                  </button>
+
+              </div>
+
+          </div>
 
       <div class="control-group">
         <label class="control-label">Sobrenombre</label>
@@ -183,11 +357,37 @@
       </div>
 
       <div class="control-group">
-        <label class="control-label">Celular</label>
+        <label class="control-label">Nombres y Apellidos</label>
         <div class="controls">
-          <input v-model="formulario.celular" class="input-small">
+          <input v-model="formulario.nombres_apellidos" class="input-xxlarge">
         </div>
-      </div>
+      </div>   
+
+        <div class="control-group">
+            <label class="control-label">Celular</label>
+
+            <div class="controls">
+
+                <div style="display:flex; gap:5px; align-items:center;">
+
+                    <input
+                        type="text"
+                        v-model="formulario.celular"
+                        class="input-medium"
+                    >
+
+                    <button
+                        type="button"
+                        class="btn"
+                        @click="generarCelularRandom"
+                    >
+                        🎲
+                    </button>
+
+                </div>
+
+            </div>
+        </div>
 
       <div class="control-group">
         <label class="control-label">Provincia</label>
@@ -199,7 +399,7 @@
       <div class="control-group">
         <label class="control-label">Fecha de Nacimiento</label>
         <div class="controls">
-          <input type="date" v-model="formulario.fecha_nacimiento" class="input-small">
+          <input type="date" v-model="formulario.fecha_nacimiento" class="input-medium">
         </div>
       </div>
 
@@ -209,11 +409,28 @@
           <v-select
             :options="tipousuarios"
             label="descripcion"
-            :reduce="t => t.tipoxusu_id"
-            v-model="formulario.tipoxusu_id"
-            placeholder="Seleccione tipo de usuario…"
-          ></v-select>
+            v-model="formulario.tipoxusu_obj"
+          />
         </div>
+      </div>
+
+      <div class="control-group">
+          <label class="control-label">Asignar Negocio:</label>
+          <div class="controls">
+              <v-select 
+                  :options="negociosValidados" 
+                  label="nombre" 
+                  v-model="negocioSeleccionado"
+                  placeholder="Seleccione un negocio..."
+              >
+                  <template #no-options="{ search, searching, loading }">
+                      No hay negocios disponibles.
+                  </template>
+              </v-select>
+              <span class="help-block" style="font-size: 0.8em;">
+                  Al guardar, el usuario se vinculará a este negocio.
+              </span>
+          </div>
       </div>
 
 
@@ -514,14 +731,54 @@
 </div>
 
 <script>
+/* ======================================
+   🔥 BLOQUEAR UI
+====================================== */
+function bloquearUI(mensaje = 'Procesando...') {
+
+    $.blockUI({
+
+        message:
+            '<h4 style="color:#fff;">' +
+            mensaje +
+            '</h4>',
+
+        css: {
+            border: 'none',
+            padding: '15px',
+            backgroundColor: '#000',
+            borderRadius: '10px',
+            opacity: .7,
+            color: '#fff',
+            zIndex: 2000
+        },
+
+        overlayCSS: {
+            backgroundColor: '#000',
+            opacity: 0.6,
+            zIndex: 1999
+        }
+
+    });
+}
+
+/* ======================================
+   🔥 DESBLOQUEAR UI
+====================================== */
+function desbloquearUI() {
+    $.unblockUI();
+}
+
 new Vue({
   el: '#appUsuario',
   data: {
     apphost: apphost,
     usuarios: [],
+    avatarPreview: '',
     tipousuarios: [],
     nuevo: {
       cod_usuario: '',
+      dni:'', // 🔥 nuevo
       google_uid: '',
       img_perfil: '',
       sobrenombre: '',
@@ -534,10 +791,15 @@ new Vue({
       fecha_fin_premium: ''
     },
     remitenteNombre: '',
-    formulario: {},
+    formulario:{
+      dni:'', // 🔥 nuevo
+      tipoxusu_obj: null
+    },
     detalle: {},
     buscarSobrenombre: '',
     resultados: [],
+    negociosValidados: [],
+    negocioSeleccionado: null,
     chats: [],
     mensajes: [],
     usuarioActual: {},
@@ -558,7 +820,15 @@ new Vue({
       axios.get(this.apphost + '/usuario/listar')
         .then(r => {
           this.usuarios = r.data;
-          this.initDataTable('#tablaUsuarios');
+
+          this.$nextTick(() => {
+            this.initDataTable('#tablaUsuarios');
+
+            setTimeout(() => { // 🔥 MUY IMPORTANTE
+              agregarScrollBotones($('#tablaUsuarios'));
+            }, 200);
+          });
+
         })
         .catch(err => {
           console.error('Error al listar usuarios:', err);
@@ -567,6 +837,16 @@ new Vue({
           }
         });
     },
+    generarCelularRandom() {
+
+        const numero =
+            '9' +
+            Math.floor(
+                10000000 + Math.random() * 90000000
+            )
+
+        this.formulario.celular = numero
+    },    
     obtenerTipousuarios() {
       axios.get(this.apphost + '/tipoxusu/listar')
         .then(r => { this.tipousuarios = r.data; });
@@ -580,18 +860,17 @@ new Vue({
       this.$nextTick(() => {
         if ($.fn.DataTable.isDataTable(sel)) $(sel).DataTable().destroy();
           $(sel).DataTable({
-            scrollX: true,
-            dom: 'frtip',
-            columnDefs: [
-              { targets: 0, orderable: false, searchable: false } // columna Foto
-            ],
-            order: [[1, 'desc']] // ordenar por ID (ahora es la col 1)
-          });
+                language: (typeof dt_language !== 'undefined' ? dt_language : undefined),
+                scrollX: true,
+                dom: 'frtip',
+                order: [[0,'desc']]
+              });
       });
     },
     abrirModalCrear() {
       this.nuevo = {
         cod_usuario: '',
+        dni: '', // 🔥 AGREGAR
         google_uid: '',
         img_perfil: '',
         sobrenombre: '',
@@ -603,32 +882,357 @@ new Vue({
         is_premium: 0,
         fecha_fin_premium: ''
       };
+
       $('#modalCrearUsuario').modal('show');
     },
+     /* ======================================
+       🎲 GENERAR AVATAR RANDOM
+    ====================================== */
+    generarAvatarRandom() {
+
+        bloquearUI('Generando avatar...');
+
+        const seed =
+            Date.now() +
+            '_' +
+            Math.floor(Math.random() * 999999);
+
+        const url =
+            'https://i.pravatar.cc/300?u=' +
+            seed;
+
+        // 🔥 precargar imagen
+        const img = new Image();
+
+        img.onload = () => {
+
+            this.avatarPreview = url;
+
+            desbloquearUI();
+        };
+
+        img.onerror = () => {
+
+            desbloquearUI();
+
+            apprise(
+                'No se pudo generar avatar'
+            );
+        };
+
+        img.src = url;
+    },
+
+    /* ======================================
+       ☁ SUBIR A BUNNY
+    ====================================== */
+    async guardarAvatarBunny() {
+
+      try {
+
+          if (!this.avatarPreview) {
+
+              apprise(
+                  'Primero genera un avatar'
+              );
+
+              return;
+          }
+
+          bloquearUI(
+              'Subiendo avatar...'
+          );
+
+          const formData =
+              new FormData();
+
+          formData.append(
+              'url',
+              this.avatarPreview
+          );
+
+          formData.append(
+              'usu_id',
+              this.formulario.usu_id
+          );
+
+
+          const r = await fetch(
+
+              this.apphost +
+              '/usuario/subirAvatarBunny',
+
+              {
+                  method: 'POST',
+                  body: formData
+              }
+          );
+
+          const data =
+              await r.json();
+
+          desbloquearUI();
+
+          if (data.success) {
+
+          /* ======================================
+             🔥 FORMULARIO
+          ====================================== */
+
+          this.formulario.img_perfil =
+              data.url;
+
+          this.avatarPreview =
+              data.url;
+
+          /* ======================================
+             🔥 ACTUALIZAR TABLA LOCAL
+          ====================================== */
+
+          const idx =
+              this.usuarios.findIndex(
+
+                  u => Number(u.usu_id) ===
+                       Number(this.formulario.usu_id)
+              );
+
+          if (idx !== -1) {
+
+              this.usuarios[idx].img_perfil =
+                  data.url;
+          }
+
+          /* ======================================
+             🔥 REFRESCAR DATATABLE
+          ====================================== */
+
+          this.$nextTick(() => {
+
+              if (
+                  $.fn.DataTable.isDataTable(
+                      '#tablaUsuarios'
+                  )
+              ) {
+
+                  $('#tablaUsuarios')
+                      .DataTable()
+                      .destroy();
+              }
+
+              $('#tablaUsuarios').DataTable({
+
+                  language:
+                      (typeof dt_language !== 'undefined'
+                          ? dt_language
+                          : undefined),
+
+                  scrollX: true
+              });
+
+          });
+
+          /* ======================================
+             🔥 ALERTA
+          ====================================== */
+
+          apprise(
+              'Avatar subido correctamente'
+          );
+      } else {
+
+              apprise(
+                  data.error ||
+                  'Error al subir'
+              );
+          }
+
+      } catch (e) {
+
+          desbloquearUI();
+
+          console.error(e);
+
+          apprise(
+              'Error de conexión'
+          );
+      }
+  },
     crearUsuario() {
-      axios.post(this.apphost + '/usuario/crear', this.nuevo)
-        .then(() => {
+      axios.post(this.apphost + '/xico/usu/crear', this.nuevo)
+        .then((r) => {
+
           $('#modalCrearUsuario').modal('hide');
-          this.obtenerUsuarios();
+
+          // 🔥 crear objeto nuevo (igual al datatable)
+          const nuevoUsuario = {
+            usu_id: r.data.usu_id,
+            cod_usu: this.nuevo.cod_usuario,
+            dni: this.nuevo.dni,
+            avatar_mini: this.nuevo.img_perfil || '',
+            sobrenombre: this.nuevo.sobrenombre,
+            celular: this.nuevo.celular,
+            provincia: this.nuevo.provincia,
+            fecha_creacion: new Date().toISOString().slice(0,19).replace('T',' '),
+            rol_nombre: '—',            
+            tipoxusu_id: this.nuevo.tipoxusu_id?.tipoxusu_id || null,
+            negocio_nombre: '—'
+          };
+
+          // 🔥 agregar al array Vue
+          this.usuarios.unshift(nuevoUsuario);
+
+          // 🔥 agregar al DataTable sin recargar
+          const dt = $('#tablaUsuarios').DataTable();
+
+          dt.row.add([
+            `<img src="${nuevoUsuario.avatar_mini}" class="avatar-mini">`,
+            nuevoUsuario.usu_id,
+            nuevoUsuario.cod_usu,
+            nuevoUsuario.google_uid,
+            nuevoUsuario.sobrenombre,
+            nuevoUsuario.celular,
+            nuevoUsuario.provincia,
+            nuevoUsuario.fecha_creacion,
+            nuevoUsuario.rol_nombre,
+            this.getTipoDescripcion(nuevoUsuario.tipoxusu_id),
+            nuevoUsuario.negocio_nombre,
+            this.renderOpciones(nuevoUsuario.usu_id)
+          ]).draw(false);
+
         });
     },
+
+    renderOpciones(id){
+      return `
+        <div class="btn-group">
+          <button class="btn btn-mini dropdown-toggle" data-toggle="dropdown">
+            ⚙ <span class="caret"></span>
+          </button>
+          <ul class="dropdown-menu">
+            <li><a href="#" onclick="editarUsuario(${id})">Editar</a></li>
+          </ul>
+        </div>
+      `;
+    },
     abrirModalEditar(u) {
-      // Asegúrate de mapear correctamente tipoxusu_id desde el registro
-      this.formulario = Object.assign({}, u, {
-        tipoxusu_id: u.tipoxusu_id ?? u.tipoxusuario_id ?? null
-      });
+
+      this.formulario = {
+        usu_id: u.usu_id,
+
+        cod_usuario: u.cod_usu,   // 🔥 map correcto
+        dni: u.dni || '',         // 🔥 importante
+        google_uid: u.google_uid || '',
+        nombres_apellidos: u.nombres_apellidos || '',
+        img_perfil: u.img_perfil || '',
+        sobrenombre: u.sobrenombre || '',
+        celular: u.celular || '',
+        provincia: u.provincia || '',
+        fecha_nacimiento: u.fecha_nacimiento || '',
+
+        tipoxusu_id: Number(u.tipoxusu_id) || null,
+
+        is_activo: u.is_activo == 1,
+        is_premium: u.is_premium == 1,
+        fecha_fin_premium: u.fecha_fin_premium || ''
+      };
+
+      this.negocioSeleccionado = this.negociosValidados.find(
+          n => Number(n.neg_id) === Number(u.neg_id)
+      ) || null;
+
+      this.formulario.tipoxusu_obj = this.tipousuarios.find(
+        t => t.tipoxusu_id == u.tipoxusu_id
+      ) || null;
+
       $('#modalEditarUsuario').modal('show');
     },
     guardarEdicion() {
-      axios.post(this.apphost + '/usuario/editar', this.formulario)
-        .then(()=>{ $('#modalEditarUsuario').modal('hide'); this.obtenerUsuarios(); });
+      // Extraemos el ID si negocioSeleccionado es un objeto, 
+      // o lo usamos directamente si ya es un ID.
+      const idFinalNegocio = (this.negocioSeleccionado && typeof this.negocioSeleccionado === 'object') 
+                             ? this.negocioSeleccionado.neg_id 
+                             : this.negocioSeleccionado;
+
+      const payload = {
+        ...this.formulario,
+        tipoxusu_id: this.formulario.tipoxusu_obj?.tipoxusu_id,
+        neg_id: idFinalNegocio // 🔥 Ahora enviamos solo el número "10"
+      };
+
+      axios.post(this.apphost + '/xico/usu/editar', payload)
+        .then(() => {
+          $('#modalEditarUsuario').modal('hide');
+          this.obtenerUsuarios();
+          apprise("Actualizado con éxito");
+        });
     },
+
+
     eliminarUsuario(u) {
       apprise(`Liquidar usuario ${u.usu_id}?`,{confirm:true}, r=>{
         if(r) axios.post(this.apphost+'/usuario/liquidar',{ usu_id:u.usu_id })
                  .then(()=>this.obtenerUsuarios());
       });
     },
+
+    generarCodigo() {
+        this.nuevo.cod_usuario = 'ADM' + this.randomDigits(4);
+      },
+
+      generarCodigoEditar(){
+        this.formulario.cod_usuario = 'ADM' + this.randomDigits(4);
+      },
+
+      generarDni(){
+        console.log("gen dni");
+        this.nuevo.dni = this.randomDniFake();
+      },
+
+      generarDniEditar(){
+        this.formulario.dni = this.randomDniFake();
+      },
+
+      generarUid(){
+        this.nuevo.google_uid = this.randomUid();
+      },
+
+      generarUidEditar(){
+        this.formulario.google_uid = this.randomUid();
+      },
+
+      randomUid(){
+        const letras = 'ABCDEFGHIJKLMNPQRSTUVWXYZ'; // sin O
+
+        const letraIni = letras[Math.floor(Math.random()*letras.length)];
+        const letraFin = letras[Math.floor(Math.random()*letras.length)];
+
+        let numeros = '';
+        for(let i=0;i<6;i++){
+          numeros += Math.floor(Math.random()*10);
+        }
+
+        return (letraIni + numeros + letraFin).toUpperCase();
+      },
+
+      // 🔥 helpers
+      randomDigits(n){
+        let s = '';
+        for(let i=0;i<n;i++){
+          s += Math.floor(Math.random()*10);
+        }
+        return s;
+      },
+
+      randomDniFake(){
+        const letras = 'ABCDEFGHIJKLMNPQRSTUVWXYZ'; // sin O
+
+        const letraIni = letras[Math.floor(Math.random()*letras.length)];
+        const letraFin = letras[Math.floor(Math.random()*letras.length)];
+
+        const numero = this.randomDigits(8);
+
+        return (letraIni + numero + letraFin).toUpperCase();
+      },    
 
     abrirModalDetalle(u) {
       axios.get(this.apphost + '/usu/detalleUsu/' + u.usu_id)
@@ -748,7 +1352,17 @@ new Vue({
         });
     },
 
-
+    async cargarNegociosValidados() {
+          try {
+            const r = await axios.get(this.apphost + '/xico/negocios/validados');
+            this.negociosValidados = r.data.map(n => ({
+                neg_id: Number(n.neg_id), // 🔥 Nos aseguramos de que el ID sea número aquí también
+                nombre: n.nombre
+            }));
+          } catch (err) {
+            console.error("Error cargando negocios:", err);
+          }
+    },
 
     onFileChange(e) {
       this.errorUpload = '';
@@ -794,16 +1408,23 @@ new Vue({
   mounted() {
     this.obtenerUsuarios();
     this.obtenerTipousuarios();
+    this.cargarNegociosValidados();
   }
 });
 </script>
 <style>
-  .avatar-mini{
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    object-fit: cover;
-    display: block;
+  .avatar-mini {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      overflow: hidden; /* 🔥 ESTO ES LO QUE TE FALTA */
+  }
+
+  .avatar-mini img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
   }
 </style>
 

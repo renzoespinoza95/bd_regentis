@@ -18,7 +18,7 @@
   --chat-body:linear-gradient(180deg,#eef2ff,#f9fbff);
 
   /* Burbujas */
-  --bubble-left:#ffffff;
+  --bubble-left:linear-gradient(135deg,#FFE082,#FFC107);
   --bubble-right:linear-gradient(135deg,#4facfe,#00f2fe);
   --bubble-border:#ffffff;
 
@@ -276,42 +276,201 @@
   border-radius:10px;
 }
 
+/* SIDEBARS */
+.sidebar-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.sidebar-wrapper {
+  display: flex;
+  width: 200%;
+  transition: transform 0.3s ease;
+}
+
+.sidebar-page {
+  width: 50%;
+}
+
+.nav-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0,0,0,0.6);
+  color: white;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  text-align: center;
+  line-height: 28px;
+  cursor: pointer;
+  z-index: 10;
+}
+
+.left { left: 5px; }
+.right { right: 5px; }
+
+.badge-red {
+  position: absolute;
+  right: 10px;
+  top: 18px;
+
+  width: 22px;        /* 🔥 mismo ancho */
+  height: 22px;       /* 🔥 mismo alto */
+
+  background: #e74c3c;
+  color: white;
+
+  border-radius: 50%; /* 🔥 círculo perfecto */
+
+  display: flex;      /* 🔥 centra el número */
+  align-items: center;
+  justify-content: center;
+
+  font-size: 11px;
+  font-weight: bold;
+}
+
+#appChat {
+  display: flex;
+  height: 80vh;
+  margin-top: 30px;
+}
+
+.sidebar-container {
+  height: 100%;
+}
+
+.sidebar-wrapper {
+  height: 100%;
+}
+
+.sidebar-page {
+  height: 100%;
+  overflow-y: auto;
+  background-color: white;
+}
+
+.chat-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+}
+
+.chat-text {
+  flex: 1;
+}
+
+.last-msg {
+  font-size: 12px;
+  color: #999;
+  margin-top: 2px;
+}
+
+.contact:hover {
+  background: #05DD8C;
+}
+
 </style>
 <div id="appChat" class="row-fluid" v-cloak>
 
   <!-- SIDEBAR -->
-  <div class="span3 sidebar">
+  <div class="span3 sidebar-container">
 
-    <div class="contact" style="background:#527497">
-      <div class="name">
-        Yo: <span class="label label-success">{{ adminName }}</span>
+  <!-- FLECHAS -->
+  <div class="nav-arrow left" @click="prevSidebar">
+    ◀
+  </div>
+
+  <div class="nav-arrow right" @click="nextSidebar">
+    ▶
+  </div>
+
+  <!-- WRAPPER -->
+  <div class="sidebar-wrapper" :style="sidebarStyle">
+
+    <!-- 🔹 SIDEBAR 1 (usuarios ORIGINAL) -->
+    <div class="sidebar-page">
+
+      <div style="background:orange">
+        DEBUG: {{ users.length }} usuarios
       </div>
-      <div class="muted">usu_id = {{ ADMIN_ID }}</div>
+
+      <div style="background:lightblue">
+        DEBUG filtered: {{ filteredUsers.length }}
+      </div>
+
+      <div class="contact" style="background:#527497">
+        <div class="name">
+          Yo: <span class="label label-success">{{ adminName }}</span>
+        </div>
+        <div class="muted">usu_id = {{ ADMIN_ID }}</div>
+      </div>
+
+      <div style="padding:10px">
+        <input v-model="searchUser"
+          placeholder="Buscar usuario..."
+          class="input-block-level">
+      </div>
+
+      <div
+        v-for="u in filteredUsers"
+        :key="u.id"
+        :class="['contact', tipoClass(u.tipoxusu_id), {active: activeUser && activeUser.id===u.id}]"
+        @click="setActive(u)"
+      >
+        <img class="avatar" :src="avatarSrc(u)">
+        <div class="name">{{ u.name }}</div>
+      </div>
+
     </div>
 
-    <div
-      v-for="u in users"
-      v-if="u.id !== ADMIN_ID"
-      :key="u.id"
-      :class="['contact', tipoClass(u.tipoxusu_id), {active: activeUser && activeUser.id===u.id}]"
-      @click="setActive(u)"
-    >
-      <img class="avatar" :src="avatarSrc(u)" @error="onImgError">
+    <!-- 🔹 SIDEBAR 2 (CHATS 🔥 NUEVO) -->
+    <div class="sidebar-page">
 
-      <div class="info">
-        <div class="name">
-          <i class="icon-user"></i> {{ u.name }}
-        </div>
-        <div class="sub">
-          <span class="muted">usu_id = {{ u.id }}</span>
-          <span v-if="u.provincia"> · {{ u.provincia }}</span>
-        </div>
+      <div class="contact" style="background:#2c3e50; color:white">
+        <b>Chats</b>
       </div>
 
-      <div style="clear:both"></div>
+      <div
+        v-for="c in chatsSidebar"
+        :key="c.chat_id"
+        class="contact chat-row"
+        @click="abrirChatSidebar(c)"
+      >
+
+        <!-- 🖼️ AVATAR -->
+        <img
+          class="avatar"
+          :src="c.usu1_id == ADMIN_ID ? c.img_usu2 : c.img_usu1"
+        >
+
+        <!-- 📄 TEXO -->
+        <div class="chat-text">
+
+          <div class="name">
+            {{ nombreChat(c) }}
+          </div>
+
+          <div class="last-msg">
+            {{ c.ultimo_mensaje || 'Sin mensajes' }}
+          </div>
+
+        </div>
+
+        <!-- 🔴 BADGE -->
+        <span v-if="c.no_leidos > 0" class="badge-red">
+          {{ c.no_leidos }}
+        </span>
+
+      </div>
+
     </div>
 
   </div>
+
+</div>
 
   <!-- CHAT -->
   <div class="span9 chat-box">
@@ -394,7 +553,10 @@ new Vue({
     apphost: (typeof apphost !== 'undefined' ? apphost : ''),
     ADMIN: ADMIN,
     ADMIN_ID: <?= intval($administrador_actual['usu_id'] ?? 0) ?>,
-
+    searchUser: '',
+    sidebarIndex: 0,
+    chatsSidebar: [],
+    intervalChats: null,
     users: [],
     activeUser: null,
 
@@ -407,13 +569,42 @@ new Vue({
   computed: {
 
     adminName () {
-      return this.ADMIN.sobrenombre || this.ADMIN.nombres_apellidos || 'Yo';
+      return this.ADMIN.nombres_apellidos || this.ADMIN.sobrenombre || 'Yo';
     },
 
-    currentThread () {
-      if (!this.activeUser) return [];
-      return this.threads[this.activeUser.id] || [];
-    }
+    sidebarStyle() {
+      return {
+        transform: `translateX(-${this.sidebarIndex * 50}%)`
+      }
+    },
+
+    filteredUsers () {
+
+        if (!this.users || !this.users.length) return [];
+
+        const txt = (this.searchUser || '').toLowerCase().trim();
+
+        let lista = this.users.filter(u => u.id !== this.ADMIN_ID);
+
+        if (!txt) return lista;
+
+        return lista.filter(u => {
+
+          const texto =
+            (u.nombres_apellidos || '') + ' ' +
+            (u.name || '') + ' ' +
+            (u.provincia || '');
+
+          return texto.toLowerCase().includes(txt);
+
+        });
+
+      },
+
+      currentThread () {
+        if (!this.activeUser) return [];
+        return this.threads[this.activeUser.id] || [];
+      }
 
   },
 
@@ -436,6 +627,47 @@ new Vue({
       const d = new Date(fecha.replace(' ', 'T'));
       return d.getHours().toString().padStart(2,'0') + ':' +
              d.getMinutes().toString().padStart(2,'0');
+    },    
+
+    nextSidebar() {
+      this.sidebarIndex = (this.sidebarIndex + 1) % 2
+    },
+
+    prevSidebar() {
+      this.sidebarIndex = (this.sidebarIndex - 1 + 2) % 2
+    },
+
+    nombreChat(c) {
+      return c.usu1_id == this.ADMIN_ID
+        ? c.usuario2
+        : c.usuario1
+    },
+
+    abrirChatSidebar(c) {
+
+      const uid = c.usu1_id == this.ADMIN_ID
+        ? c.usu2_id
+        : c.usu1_id
+
+      const user = this.users.find(u => u.id == uid)
+
+      if (user) this.setActive(user)
+    },
+
+    async fetchChatsSidebar() {
+
+      try {
+
+        const r = await axios.post(`${this.apphost}/WDAA/cant_msg`, {
+          usu_id: this.ADMIN_ID
+        })
+
+        this.chatsSidebar = r.data.data
+
+      } catch (e) {
+        console.error('❌ error chats sidebar', e)
+      }
+
     },
 
     /* =========================
@@ -475,22 +707,40 @@ new Vue({
       const chat_id = this.chatIds[this.activeUser.id];
       if (!chat_id) return;
 
-      const list = await axios.get(
-        `${this.apphost}/msg/listar/${chat_id}/${this.ADMIN_ID}`
-      );
+      try {
 
-      const ordenados = list.data.sort(
-        (a, b) => new Date(a.fecha_creacion) - new Date(b.fecha_creacion)
-      );
+        const r = await axios.get(
+          `${this.apphost}/msg/listar/${chat_id}/${this.ADMIN_ID}`
+        );
 
-      const mensajes = this.procesarMensajes(ordenados, this.activeUser);
+        // 🔥 mensajes crudos
+        const mensajesRaw = Array.isArray(r.data.mensajes)
+          ? r.data.mensajes
+          : [];
 
-      this.$set(this.threads, this.activeUser.id, mensajes);
+        // 🔥 ordenar
+        const ordenados = mensajesRaw.sort(
+          (a, b) => new Date(a.fecha_creacion) - new Date(b.fecha_creacion)
+        );
 
-      this.$nextTick(() => {
-        const el = this.$refs.chatBody;
-        if (el) el.scrollTop = el.scrollHeight;
-      });
+        // 🔥 procesar para UI
+        const mensajesProcesados = this.procesarMensajes(
+          ordenados,
+          this.activeUser
+        );
+
+        // 🔥 guardar reactivo
+        this.$set(this.threads, this.activeUser.id, mensajesProcesados);
+
+        // 🔥 scroll automático
+        this.$nextTick(() => {
+          const el = this.$refs.chatBody;
+          if (el) el.scrollTop = el.scrollHeight;
+        });
+
+      } catch (e) {
+        console.error('❌ error refreshChat:', e);
+      }
 
     },
 
@@ -499,14 +749,50 @@ new Vue({
     ========================= */
     async fetchUsers () {
 
-      const r = await axios.get(`${this.apphost}/usuario/listar`);
+      console.log('📡 llamando endpoint...');
 
-      this.users = r.data.map(u => ({
-        id: Number(u.usu_id),
-        name: u.sobrenombre || u.cod_usu,
-        tipoxusu_id: u.tipoxusu_id || 0,
-        provincia: u.provincia || ''
-      }));
+      try {
+
+        const r = await axios.get(`${this.apphost}/oxi/usuario/listar`);
+
+        console.log('✅ respuesta API:', r.data);
+
+        const mapped = r.data.map(u => ({
+
+          id: Number(u.usu_id),
+
+          name:
+            u.nombres_apellidos ||
+            u.sobrenombre ||
+            u.name ||
+            u.cod_usu ||
+
+            'Sin nombre',
+
+          nombres_apellidos:
+            u.nombres_apellidos ||
+            u.sobrenombre ||
+            u.name ||
+            u.cod_usu ||
+
+            '',
+
+          tipoxusu_id: u.tipoxusu_id || 0,
+          provincia: u.provincia || ''
+
+        }));
+
+        console.log('🧠 usuarios mapeados:', mapped);
+
+        this.users = mapped;
+
+        console.log('📦 users asignado:', this.users);
+
+      } catch (e) {
+
+        console.error('❌ ERROR fetchUsers:', e);
+
+      }
 
     },
 
@@ -515,27 +801,53 @@ new Vue({
     ========================= */
     async setActive (u) {
 
-      this.activeUser = u;
+      try {
 
-      const r = await axios.get(`${this.apphost}/chat/open_barsi/${u.id}`);
-      this.chatIds[u.id] = r.data.chat_id;
+        // 🔥 activar usuario
+        this.activeUser = u;
 
-      const list = await axios.get(
-        `${this.apphost}/msg/listar/${this.chatIds[u.id]}/${this.ADMIN_ID}`
-      );
+        // 🔥 abrir / crear chat
+        const r = await axios.get(
+          `${this.apphost}/chat/open_barsi/${u.id}`
+        );
 
-      const ordenados = list.data.sort(
-        (a, b) => new Date(a.fecha_creacion) - new Date(b.fecha_creacion)
-      );
+        const chat_id = r.data.chat_id;
 
-      const mensajes = this.procesarMensajes(ordenados, u);
+        // guardar relación usuario → chat
+        this.$set(this.chatIds, u.id, chat_id);
 
-      this.$set(this.threads, u.id, mensajes);
+        // 🔥 traer mensajes
+        const res = await axios.get(
+          `${this.apphost}/msg/listar/${chat_id}/${this.ADMIN_ID}`
+        );
 
-      this.$nextTick(() => {
-        const el = this.$refs.chatBody;
-        if (el) el.scrollTop = el.scrollHeight;
-      });
+        // 🔥 FIX IMPORTANTE (tu error estaba aquí)
+        const mensajesRaw = Array.isArray(res.data.mensajes)
+          ? res.data.mensajes
+          : [];
+
+        // 🔥 ordenar correctamente
+        const ordenados = mensajesRaw.sort(
+          (a, b) => new Date(a.fecha_creacion) - new Date(b.fecha_creacion)
+        );
+
+        // 🔥 procesar para UI
+        const mensajes = this.procesarMensajes(ordenados, u);
+
+        // 🔥 guardar en threads reactivo
+        this.$set(this.threads, u.id, mensajes);
+
+        // 🔥 scroll automático
+        this.$nextTick(() => {
+          const el = this.$refs.chatBody;
+          if (el) el.scrollTop = el.scrollHeight;
+        });
+
+      } catch (e) {
+
+        console.error('❌ error en setActive:', e);
+
+      }
 
     },
 
@@ -643,7 +955,26 @@ async eliminarChat () {
   },
 
   async mounted () {
-    await this.fetchUsers();
+
+    console.log('🔥 mounted iniciado');
+
+    await this.fetchUsers()
+    await this.fetchChatsSidebar()
+
+    this.intervalChats = setInterval(() => {
+      this.fetchChatsSidebar()
+    }, 60000) // 1 minuto
+
+    console.log('🔥 después de fetchUsers:', this.users);
+
+  },
+  watch: {
+    searchUser (val) {
+      console.log('🔍 escribiendo:', val);
+    }
+  },
+    beforeDestroy () {
+    clearInterval(this.intervalChats)
   }
 
 });

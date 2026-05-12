@@ -23,20 +23,26 @@
           <th>Acciones</th>
         </tr>
       </thead>
-      <tbody>
-        <tr v-for="s in sliders" :key="s.slider_id">
+      <tbody id="sortable">
+        <tr v-for="s in sliders" 
+          :key="s.slider_id" 
+          :data-id="s.slider_id">
           <td>{{ s.slider_id }}</td>
           <td>{{ s.grupo }}</td>
           <td><img :src="s.img_thumb" style="max-width:100px; max-height:60px;" /></td>
-          <td>{{ s.orden }}</td>
+         <td style="text-align:center;">
+            <span class="label label-info drag-handle" style="cursor:move;">
+              ⇅ ({{ s.orden }})
+            </span>
+          </td>
           <td>{{ s.is_visible ? 'Sí' : 'No' }}</td>
           <td>{{ s.fecha_creacion }}</td>
           <td>{{ s.fecha_fin }}</td>
           <td>{{ s.neg_id }}</td>
           <td>
             <div class="btn-group">
-              <button class="btn btn-mini btn-primary dropdown-toggle" data-toggle="dropdown">
-                Opciones <span class="caret"></span>
+              <button class="btn btn-mini dropdown-toggle" data-toggle="dropdown">
+                ⚙ <span class="caret"></span>
               </button>
               <ul class="dropdown-menu">
                 <li><a href="#" @click.prevent="abrirModalEditar(s)">Editar</a></li>
@@ -63,6 +69,12 @@
               </div>
             </div>
           </div>
+          <div class="control-group">
+            <label class="control-label">Descripción</label>
+            <div class="controls">
+              <textarea id="snCrearDescripcion"></textarea>
+            </div>
+          </div>       
           <div class="control-group">
             <label class="control-label">Grupo</label>
             <div class="controls">
@@ -100,12 +112,6 @@
               <input type="datetime-local" v-model="nuevo.fecha_fin" class="input-medium">
             </div>
           </div>
-          <div class="control-group">
-            <label class="control-label">Negocio ID</label>
-            <div class="controls">
-              <input type="number" v-model.number="nuevo.neg_id" class="input-small">
-            </div>
-          </div>
         </form>
       </div>
       <div class="modal-footer">
@@ -128,6 +134,12 @@
               </div>
             </div>
           </div>
+          <div class="control-group">
+            <label class="control-label">Descripción</label>
+            <div class="controls">
+              <textarea id="snEditarDescripcion"></textarea>
+            </div>
+          </div>         
 
           <div class="control-group">
             <label class="control-label">Grupo</label>
@@ -166,15 +178,12 @@
               <input type="datetime-local" v-model="formulario.fecha_fin" class="input-medium">
             </div>
           </div>
-          <div class="control-group">
-            <label class="control-label">Negocio ID</label>
-            <div class="controls">
-              <input type="number" v-model.number="formulario.neg_id" class="input-small">
-            </div>
-          </div>
         </form>
       </div>
       <div class="modal-footer">
+        <button class="btn btn-info" @click="actualizarDescripcion">
+            Descripción
+        </button>
         <button class="btn btn-primary" @click="guardarEdicion">Guardar</button>
         <button class="btn" data-dismiss="modal">Cancelar</button>
       </div>
@@ -187,9 +196,9 @@
         <dl class="dl-horizontal">
           <dt>ID</dt><dd>{{ detalle.slider_id }}</dd>
           <dt>Imagen</dt><dd><img :src="detalle.img_thumb" style="max-width:200px; max-height:100px;" /></dd>
+          <dt>Descripcion</dt><dd>{{ detalle.descripcion }}</dd>
           <dt>Orden</dt><dd>{{ detalle.orden }}</dd>
-          <dt>Visible</dt><dd>{{ detalle.is_visible ? 'Sí' : 'No' }}</dd>
-          <dt>Creación</dt><dd>{{ detalle.fecha_creacion }}</dd>
+          <dt>Visible</dt><dd>{{ detalle.is_visible ? 'Sí' : 'No' }}</dd>          
           <dt>Fin</dt><dd>{{ detalle.fecha_fin }}</dd>
           <dt>Negocio ID</dt><dd>{{ detalle.neg_id }}</dd>
         </dl>
@@ -202,11 +211,35 @@
 </div>
 
 <script>
+
+  function bloquearUI(mensaje = 'Procesando...') {
+  $.blockUI({
+    message: '<h4 style="color:#fff;">' + mensaje + '</h4>',
+    css: {
+      border: 'none',
+      padding: '15px',
+      backgroundColor: '#000',
+      borderRadius: '10px',
+      opacity: .7,
+      color: '#fff',
+      zIndex: 2000 // 🔥 IMPORTANTE
+    },
+    overlayCSS: {
+      backgroundColor: '#000',
+      opacity: 0.6,
+      zIndex: 1999 // 🔥 por debajo del mensaje pero encima de modal
+    }
+  });
+}
+
+  function desbloquearUI() {
+    $.unblockUI();
+  }
+
 new Vue({
   el: '#appSlider',
   data: {
     apphost: apphost,
-    cdn_base_url: cdn_base_url,
     sliders: [],
     letrasAZ: Array.from({length: 26}, (_, i) => String.fromCharCode(65 + i)),
     nuevo: {
@@ -217,6 +250,7 @@ new Vue({
       fecha_creacion: '',
       fecha_fin: '',
       neg_id: 0,
+      descripcion: '',   // 👈 NUEVO
       grupo: ''   // <── NUEVO
     },
     formulario: {
@@ -228,27 +262,33 @@ new Vue({
       fecha_creacion: '',
       fecha_fin: '',
       neg_id: 0,
+      descripcion: '',   // 👈 NUEVO
       grupo: '' 
     },
     detalle: {}
   },
-  methods: {
+  methods: {    
     obtenerSliders() {
-          fetch(this.apphost + '/slider/listar')
-            .then(r => r.json())
-            .then(data => {
-              this.sliders = data.map(s => ({
-                ...s,
-                // 💡 FIX: Construir la URL del CDN usando el nombre del archivo 'img' y la ruta 'sliders'
-                img_thumb: cdn_base_url + '/sliders/' + s.img
-              }));
-              this.$nextTick(() => {
-                if ($.fn.DataTable.isDataTable('#tablaSliders')) {
-                  $('#tablaSliders').DataTable().destroy();
-                }
-                $('#tablaSliders').DataTable({ scrollX: true, dom: 'frtip' });
-              });
-            });
+      fetch(this.apphost + '/slider/listar')
+      .then(r => r.json())
+      .then(data => {
+        this.sliders = data.map(s => ({
+          ...s,
+          // 💡 FIX: Construir la URL del CDN usando el nombre del archivo 'img' y la ruta 'sliders'
+          img_thumb: s.img
+        }));
+        this.$nextTick(() => {
+          if ($.fn.DataTable.isDataTable('#tablaSliders')) {
+            $('#tablaSliders').DataTable().destroy();
+          }
+          $('#tablaSliders').DataTable({
+            language: (typeof dt_language !== 'undefined' ? dt_language : undefined),
+            scrollX: true,
+            dom: 'frtip',
+            order: [[3,'asc']]
+          });
+        });
+      });
     },
     onFileChange(e, mode) {
       const file = e.target.files[0];
@@ -286,110 +326,226 @@ new Vue({
 
       $('#modalCrearSlider').modal('show');
     },
+    
     crearSlider() {
-      // 0) Log de debug
-      console.log('Valores del formulario crear:', this.nuevo);
 
-      // 1) Validar que las cadenas sean fechas válidas
-      const fc = new Date(this.nuevo.fecha_creacion);
-      const ff = new Date(this.nuevo.fecha_fin);
-      if (isNaN(fc.getTime()) || isNaN(ff.getTime())) {
-        return apprise('Debes seleccionar fecha de creación y fecha fin válidas', { okBtn: 'Entendido' });
-      }
-      
-      // Validar imagen
-      if (!this.nuevo.imgFile) {
-        return apprise('Debes seleccionar una imagen para el slider', { okBtn: 'Entendido' });
-      }
+        console.log('Valores del formulario crear:', this.nuevo);
 
-      // 2) Preparar FormData
-      const formData = new FormData();
-      formData.append('img',            this.nuevo.imgFile);
-      formData.append('orden',          this.nuevo.orden);
-      formData.append('is_visible',     this.nuevo.is_visible);
-      formData.append('fecha_creacion', this.nuevo.fecha_creacion);
-      formData.append('fecha_fin',      this.nuevo.fecha_fin);
-      formData.append('neg_id',         this.nuevo.neg_id);
-      formData.append('grupo', this.nuevo.grupo);
+        const fc = new Date(this.nuevo.fecha_creacion);
+        const ff = new Date(this.nuevo.fecha_fin);
 
+        if (isNaN(fc.getTime()) || isNaN(ff.getTime())) {
+          return apprise('Debes seleccionar fecha de creación y fecha fin válidas', { okBtn: 'Entendido' });
+        }
 
-      // 3) Envío a Flask
-      fetch(apphost + '/slider/crear', {
-        method: 'POST',
-        body: formData
-      })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
+        if (!this.nuevo.imgFile) {
+          return apprise('Debes seleccionar una imagen para el slider', { okBtn: 'Entendido' });
+        }
+
+        const formData = new FormData();
+        formData.append('img', this.nuevo.imgFile);
+        formData.append('orden', this.nuevo.orden);
+        formData.append('is_visible', this.nuevo.is_visible);
+        formData.append('fecha_creacion', this.nuevo.fecha_creacion);
+        formData.append('fecha_fin', this.nuevo.fecha_fin);
+        formData.append('neg_id', this.nuevo.neg_id);
+        formData.append('grupo', this.nuevo.grupo);
+        formData.append('descripcion', this.nuevo.descripcion);        
+
+        // 🔥 BLOQUEAR UI
+        bloquearUI('Subiendo imagen y guardando...');
+
+          setTimeout(() => {
+
+            fetch(apphost + '/slider/crear', {
+              method: 'POST',
+              body: formData
+            })
+            .then(r => r.json())
+            .then(data => {
+
+              desbloquearUI();
+
+              if (data.success) {
                 $('#modalCrearSlider').modal('hide');
-                this.obtenerSliders(); // 👈 Actualiza la lista para mostrar la nueva imagen
+                this.obtenerSliders();
+
                 apprise('Slider creado', { okBtn: 'Ok' }, () => {
-                    window.location.reload();
+                  window.location.reload();
                 });
+              } else {
+                apprise('Error: ' + (data.error || 'Desconocido'));
+              }
+            })
+            .catch(e => {
+              desbloquearUI();
+              apprise('Error de red');
+              console.error(e);
+            });
+
+          }, 50); // 🔥 clave
+      },
+
+      actualizarDescripcion() {
+
+        if (!this.formulario || !this.formulario.slider_id) {
+            apprise('ID inválido');
+            return;
+        }
+
+        let descripcion = $('#snEditarDescripcion').summernote('code');
+
+        bloquearUI('Guardando descripción...');
+
+        const formData = new FormData();
+        formData.append('slider_id', this.formulario.slider_id);
+        formData.append('descripcion', descripcion);
+
+        axios.post(this.apphost + '/slider/actualizarDescripcion', formData)
+        .then(res => {
+
+            desbloquearUI();
+
+            if (res.data && res.data.success) {
+
+                apprise('Descripción actualizada correctamente');
+
+                $('#modalEditarSlider').modal('hide');
+
+                this.obtenerSliders();
+
             } else {
-                apprise('Error al crear slider: ' + (data.error || 'Desconocido'), { okBtn: 'Entendido' });
+                apprise('Error: ' + (res.data.error || 'Error desconocido'));
             }
+
         })
-        .catch(e => {
-            apprise('Error de red al crear slider', { okBtn: 'Entendido' });
-            console.error(e);
+        .catch(() => {
+            desbloquearUI();
+            apprise('Error de conexión');
         });
     },
 
     abrirModalEditar(s) {
-          // Al cargar el slider, ya viene con fecha completa desde el back...
-          let fc = s.fecha_creacion;
-          let ff = s.fecha_fin;
-          if (fc && fc.length === 10) fc += 'T12:00';
-          if (ff && ff.length === 10) ff += 'T12:00';
-          
-          // 💡 FIX: Usa el img_thumb ya construido para el preview inicial
-          this.formulario = { 
-              ...s, 
-              fecha_creacion: fc,
-              fecha_fin: ff,
-              imgFile: null, 
-              imgPreview: s.img_thumb 
-          };
-          $('#modalEditarSlider').modal('show');
+
+      let fc = s.fecha_creacion;
+      let ff = s.fecha_fin;
+      if (fc && fc.length === 10) fc += 'T12:00';
+      if (ff && ff.length === 10) ff += 'T12:00';
+
+      this.formulario = { 
+        ...s, 
+        fecha_creacion: fc,
+        fecha_fin: ff,
+        imgFile: null, 
+        imgPreview: s.img_thumb 
+      };
+
+      $('#modalEditarSlider').modal('show');
+
+      // 🔥 CLAVE: esperar que el modal termine de abrir
+      setTimeout(() => {
+        $('#snEditarDescripcion').summernote('code', s.descripcion || '');
+      }, 200);
     },
+    
     guardarEdicion() {
+
       const fc = new Date(this.formulario.fecha_creacion);
       const ff = new Date(this.formulario.fecha_fin);
+
       if (isNaN(fc.getTime()) || isNaN(ff.getTime())) {
-        return apprise('Debes seleccionar fecha de creación y fecha fin válidas', { okBtn: 'Entendido' });
+        return apprise('Debes seleccionar fechas válidas');
       }
 
       const formData = new FormData();
       formData.append('slider_id', this.formulario.slider_id);
-      if (this.formulario.imgFile) formData.append('img', this.formulario.imgFile); // Solo si se seleccionó una nueva
+
+      if (this.formulario.imgFile) {
+        formData.append('img', this.formulario.imgFile);
+      }
+
+      const descripcion = $('#snEditarDescripcion').summernote('code');
+
+      console.log('📦 PAYLOAD EDITAR:', {
+        slider_id: this.formulario.slider_id,
+        orden: this.formulario.orden,
+        is_visible: this.formulario.is_visible,
+        fecha_creacion: this.formulario.fecha_creacion,
+        fecha_fin: this.formulario.fecha_fin,
+        grupo: this.formulario.grupo,
+        descripcion: descripcion
+      });
+
       formData.append('orden', this.formulario.orden);
       formData.append('is_visible', this.formulario.is_visible);
       formData.append('fecha_creacion', this.formulario.fecha_creacion);
       formData.append('fecha_fin', this.formulario.fecha_fin);
       formData.append('neg_id', this.formulario.neg_id);
       formData.append('grupo', this.formulario.grupo);
+      formData.append('descripcion', this.formulario.descripcion);      
 
+      // 🔥 BLOQUEAR UI
+      bloquearUI('Actualizando slider...');
 
-      fetch(apphost + '/slider/editar', {
-        method: 'POST',
-        body: formData
-      })
-        .then(r => r.json())
-        .then(data => {
+        setTimeout(() => {
+
+          fetch(apphost + '/slider/editar', {
+            method: 'POST',
+            body: formData
+          })
+          .then(r => r.json())
+          .then(data => {
+
+            desbloquearUI();
+
             if (data.success) {
-                $('#modalEditarSlider').modal('hide');
-                this.obtenerSliders(); // 👈 Actualiza la lista para mostrar la nueva imagen
-                apprise('Slider actualizado');
+              $('#modalEditarSlider').modal('hide');
+              this.obtenerSliders();
+              apprise('Slider actualizado');
             } else {
-                apprise('Error al editar slider: ' + (data.error || 'Desconocido'), { okBtn: 'Entendido' });
+              apprise('Error: ' + (data.error || 'Desconocido'));
             }
-        })
-        .catch(e => {
-            apprise('Error de red al editar slider', { okBtn: 'Entendido' });
+          })
+          .catch(e => {
+            desbloquearUI();
+            apprise('Error de red');
             console.error(e);
-        });
+          });
+
+        }, 50);
     },
+
+    activarDrag() {
+      const vm = this;
+
+      $('#sortable').sortable({
+        handle: '.drag-handle',
+        update: function () {
+
+          let orden = [];
+
+          $('#sortable tr').each(function (index) {
+            orden.push({
+              slider_id: $(this).data('id'),
+              orden: index + 1
+            });
+          });
+
+          // 🔥 enviar al backend
+          fetch(vm.apphost + '/slider/ordenar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orden })
+          })
+          .then(r => r.json())
+          .then(() => {
+            vm.obtenerSliders();
+          });
+
+        }
+      });
+    },
+
     eliminarSlider(s) {
         // ... (sin cambios, usa this.obtenerSliders() que ya fue actualizado)
       apprise(`¿Eliminar slider #${s.slider_id}?`, { confirm: true }, r => {
@@ -412,7 +568,7 @@ new Vue({
         .then(r => r.json())
         .then(data => {
             // 💡 FIX: Construir la URL del CDN usando el nombre del archivo 'img' y la ruta 'sliders'
-            const cdn_url = cdn_base_url + '/sliders/' + data.img;
+            const cdn_url = data.img;
             this.detalle = { ...data, img_thumb: cdn_url };
           $('#modalDetalleSlider').modal('show');
         });
@@ -420,6 +576,18 @@ new Vue({
   },
   mounted() {
     this.obtenerSliders();
+
+    this.$nextTick(() => {
+      this.activarDrag();
+
+      $('#snCrearDescripcion').summernote({
+        height: 150
+      });
+
+      $('#snEditarDescripcion').summernote({
+        height: 150
+      });
+    });
   }
 });
 </script>

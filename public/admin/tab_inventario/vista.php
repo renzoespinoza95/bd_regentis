@@ -16,8 +16,6 @@
           <th>ID</th>
           <th>Producto</th>
           <th>Stock</th>
-          <th>Mín</th>
-          <th>Máx</th>
           <th>Acciones</th>
         </tr>
       </thead>
@@ -221,7 +219,7 @@ new Vue({
             const acciones = `
               <div class="btn-group">
                 <button class="btn btn-mini btn-primary dropdown-toggle" data-toggle="dropdown">
-                  Opciones <span class="caret"></span>
+                  ⚙ <span class="caret"></span>
                 </button>
                 <ul class="dropdown-menu">
                   <li>
@@ -258,8 +256,6 @@ new Vue({
               i.inventario_id,
               i.producto,
               stockTxt,
-              i.stock_min,
-              i.stock_max,
               acciones
             ]);
           });

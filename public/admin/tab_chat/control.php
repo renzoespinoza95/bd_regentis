@@ -7,7 +7,7 @@ Flight::route('GET /chat', function () {
     include DEFINITION;
     autentificar_administrador();
 
-    include $path_public . '/admin/tab_chat/inicio.php';
+    include VARPATH . '/public/admin/tab_chat/inicio.php';
 });
 
 
@@ -16,14 +16,14 @@ Flight::route('GET /chat', function () {
  * ============================================================ */
 function get_admin_id() {
 
-    global $sesion_admin_administrador_id, $valor_key;
+    global $ssa_id, $valor_key;
 
     if (
-        isset($sesion_admin_administrador_id) &&
-        is_string($sesion_admin_administrador_id) &&
-        strlen($sesion_admin_administrador_id) > 10
+        isset($ssa_id) &&
+        is_string($ssa_id) &&
+        strlen($ssa_id) > 10
     ) {
-        $usu_id = perso::decrypt($sesion_admin_administrador_id, $valor_key);
+        $usu_id = perso::decrypt($ssa_id, $valor_key);
 
         if (!is_string($usu_id)) return 0;
 
@@ -192,13 +192,21 @@ Flight::route('GET /msg/listar/@chat_id/@viewer_id', function ($chat_id, $viewer
         }
     }
 
-    Flight::json($rows);
+    $chat = DB::queryFirstRow("
+        SELECT usu1_id, usu2_id,
+               last_seen_msg_id_u1,
+               last_seen_msg_id_u2
+        FROM reg_chat
+        WHERE chat_id=%i
+    ", $chat_id);
+
+    Flight::json([
+        'mensajes' => $rows,
+        'chat' => $chat
+    ]);
 });
 
 
-/* ============================================
-   ENDPOINT: ENVIAR MENSAJE
-============================================ */
 /* ============================================
    ENDPOINT: ENVIAR MENSAJE
 ============================================ */
@@ -240,21 +248,25 @@ Flight::route('POST /msg/enviar', function () {
     ]);
 
     // ======================================
+    // 🔥 ACTUALIZAR PREVIEW SIEMPRE (FIX CLAVE)
+    // ======================================
+    DB::update('reg_chat', [
+        'ultimo_mensaje' => mb_substr($texto, 0, 200, 'UTF-8')
+    ], "chat_id=%i", $chat_id);
+
+    // ======================================
     // 🔥 ACTUALIZAR CONTEXTO DINÁMICO
     // ======================================
     $contextoActual = DB::queryFirstField("
         SELECT contexto FROM reg_chat WHERE chat_id=%i
     ", $chat_id);
 
-    // contar mensajes
     $totalMensajes = DB::queryFirstField("
         SELECT COUNT(*) FROM reg_msg WHERE chat_id=%i
     ", $chat_id);
 
-    // 👉 SOLO SI YA EXISTE CONTEXTO
     if (!empty($contextoActual)) {
 
-        // cada 5 mensajes
         if ($totalMensajes % 5 == 0) {
 
             $mensajes = obtener_ultimos_mensajes($chat_id, 15);
@@ -266,7 +278,7 @@ Flight::route('POST /msg/enviar', function () {
     }
 
     // ======================================
-    // SI NO ES IA → FIN
+    // SI NO ES IA → TERMINAR
     // ======================================
     if ($dest_id != 1) {
 
@@ -277,7 +289,7 @@ Flight::route('POST /msg/enviar', function () {
     }
 
     // ======================================
-    // PROCESAR IA (🔥 NUEVO FLUJO INTELIGENTE)
+    // PROCESAR IA
     // ======================================
     $resultado = procesarAgenteIA_v3($chat_id, $rem_id, $apikey_openai);
 
@@ -294,20 +306,14 @@ Flight::route('POST /msg/enviar', function () {
     ]);
 
     // ======================================
-    // ACTUALIZAR CONTEXTO SI YA TERMINÓ
+    // 🔥 ACTUALIZAR CONTEXTO FINAL
     // ======================================
     if ($resultado['finalizado'] === true && !empty($resultado['contexto'])) {
 
-        // ======================================
-        // GUARDAR EN CHAT
-        // ======================================
         DB::update('reg_chat', [
             'contexto' => $resultado['contexto']
         ], "chat_id=%i", $chat_id);
 
-        // ======================================
-        // 🔥 OBTENER NEGOCIO CORRECTAMENTE
-        // ======================================
         $negocio = DB::queryFirstRow("
             SELECT nxu.neg_id
             FROM reg_negxusu nxu
@@ -323,15 +329,16 @@ Flight::route('POST /msg/enviar', function () {
             ], "neg_id=%i", $negocio['neg_id']);
         }
     }
+
     // ======================================
-    // ACTUALIZAR PREVIEW
+    // 🔥 ACTUALIZAR PREVIEW CON RESPUESTA IA
     // ======================================
     DB::update('reg_chat', [
-        'ultimo_mensaje' => substr($resultado['respuesta'], 0, 200)
+        'ultimo_mensaje' => mb_substr($resultado['respuesta'], 0, 200, 'UTF-8')
     ], "chat_id=%i", $chat_id);
 
     // ======================================
-    // RESPUESTA
+    // RESPUESTA FINAL
     // ======================================
     Flight::json([
         "ok" => true,
@@ -381,7 +388,7 @@ Flight::route('POST /msg/eliminar_chat', function () {
 /* ============================================================
  * LISTAR USUARIOS (EXCLUYE AL ADMIN ACTUAL)
  * ============================================================ */
-Flight::route('GET /usuario/listar', function () {
+Flight::route('GET /oxi/usuario/listar', function () {
 
     DB::query("SET NAMES 'utf8mb4'");
 
@@ -425,6 +432,7 @@ Flight::route('GET /usuario/listar', function () {
             'cod_usu'       => $u['cod_usu'],
             'name'          => $nombre,
             'sobrenombre'   => $u['sobrenombre'],
+            'nombres_apellidos'   => $u['nombres_apellidos'],
             'provincia'     => $u['provincia'],
             'tipoxusu_id'   => (int)$u['tipoxusu_id'],
 
@@ -667,3 +675,96 @@ function procesarAgenteIA_v3($chat_id, $rem_id, $apikey_openai)
         "contexto" => ""
     ];
 }
+
+Flight::route('POST /WDAA/cant_msg', function(){
+
+    // 🔐 usuario desde sesión
+    $adminId = get_admin_id();
+
+    if ($adminId <= 0) {
+        Flight::json([
+            'estado' => 'error',
+            'mensaje' => 'No autenticado'
+        ], 401);
+        return;
+    }
+
+    try {
+
+        DB::query("SET NAMES 'utf8mb4' COLLATE utf8mb4_unicode_ci");
+
+        // 🔥 LISTADO DE CHATS
+        $rows = DB::query("
+            SELECT 
+                ch.chat_id,
+
+                ch.usu1_id,
+                u1.sobrenombre AS usuario1,
+
+                -- 🖼️ IMAGEN PICSUM (usuario 1)
+                CONCAT('https://picsum.photos/seed/', u1.usu_id, '/40/40') AS img_usu1,
+
+                ch.usu2_id,
+                u2.sobrenombre AS usuario2,
+
+                -- 🖼️ IMAGEN PICSUM (usuario 2)
+                CONCAT('https://picsum.photos/seed/', u2.usu_id, '/40/40') AS img_usu2,
+
+                ch.fecha_creacion,
+                ch.ultimo_mensaje,
+                ch.is_bloqueado,
+
+                -- 🔴 NO LEÍDOS POR CHAT
+                (
+                  SELECT COUNT(*)
+                  FROM reg_msg m
+                  WHERE m.chat_id = ch.chat_id
+                  AND m.msg_id >
+                    CASE 
+                      WHEN %i = ch.usu1_id THEN ch.last_seen_msg_id_u1
+                      ELSE ch.last_seen_msg_id_u2
+                    END
+                  AND m.dest_id = %i
+                ) AS no_leidos
+
+            FROM reg_chat ch
+            JOIN reg_usu u1 ON u1.usu_id = ch.usu1_id
+            JOIN reg_usu u2 ON u2.usu_id = ch.usu2_id
+
+            WHERE ch.usu1_id = %i OR ch.usu2_id = %i
+
+            ORDER BY ch.fecha_creacion DESC
+        ",
+        $adminId, $adminId,
+        $adminId, $adminId
+        );
+
+        // 🔴 TOTAL GLOBAL DE NO LEÍDOS
+        $nuevos = DB::queryFirstField("
+            SELECT COUNT(*)
+            FROM reg_msg m
+            JOIN reg_chat ch ON ch.chat_id = m.chat_id
+            WHERE (ch.usu1_id = %i OR ch.usu2_id = %i)
+            AND m.dest_id = %i
+            AND m.msg_id >
+              CASE 
+                WHEN %i = ch.usu1_id THEN ch.last_seen_msg_id_u1
+                ELSE ch.last_seen_msg_id_u2
+              END
+        ", $adminId, $adminId, $adminId, $adminId);
+
+        Flight::json([
+            'estado'          => 'ok',
+            'mensajes_nuevos' => (int)$nuevos,
+            'data'            => $rows
+        ]);
+
+    } catch (Exception $ex) {
+
+        Flight::json([
+            'estado' => 'error',
+            'mensaje' => $ex->getMessage()
+        ], 500);
+    }
+
+});

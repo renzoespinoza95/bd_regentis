@@ -5,37 +5,54 @@
 <div class="row-fluid" id="appNeg">
   <div class="span12">
 
-    <h2>Negocios</h2>
+    <div class="titulo-fijo clearfix">
 
-    <div class="form-actions">
-      <button class="btn btn-success" @click="abrirModalCrearNeg">
-        <i class="icon-plus icon-white"></i> Agregar Neg
-      </button>
+      <div style="float:left;">
+        <h2 style="margin:0;">Negocios</h2>
+      </div>
 
-      <button class="btn btn-info" style="margin-left:8px" @click="abrirModalMercados">
-        <i class="icon-th icon-white"></i> Mercados
-      </button>
+      <div class="btn-group pull-right">
+        <button class="btn btn-info dropdown-toggle" data-toggle="dropdown">
+          <i class="fa fa-bandcamp"></i>
+          <span class="caret"></span>
+        </button>
+
+        <ul class="dropdown-menu pull-right">
+          <li>
+            <a href="#" @click.prevent="abrirModalCrearNeg">
+              <i class="fa fa-arrow-circle-right"></i> Agregar Neg
+            </a>
+          </li>
+
+          <li>
+            <a href="#" @click.prevent="abrirModalMercados">
+              <i class="fa fa-arrow-circle-right"></i> Mercados
+            </a>
+          </li>
+        </ul>
+      </div>
     </div>
-
-    <!-- TABLA NEGOCIOS -->
-    <table id="tablaNeg" class="table table-bordered table-striped">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Nombre</th>
-          <th>Puesto</th>
-          <th>Mercado</th>
-          <th>Activo</th>
-          <th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-
+    <div class="span12 tabla_esp_sup">
+      <!-- TABLA NEGOCIOS -->
+      <table id="tablaNeg" class="table table-bordered table-condensed">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nombre</th>
+            <th>Puesto</th>
+            <th>Mercado</th>
+            <th>Rubros</th>
+            <th>Activo</th>            
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>  
     <!-- =========================
          MODAL CREAR NEG
     ========================== -->
-    <div id="modalCrearNeg" class="modal hide fade" tabindex="-1">
+    <div id="modalCrearNeg" class="modal hide fade fullscreen" tabindex="-1">
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal">×</button>
         <h3>Nuevo Negocio</h3>
@@ -61,13 +78,29 @@
           <div class="controls">
             <!-- vue-select -->
             <v-select
-              :options="mercadosOptions"
-              :reduce="m => m.mercado_id"
+              :options="mercadosOptions"              
               label="nombre"
               placeholder="Selecciona un mercado..."
               v-model="nuevoNeg.mercado_id"
               style="width: 420px;"
             ></v-select>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label class="control-label">Rubros</label>
+
+          <div class="controls">
+
+            <v-select
+              multiple
+              :options="rubrosOptions"
+              label="nombre"
+              v-model="nuevoNeg.rubros"
+              placeholder="Selecciona rubros..."
+              style="width:420px;"
+            ></v-select>
+
           </div>
         </div>
       </div>
@@ -81,7 +114,7 @@
     <!-- =========================
          MODAL EDITAR NEG
     ========================== -->
-    <div id="modalEditarNeg" class="modal hide fade" tabindex="-1">
+    <div id="modalEditarNeg" class="modal hide fade fullscreen" tabindex="-1">
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal">×</button>
         <h3>Editar Negocio</h3>
@@ -106,8 +139,7 @@
           <label class="control-label">Mercado</label>
           <div class="controls">
             <v-select
-              :options="mercadosOptions"
-              :reduce="m => m.mercado_id"
+              :options="mercadosOptions"              
               label="nombre"
               placeholder="Selecciona un mercado..."
               v-model="formNeg.mercado_id"
@@ -115,6 +147,25 @@
             ></v-select>
           </div>
         </div>
+
+
+        <div class="control-group">
+          <label class="control-label">Rubros</label>
+
+          <div class="controls">
+
+            <v-select
+              multiple
+              :options="rubrosOptions"
+              label="nombre"
+              v-model="formNeg.rubros"
+              placeholder="Selecciona rubros..."
+              style="width:420px;"
+            ></v-select>
+
+          </div>
+        </div>        
+
       </div>
 
       <div class="modal-footer">
@@ -126,7 +177,7 @@
     <!-- =========================
          MODAL PROPIETARIO (NEGXUSU)
     ========================== -->
-    <div id="modalPropietario" class="modal hide fade" tabindex="-1">
+    <div id="modalPropietario" class="modal hide fade fullscreen" tabindex="-1">
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal">×</button>
         <h3>Propietario del Negocio</h3>
@@ -220,20 +271,14 @@
     <!-- =========================
          MODAL MERCADOS (LISTA)
     ========================== -->
-    <div id="modalMercados" class="modal hide fade" tabindex="-1">
+    <div id="modalMercados" class="modal hide fade fullscreen" tabindex="-1">
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal">×</button>
         <h3>Mercados</h3>
       </div>
 
       <div class="modal-body">
-        <div class="form-actions" style="margin-top:0;">
-          <button class="btn btn-success" @click="abrirModalCrearMercadoDesdeLista">
-            <i class="icon-plus icon-white"></i> Agregar
-          </button>
-        </div>
-
-        <table id="tablaMercados" class="table table-bordered table-striped">
+        <table id="tablaMercados" class="table table-bordered table-condensed">
           <thead>
             <tr>
               <th>ID</th>
@@ -248,6 +293,9 @@
       </div>
 
       <div class="modal-footer">
+        <button class="btn btn-success" @click="abrirModalCrearMercadoDesdeLista">
+          <i class="icon-plus icon-white"></i> Agregar
+        </button>
         <button class="btn" data-dismiss="modal">Cerrar</button>
       </div>
     </div>
@@ -255,7 +303,7 @@
     <!-- =========================
          MODAL CREAR MERCADO
     ========================== -->
-    <div id="modalCrearMercado" class="modal hide fade" tabindex="-1">
+    <div id="modalCrearMercado" class="modal hide fade fullscreen" tabindex="-1">
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal">×</button>
         <h3>Nuevo Mercado</h3>
@@ -293,46 +341,211 @@
       </div>
     </div>
 
+    
+
+    <div id="modalRubro" class="modal hide fade fullscreen">
+        <div class="modal-header">
+          <button class="close" data-dismiss="modal">×</button>
+          <h3>Rubros del negocio</h3>
+          <div>Negocio: <b>{{ negRubro.nombre }}</b></div>
+        </div>
+
+        <div class="modal-body">
+          <table id="tablaRubros" class="table table-bordered table-condensed">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-success" @click="abrirModalAgregarRubro">
+            + Rubro
+          </button>
+          <button class="btn" data-dismiss="modal">Cerrar</button>
+        </div>
+      </div>
+
+
+      <div id="modalAgregarRubro" class="modal hide fade fullscreen">
+        <div class="modal-header">
+          <button class="close" data-dismiss="modal">×</button>
+          <h3>Agregar Rubro</h3>
+        </div>
+
+        <div class="modal-body">
+          <v-select
+            :options="rubrosOptions"
+            :reduce="r => r.rubro_id"
+            label="nombre"
+            v-model="nuevoRubro.rubro_id"
+            placeholder="Selecciona rubro..."
+            style="width:400px;"
+          ></v-select>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn btn-primary" @click="guardarRubro">Guardar</button>
+          <button class="btn" data-dismiss="modal">Cancelar</button>
+        </div>
+      </div>
+
     <!-- =========================
          MODAL EDITAR MERCADO
     ========================== -->
-    <div id="modalEditarMercado" class="modal hide fade" tabindex="-1">
-      <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal">×</button>
-        <h3>Editar Mercado</h3>
-      </div>
+    <!-- =========================
+     MODAL EDITAR MERCADO
+========================== -->
+<div id="modalEditarMercado" class="modal hide fade fullscreen" tabindex="-1">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal">×</button>
+    <h3>Editar Mercado</h3>
+  </div>
 
-      <div class="modal-body">
-        <div class="control-group">
-          <label class="control-label">Nombre</label>
-          <div class="controls">
-            <input v-model="formMercado.nombre" class="input-xxlarge" placeholder="Nombre del mercado">
-          </div>
-        </div>
+  <div class="modal-body">
 
-        <div class="control-group">
-          <label class="control-label">Dirección</label>
-          <div class="controls">
-            <input v-model="formMercado.direccion" class="input-xxlarge" placeholder="Dirección">
-          </div>
-        </div>
-
-        <div class="control-group">
-          <label class="control-label">Activo</label>
-          <div class="controls">
-            <select v-model="formMercado.is_activo" class="input-small">
-              <option :value="1">SI</option>
-              <option :value="0">NO</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div class="modal-footer">
-        <button class="btn btn-primary" @click="guardarMercado">Guardar</button>
-        <button class="btn" data-dismiss="modal">Cancelar</button>
+    <!-- NOMBRE -->
+    <div class="control-group">
+      <label class="control-label">Nombre</label>
+      <div class="controls">
+        <input 
+          v-model="formMercado.nombre" 
+          class="input-xxlarge" 
+          placeholder="Nombre del mercado"
+        >
       </div>
     </div>
+
+    <!-- DIRECCION -->
+    <div class="control-group">
+      <label class="control-label">Dirección</label>
+      <div class="controls">
+        <input 
+          v-model="formMercado.direccion" 
+          class="input-xxlarge" 
+          placeholder="Dirección"
+        >
+      </div>
+    </div>
+
+    <!-- ACTIVO -->
+    <div class="control-group">
+      <label class="control-label">Activo</label>
+      <div class="controls">
+        <select v-model="formMercado.is_activo" class="input-small">
+          <option :value="1">SI</option>
+          <option :value="0">NO</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- LOGO -->
+    <div class="control-group">
+      <label class="control-label">Logo</label>
+
+      <div class="controls">
+
+        <input 
+          v-model="formMercado.logo"
+          class="input-xxlarge"
+          placeholder="https://..."
+        >
+
+        <!-- preview -->
+        <div style="margin-top:10px;">
+
+          <img 
+            v-if="formMercado.logo"
+            :src="formMercado.logo"
+            style="
+              width:120px;
+              height:120px;
+              object-fit:cover;
+              border-radius:16px;
+              border:1px solid #ddd;
+              background:#fff;
+            "
+          >
+
+        </div>
+
+      </div>
+    </div>
+
+    <!-- COLOR -->
+    <div class="control-group">
+      <label class="control-label">Top Navbar Color</label>
+
+      <div class="controls" style="display:flex; gap:10px; align-items:center;">
+
+        <input 
+          v-model="formMercado.topnavbar_color"
+          class="input-medium"
+          placeholder="#FD7635"
+        >
+
+        <!-- preview -->
+        <div
+          :style="{
+            width:'45px',
+            height:'45px',
+            borderRadius:'10px',
+            border:'1px solid #ccc',
+            background: formMercado.topnavbar_color || '#fff'
+          }"
+        ></div>
+
+      </div>
+    </div>
+
+    <!-- PATRON FONDO -->
+    <div class="control-group">
+      <label class="control-label">Patrón Fondo (CSS)</label>
+
+      <div class="controls">
+
+        <textarea
+          v-model="formMercado.patron_fondo"
+          class="input-xxlarge"
+          rows="10"
+          placeholder="background-color: #fff;"
+        ></textarea>
+
+        <!-- preview -->
+        <div style="margin-top:12px;">
+
+          <div
+            :style="cssToObject(formMercado.patron_fondo)"
+            style="
+              width:100%;
+              height:180px;
+              border-radius:16px;
+              border:1px solid #ddd;
+            "
+          ></div>
+
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <div class="modal-footer">
+    <button class="btn btn-primary" @click="guardarMercado">
+      Guardar
+    </button>
+
+    <button class="btn" data-dismiss="modal">
+      Cancelar
+    </button>
+  </div>
+</div>    
 
   </div>
 </div>
@@ -352,15 +565,59 @@ const appNeg = new Vue({
     // data negocios
     negs: [],
     dtNeg: null,
-    nuevoNeg: { nombre: '', puesto: '', mercado_id: null },
-    formNeg: { neg_id: 0, nombre: '', puesto: '', mercado_id: null },
+    formCategoria: {
+      nombre: '',
+      icono: '',
+      is_activo: 1
+    },
+    dtCat:null,
+    /* =========================================
+       NUEVO FORMULARIO
+    ========================================= */
+
+    nuevoNeg: {
+
+      nombre: '',
+
+      puesto: '',
+
+      mercado_id: null,
+
+      rubros: [] // 🔥 NUEVO
+
+    },
+
+    formNeg: {
+
+      neg_id: 0,
+
+      nombre: '',
+
+      puesto: '',
+
+      mercado_id: null,
+
+      rubros: [] // 🔥 NUEVO
+
+    },
+
+    categorias: [],
+    categoriasOptions: [],
 
     // data mercados
     mercados: [],
     mercadosOptions: [],
     dtMerc: null,
     nuevoMercado: { nombre: '', direccion: '', is_activo: 1 },
-    formMercado: { mercado_id: 0, nombre: '', direccion: '', is_activo: 1 },
+    formMercado: {
+      mercado_id: 0,
+      nombre: '',
+      direccion: '',
+      is_activo: 1,
+      logo: '',
+      topnavbar_color: '',
+      patron_fondo: ''
+    },
 
     // propietario
     negProp: { neg_id: 0, nombre: '' },
@@ -372,7 +629,13 @@ const appNeg = new Vue({
       nombres_apellidos: '',
       is_activo: 0,
       negxusu_id: 0
-    }
+    },
+    // rubros
+    negRubro: { neg_id: 0, nombre: '' },
+    rubrosNeg: [],
+    dtRubro: null,
+    nuevoRubro: { rubro_id: null },
+    rubrosOptions: []
   },
 
   methods: {
@@ -407,91 +670,375 @@ const appNeg = new Vue({
 
     },
 
+    abrirModalRubro(n){
+      this.negRubro = {
+        neg_id: parseInt(n.neg_id,10),
+        nombre: n.nombre
+      };
+
+      this.listarRubrosNeg().then(()=>{
+        $('#modalRubro').modal('show');
+      });
+    },
+   
+    listarRubrosNeg(){
+      this.bloquear('Cargando rubros...');
+
+      return axios.get(`${this.apphost}/rubroxneg/listar`, {
+        params:{ neg_id:this.negRubro.neg_id }
+      })
+      .then(r=>{
+        this.rubrosNeg = r.data.data || [];
+
+        this.$nextTick(()=>{
+
+          if(!this.dtRubro){
+
+            this.dtRubro = $('#tablaRubros').DataTable({
+              scrollX:true,
+              destroy:true
+            });
+
+            const self = this;
+
+            $('#tablaRubros tbody').on('click','a.eliminar-rubro',function(e){
+              e.preventDefault();
+              const id = $(this).data('id');
+              self.eliminarRubro(id);
+            });
+
+          }
+
+          this.dtRubro.clear();
+
+          this.rubrosNeg.forEach(r=>{
+
+            const btn = `
+              <a href="#" class="eliminar-rubro" data-id="${r.rubroxneg_id}">
+                <i class="fa fa-trash"></i>
+              </a>
+            `;
+
+            this.dtRubro.row.add([
+              r.rubro_id,
+              r.nombre,
+              btn
+            ]);
+
+          });
+
+          this.dtRubro.draw(false);
+
+        });
+
+      })
+      .finally(()=>$.unblockUI());
+    },
+
+    abrirModalAgregarRubro(){
+
+      this.nuevoRubro = { rubro_id:null };
+
+      this.bloquear('Cargando rubros...');
+
+      axios.get(`${this.apphost}/rubro/listar`)
+        .then(r=>{
+          this.rubrosOptions = r.data.data || [];
+          $('#modalRubro').modal('hide');
+          $('#modalAgregarRubro').modal('show');
+        })
+        .finally(()=>$.unblockUI());
+    },
+
+    guardarRubro(){
+
+      if(!this.nuevoRubro.rubro_id){
+        return apprise('Selecciona un rubro');
+      }
+
+      this.bloquear('Guardando...');
+
+      axios.post(`${this.apphost}/rubroxneg/crear`,{
+        neg_id:this.negRubro.neg_id,
+        rubro_id: typeof this.nuevoRubro.rubro_id === 'object'
+        ? parseInt(this.nuevoRubro.rubro_id.rubro_id)
+        : parseInt(this.nuevoRubro.rubro_id)
+      })
+      .then(()=>{
+        apprise('Rubro agregado');
+        $('#modalAgregarRubro').modal('hide');
+      })
+      .finally(()=>{
+        $.unblockUI();
+        this.listarRubrosNeg().then(()=>{
+          $('#modalRubro').modal('show');
+        });
+      });
+    },
+
+
+    eliminarRubro(id){
+
+      apprise('¿Eliminar rubro?',{confirm:true}, ok=>{
+
+        if(!ok) return;
+
+        this.bloquear('Eliminando...');
+
+        axios.post(`${this.apphost}/rubroxneg/eliminar`,{
+          rubroxneg_id:id
+        })
+        .then(()=>{
+          apprise('Eliminado');
+        })
+        .finally(()=>{
+          $.unblockUI();
+          this.listarRubrosNeg();
+        });
+
+      });
+
+    },
+
     /* =========================
        NEGOCIOS - LISTAR (DataTable principal)
     ========================== */
-    listarNeg() {
-      this.bloquear('Cargando negocios…');
+    
+  listarNeg() {
 
-      // primero cargar mercados (para nombres y combos)
-      this.cargarMercadosParaCombo()
-        .then(() => axios.get(`${this.apphost}/neg/listar`))
-        .then(r => {
-          this.negs = r.data.data || [];
+    this.bloquear('Cargando negocios…');
 
-          this.$nextTick(() => {
-            if (!this.dtNeg) {
-              this.dtNeg = $('#tablaNeg').DataTable({
-                language: (typeof dt_language !== 'undefined' ? dt_language : undefined),
-                scrollX: true,
-                dom: 'frtip',
-                order: [[0,'desc']]
-              });
+    this.cargarMercadosParaCombo()
 
-              const self = this;
-              $('#tablaNeg tbody')
-                .on('click', 'a.editar-neg', function(e){
-                  e.preventDefault();
-                  const id = $(this).data('id');
-                  const row = self.negs.find(x => parseInt(x.neg_id,10) === parseInt(id,10));
-                  if (row) self.abrirModalEditarNeg(row);
-                })
-                .on('click', 'a.eliminar-neg', function(e){
-                  e.preventDefault();
-                  const id = $(this).data('id');
-                  const row = self.negs.find(x => parseInt(x.neg_id,10) === parseInt(id,10));
-                  if (row) self.eliminarNeg(row);
-                })
-                .on('click', 'a.propietario-neg', function(e){
-                  e.preventDefault();
-                  const id = $(this).data('id');
-                  const row = self.negs.find(x => parseInt(x.neg_id,10) === parseInt(id,10));
-                  if (row) self.abrirModalPropietario(row);
-                });
-            }
+      .then(() => axios.get(`${this.apphost}/neg/listar`))
 
-            // refrescar filas
-            this.dtNeg.clear();
+      .then(r => {
 
-            this.negs.forEach(n => {
-              const mercadoNombre = this.obtenerNombreMercado(n.mercado_id);
-              const activo = (parseInt(n.is_activo,10) ? 'SI' : 'NO');
+        this.negs = r.data.data || [];
 
-              const actions = `
-                <div class="btn-group">
-                  <button class="btn btn-mini btn-primary dropdown-toggle" data-toggle="dropdown">
-                    Opciones <span class="caret"></span>
-                  </button>
-                  <ul class="dropdown-menu">
-                    <li><a href="#" class="editar-neg" data-id="${n.neg_id}">Editar</a></li>
-                    <li><a href="#" class="eliminar-neg" data-id="${n.neg_id}">Eliminar</a></li>
-                    <li class="divider"></li>
-                    <li><a href="#" class="propietario-neg" data-id="${n.neg_id}">Propietario</a></li>
-                  </ul>
-                </div>
-              `;
+        this.$nextTick(() => {
 
-              this.dtNeg.row.add([
-                n.neg_id,
-                (n.nombre || ''),
-                (n.puesto || ''),
-                (mercadoNombre || ''),
-                activo,
-                actions
-              ]);
+          if (!this.dtNeg) {
+
+            this.dtNeg = $('#tablaNeg').DataTable({
+
+              language: (
+                typeof dt_language !== 'undefined'
+                  ? dt_language
+                  : undefined
+              ),
+
+              scrollX: true,
+
+              dom: 'frtip',
+
+              order: [[0,'desc']]
+
             });
 
-            this.dtNeg.draw(false);
+            const self = this;
+
+            $('#tablaNeg tbody')
+
+              .on('click', 'a.editar-neg', function(e){
+
+                e.preventDefault();
+
+                const id = $(this).data('id');
+
+                const row = self.negs.find(
+                  x => parseInt(x.neg_id,10) === parseInt(id,10)
+                );
+
+                if (row) {
+                  self.abrirModalEditarNeg(row);
+                }
+
+              })
+
+              .on('click', 'a.eliminar-neg', function(e){
+
+                e.preventDefault();
+
+                const id = $(this).data('id');
+
+                const row = self.negs.find(
+                  x => parseInt(x.neg_id,10) === parseInt(id,10)
+                );
+
+                if (row) {
+                  self.eliminarNeg(row);
+                }
+
+              })
+
+              .on('click', 'a.propietario-neg', function(e){
+
+                e.preventDefault();
+
+                const id = $(this).data('id');
+
+                const row = self.negs.find(
+                  x => parseInt(x.neg_id,10) === parseInt(id,10)
+                );
+
+                if (row) {
+                  self.abrirModalPropietario(row);
+                }
+
+              });
+
+          }
+
+          this.dtNeg.clear();
+
+          this.negs.forEach(n => {
+
+            const mercadoNombre =
+              this.obtenerNombreMercado(n.mercado_id);
+
+            const activo =
+              parseInt(n.is_activo,10)
+                ? 'SI'
+                : 'NO';
+
+            /* =========================================
+               RUBROS BONITOS 😏
+            ========================================= */
+
+            let rubrosHtml = `
+              <span class="label">
+                Sin rubros
+              </span>
+            `;
+
+            if(
+              Array.isArray(n.rubros_obj)
+              &&
+              n.rubros_obj.length > 0
+            ){
+
+              rubrosHtml = n.rubros_obj.map(r => `
+
+                <span
+                  class="label label-info"
+                  style="
+                    margin-right:4px;
+                    margin-bottom:4px;
+                    display:inline-block;
+                    padding:4px 8px;
+                    border-radius:12px;
+                    font-size:11px;
+                  "
+                >
+
+                  <span style="font-size:14px;">
+                    ${r.icono || '📦'}
+                  </span>
+
+                  ${r.nombre}
+
+                </span>
+
+              `).join('');
+
+            }
+
+            const actions = `
+
+              <div class="btn-group">
+
+                <button
+                  class="btn btn-mini dropdown-toggle"
+                  data-toggle="dropdown"
+                >
+                  ⚙ <span class="caret"></span>
+                </button>
+
+                <ul class="dropdown-menu">
+
+                  <li>
+                    <a href="#"
+                      class="editar-neg"
+                      data-id="${n.neg_id}">
+                      Editar
+                    </a>
+                  </li>
+
+                  <li>
+                    <a href="#"
+                      class="eliminar-neg"
+                      data-id="${n.neg_id}">
+                      Eliminar
+                    </a>
+                  </li>
+
+                  <li class="divider"></li>
+
+                  <li>
+                    <a href="#"
+                      class="propietario-neg"
+                      data-id="${n.neg_id}">
+                      Propietario
+                    </a>
+                  </li>
+
+                </ul>
+
+              </div>
+
+            `;
+
+            this.dtNeg.row.add([
+
+              n.neg_id,
+
+              n.nombre || '',
+
+              n.puesto || '',
+
+              mercadoNombre || '',
+
+              rubrosHtml,
+
+              activo,
+
+              actions
+
+            ]);
+
           });
-        })
-        .finally(() => $.unblockUI());
-    },
+
+          this.dtNeg.draw(false);
+
+        });
+
+      })
+
+      .finally(() => $.unblockUI());
+
+  },
 
     obtenerNombreMercado(mercado_id) {
       const mid = parseInt(mercado_id, 10);
       const m = this.mercadosOptions.find(x => parseInt(x.mercado_id,10) === mid);
       return m ? m.nombre : '';
     },
+
+    /* =========================================
+       CARGAR RUBROS
+    ========================================= */
+
+    cargarRubros(){
+
+      return axios.get(`${this.apphost}/rubro/listar`)
+        .then(r=>{
+
+          this.rubrosOptions = r.data.data || [];
+
+        });
+
+    },    
 
     /* =========================
        NEGOCIOS - MODALES / CRUD
@@ -501,48 +1048,194 @@ const appNeg = new Vue({
       $('#modalCrearNeg').modal('show');
     },
 
-    crearNeg() {
-      if (!this.nuevoNeg.nombre || !this.nuevoNeg.nombre.trim()) return apprise('Escribe el nombre');
-      if (!this.nuevoNeg.puesto || !this.nuevoNeg.puesto.trim()) return apprise('Escribe el puesto');
-      if (!this.nuevoNeg.mercado_id) return apprise('Selecciona un mercado');
+    /* =========================================
+       CREAR NEG
+    ========================================= */
 
-      this.bloquear('Creando negocio…');
-      axios.post(`${this.apphost}/neg/crear`, this.nuevoNeg)
-        .then(() => {
-          $('#modalCrearNeg').modal('hide');
-          apprise('¡Creado!');
+    crearNeg(){
+
+      if (!this.nuevoNeg.nombre.trim()) {
+        return apprise('Escribe el nombre')
+      }
+
+      if (!this.nuevoNeg.puesto.trim()) {
+        return apprise('Escribe el puesto')
+      }
+
+      if (!this.nuevoNeg.mercado_id) {
+        return apprise('Selecciona un mercado')
+      }
+
+      const mercado_id = typeof this.nuevoNeg.mercado_id === 'object'
+        ? this.nuevoNeg.mercado_id.mercado_id
+        : this.nuevoNeg.mercado_id
+
+      const payload = {
+
+        nombre: this.nuevoNeg.nombre.trim(),
+
+        puesto: this.nuevoNeg.puesto.trim(),
+
+        mercado_id: mercado_id,
+
+        rubros: (this.nuevoNeg.rubros || [])
+          .map(r => r.rubro_id)
+
+      }
+
+      this.bloquear('Creando negocio...')
+
+      axios.post(`${this.apphost}/neg/crear`, payload)
+
+        .then(()=>{
+
+          $('#modalCrearNeg').modal('hide')
+
+          apprise('¡Creado!')
+
+          this.nuevoNeg = {
+
+            nombre: '',
+
+            puesto: '',
+
+            mercado_id: null,
+
+            rubros: []
+
+          }
+
         })
-        .finally(() => {
-          $.unblockUI();
-          this.listarNeg();
-        });
+
+        .finally(()=>{
+
+          $.unblockUI()
+
+          this.listarNeg()
+
+        })
+
     },
+
+    /* =========================================
+       EDITAR NEG
+    ========================================= */
 
     abrirModalEditarNeg(n) {
-      this.formNeg = {
-        neg_id: parseInt(n.neg_id,10),
-        nombre: (n.nombre || ''),
-        puesto: (n.puesto || ''),
-        mercado_id: (n.mercado_id ? parseInt(n.mercado_id,10) : null)
-      };
-      $('#modalEditarNeg').modal('show');
+
+      this.bloquear('Cargando categorías...')
+
+      Promise.all([
+
+        this.cargarRubros()
+
+      ])
+      .then(()=>{
+
+        this.formNeg = {
+
+          neg_id: n.neg_id,
+
+          nombre: n.nombre,
+
+          puesto: n.puesto,
+
+          mercado_id: this.mercadosOptions.find(
+            m => m.mercado_id == n.mercado_id
+          ),
+
+          rubros: n.rubros_obj || [] // 🔥
+
+        };
+
+        $('#modalEditarNeg').modal('show')
+
+      })
+      .finally(()=>$.unblockUI())
     },
 
-    guardarNeg() {
-      if (!this.formNeg.nombre || !this.formNeg.nombre.trim()) return apprise('Escribe el nombre');
-      if (!this.formNeg.puesto || !this.formNeg.puesto.trim()) return apprise('Escribe el puesto');
-      if (!this.formNeg.mercado_id) return apprise('Selecciona un mercado');
+    cssToObject(css) {
 
-      this.bloquear('Actualizando negocio…');
-      axios.post(`${this.apphost}/neg/editar`, this.formNeg)
-        .then(() => {
-          $('#modalEditarNeg').modal('hide');
-          apprise('¡Actualizado!');
+      if (!css) return {}
+
+      const obj = {}
+
+      css.split(';').forEach(rule => {
+
+        const parts = rule.split(':')
+
+        if (parts.length < 2) return
+
+        const key = parts[0].trim()
+          .replace(/-([a-z])/g, g => g[1].toUpperCase())
+
+        const value = parts.slice(1).join(':').trim()
+
+        if (key && value) {
+          obj[key] = value
+        }
+
+      })
+
+      return obj
+    },    
+
+    /* =========================================
+       GUARDAR NEG
+    ========================================= */
+
+    guardarNeg() {
+
+      if (!this.formNeg.nombre.trim()) {
+        return apprise('Escribe el nombre')
+      }
+
+      if (!this.formNeg.puesto.trim()) {
+        return apprise('Escribe el puesto')
+      }
+
+      if (!this.formNeg.mercado_id) {
+        return apprise('Selecciona un mercado')
+      }
+
+      const mercado_id = typeof this.formNeg.mercado_id === 'object'
+        ? this.formNeg.mercado_id.mercado_id
+        : this.formNeg.mercado_id
+
+      const payload = {
+
+        neg_id: this.formNeg.neg_id,
+
+        nombre: this.formNeg.nombre.trim(),
+
+        puesto: this.formNeg.puesto.trim(),
+
+        mercado_id: mercado_id,
+        rubros: (this.formNeg.rubros || [])
+          .map(r => r.rubro_id)
+
+      }
+
+      this.bloquear('Actualizando negocio…')
+
+      axios.post(`${this.apphost}/neg/editar`, payload)
+
+        .then(()=>{
+
+          $('#modalEditarNeg').modal('hide')
+
+          apprise('¡Actualizado!')
+
         })
-        .finally(() => {
-          $.unblockUI();
-          this.listarNeg();
-        });
+
+        .finally(()=>{
+
+          $.unblockUI()
+
+          this.listarNeg()
+
+        })
+
     },
 
     eliminarNeg(n) {
@@ -812,12 +1505,18 @@ const appNeg = new Vue({
     },
 
     abrirModalEditarMercadoDesdeLista(m) {
+
       this.formMercado = {
         mercado_id: parseInt(m.mercado_id,10),
         nombre: (m.nombre || ''),
         direccion: (m.direccion || ''),
-        is_activo: (parseInt(m.is_activo,10) ? 1 : 0)
+        is_activo: (parseInt(m.is_activo,10) ? 1 : 0),
+
+        logo: (m.logo || ''),
+        topnavbar_color: (m.topnavbar_color || ''),
+        patron_fondo: (m.patron_fondo || '')
       };
+
       $('#modalMercados').modal('hide');
       $('#modalEditarMercado').modal('show');
     },
@@ -857,6 +1556,7 @@ const appNeg = new Vue({
 
   mounted() {
     this.listarNeg();
+    this.cargarRubros(); // 🔥 NUEVO
   }
 });
 </script>

@@ -12,246 +12,10 @@ function mostrar_html($html) {
     return $res;
 }
 
-function mh($item) {
-    $res = html_entity_decode($item, ENT_QUOTES, 'UTF-8');
-    return $res;
-}
-
-function solo_texto($html, $cantidad) {
-    $res = strip_tags($html);
-    $res = limite_palabras($res, $cantidad);
-
-    return $res;
-}
-
-
-function limite_palabras($text, $limit = 25, $ending = '...') {
-
-    //$text = strip_tags($text);
-    $text = preg_replace("/\s\s+/", "", (strip_tags($text)));
-    if (strlen($text) > $limit) {
-        //$text = strip_tags($text);
-        $text = substr($text, 0, $limit);
-        $text = substr($text, 0, -(strlen(strrchr($text, ' '))));
-        $text = $text . $ending;
-    }
-
-    return $text;
-}
-
-function valor_random() {
-
-    $validCharacters = "abcdefghijklmnopqrstuxyvwzABCDEFGHIJKLMNOPQRSTUXYVWZ1234567890";
-    $validCharNumber = strlen($validCharacters);
-    $result = "";
-
-    for ($i = 0; $i < $this->persistencia; $i++) {
-
-        $index = mt_rand(0, $validCharNumber - 1);
-        $result .= $validCharacters[$index];
-    }
-
-    return $result;
-}
-
-function string_random() {
-
-    $validCharacters = "abcdefghijklmnopqrstuxyvwzABCDEFGHIJKLMNOPQRSTUXYVWZ";
-    $validCharNumber = strlen($validCharacters);
-    $result = "";
-
-    for ($i = 0; $i < $this->persistencia; $i++) {
-
-        $index = mt_rand(0, $validCharNumber - 1);
-        $result .= $validCharacters[$index];
-    }
-
-    return $result;
-}
-
-// Obtener un numero random
-
-function cantidad_numeros_random() {
-    $cantidad = 8;
-    $validCharacters = "1234567890";
-    $validCharNumber = strlen($validCharacters);
-    $result = "";
-
-    for ($i = 0; $i < $cantidad; $i++) {
-
-        $index = mt_rand(0, $validCharNumber - 1);
-        $result .= $validCharacters[$index];
-    }
-
-    $tiempoUnico = time();
-
-    $result = $result . "_" . $tiempoUnico;
-
-    return $result;
-}
-
-// Obtener un true-false random
-
-function logico_random() {
-
-    $validCharacters = "1234567890";
-    $validCharNumber = strlen($validCharacters);
-    $result = "";
-
-    for ($i = 0; $i < 4; $i++) {
-
-        $index = mt_rand(0, $validCharNumber - 1);
-        $result .= $validCharacters[$index];
-    }
-
-    if ($result % 2 == 0) {
-        return "1";
-    } else {
-        return "0";
-    }
-}
-
-function diferencia_de_horas_y_dias($startDate, $endDate, $format = 3) {
-    list($date, $time) = explode(' ', $endDate);
-    $startdate = explode("-", $date);
-    $starttime = explode(":", $time);
-
-    list($date, $time) = explode(' ', $startDate);
-    $enddate = explode("-", $date);
-    $endtime = explode(":", $time);
-
-    $secondsDifference = mktime($endtime[0], $endtime[1], $endtime[2], $enddate[1], $enddate[2], $enddate[0]) - mktime($starttime[0], $starttime[1], $starttime[2], $startdate[1], $startdate[2], $startdate[0]);
-
-    switch ($format) {
-        // Difference in Minutes 
-        case 1:
-            return floor($secondsDifference / 60);
-        // Difference in Hours     
-        case 2:
-            return floor($secondsDifference / 60 / 60);
-        // Difference in Days     
-        case 3:
-            return floor($secondsDifference / 60 / 60 / 24);
-        // Difference in Weeks     
-        case 4:
-            return floor($secondsDifference / 60 / 60 / 24 / 7);
-        // Difference in Months     
-        case 5:
-            return floor($secondsDifference / 60 / 60 / 24 / 7 / 4);
-        // Difference in Years     
-        default:
-            return floor($secondsDifference / 365 / 60 / 60 / 24);
-    }
-}
-
-// devuelve la fecha y hora en texto  
-
-function fecha_hora_en_texto($raw_date) {
-    if (($raw_date == '0001-01-01 00:00:00') || ($raw_date == ''))
-        return false;
-
-    $year = (int) substr($raw_date, 0, 4);
-    $month = (int) substr($raw_date, 5, 2);
-    $day = (int) substr($raw_date, 8, 2);
-    $hour = (int) substr($raw_date, 11, 2);
-    $minute = (int) substr($raw_date, 14, 2);
-    $second = (int) substr($raw_date, 17, 2);
-    $lemp = "";
-    $l_mes = "";
-    switch ($month) {
-        case "01";
-            $l_mes = "Enero";
-            break;
-        case "02";
-            $l_mes = "Febrero";
-            break;
-        case "03";
-            $l_mes = "Marzo";
-            break;
-        case "04";
-            $l_mes = "Abril";
-            break;
-        case "05";
-            $l_mes = "Mayo";
-            break;
-        case "06";
-            $l_mes = "Junio";
-            break;
-        case "07";
-            $l_mes = "Julio";
-            break;
-        case "08";
-            $l_mes = "Agosto";
-            break;
-        case "09";
-            $l_mes = "Setiembre";
-            break;
-        case "10";
-            $l_mes = "Octubre";
-            break;
-        case "11";
-            $l_mes = "Noviembre";
-            break;
-        case "12";
-            $l_mes = "Diciembre";
-            break;
-    }
-    $l_emp = $day . " " . $l_mes . " de " . $year;
-    return $l_emp;
-}
-
-function numeros_para_paginacion($cant_total, $cant_items) {
-    $paginas = (int) ($cant_total / $cant_items);
-    $resto = ($cant_total % $cant_items);
-
-    if ($resto > 0) {
-        $paginas++;
-    }
-
-    $res = array();
-
-    for ($i = 0; $i < $paginas; $i++) {
-        array_push($res, $i * $cant_items);
-    }
-
-    return $res;
-}
-
-// Funciones Html
-
-function br() { // BEGIN public static function br()
-    echo "<br/>";
-}
-
-// END public static function br() 
-
-function p($parrafo) { // BEGIN public static function br()
-    echo "<p>" . $parrafo . "</p>";
-}
-
-function pre() { // BEGIN public static function pre()
-    echo "<pre>";
-}
-
-// END public static function pre()
-
-function cpre() { // BEGIN public static function close_pre()
-    echo "</pre>";
-}
-
  function encode_items(&$item, $key)
  {
     $item = util::mostrar_palabra_latina($item);
  }
-
- function pl($item)
- {    
-    return util::mostrar_palabra_latina($item);
- }
-
-
-// END public static function close_pre()
-// html comentarios
 
 function com($texto) {
     echo "<!-- " . strtoupper($texto) . " -->";
@@ -262,27 +26,9 @@ function com($texto) {
 function n() {
     echo "\n";
 }
-
-function tt() {
-    return "  ";
-}
-
-function nl() {
-    return "\r\n";
-}
-
-function pc() {
-    return ";";
-}
-
 //
 function css($css) {
     echo "<link rel='stylesheet' href='" . $css . "' />";
-    n();
-}
-
-function print_css($css) {
-    echo "<link rel='stylesheet' href='" . $css . "' media='print' />";
     n();
 }
 
@@ -292,54 +38,22 @@ function js($js) {
     n();
 }
 
-function q() {
-    return chr(39);
-}
-
-function sp() {
-    return " ";
-}
-
-function qq() {
-    return chr(34);
-}
-
-function eq() {
-    return "=";
-}
-
-function m1() {
-    return "<";
-}
-
-function m2() {
-    return ">";
-}
-
-function heq($key, $value) {
-    return $key . eq(). qq() . $value . qq();
-}
-
-function data($data, $value) {
-    return $data . eq(). qq() . $value . qq();
-}
-
 function vari($nombre_variable)
 {
 
-$query = <<<EOF
-SELECT * FROM reg_vari WHERE nombre_variable = '$nombre_variable'
-EOF;
+    $query = <<<EOF
+    SELECT * FROM reg_vari WHERE nombre = '$nombre_variable'
+    EOF;
 
-$res = DB::queryFirstRow($query);
-$vari = $res['valor'];    
+    $res = DB::queryFirstRow($query);
+    $vari = $res['valor'];    
 
 
-if($vari == "") {;
-echo "NO EXISTE: $nombre_variable";
-exit;
-}
-return $vari;
+    if($vari == "") {;
+        echo "NO EXISTE: $nombre_variable";
+        exit;
+    }
+    return $vari;
 
 }
 
@@ -405,15 +119,6 @@ $cliente_api_key = $app->request()->params('API_KEY');
 //==============
 }
 
-function pl_rec(&$item)
-{ 
-$item = util::mostrar_palabra_latina($item);
-}
-
-function prea() {
-    echo "<textarea style='height: 700px; width: 600px'>";
-}
-
 function dd($value, $name = "") {
     $timestamp = date('H:i:s.u'); // Add timestamp with microseconds
     echo "<pre>";
@@ -475,18 +180,16 @@ function autentificar_administrador()
 {
     include DEFINITION;
 
-    global $sesion_admin_administrador_id, $nombre_app, $apphost;
-
     // Si no hay sesión
-    if (empty($sesion_admin_administrador_id)) {
-        include $path_public . "/admin/fin_sesion.php";
+    if (empty($ssa_id)) {
+        include VARPATH . "/public/admin/fin_sesion.php";
         exit;
     }
 
     // desencriptar id usuario
     $valor_key = $nombre_app . vari("KEY");
 
-    $usu_id = perso::decrypt($sesion_admin_administrador_id, $valor_key);
+    $usu_id = perso::decrypt($ssa_id, $valor_key);
     $usu_id = str_replace("*", "", $usu_id);
 
     // verificar que el usuario exista y esté activo
@@ -498,38 +201,11 @@ function autentificar_administrador()
     ", $usu_id);
 
     if (!$existe) {
-        include $path_public . "/admin/fin_sesion.php";
+        include VARPATH . "/public/admin/fin_sesion.php";
         exit;
     }
 
     return $usu_id;
-}
-
-function categorias_nuevo_negocio($neg_id){
-
-    $now_unix = time()*1000;
-
-    $cats = DB::query("
-        SELECT *
-        FROM reg_categoria_global
-        WHERE is_activo=1
-        ORDER BY orden ASC
-    ");
-
-    foreach($cats as $c){
-
-        DB::insert('pos_category',[
-            'neg_id'      => $neg_id,
-            'name'        => $c['nombre'],
-            'icon'        => $c['icono'],
-            'priority'    => $c['orden'],
-            'categoria_global_id'    => $c['categoria_global_id'],
-            'created_at'  => $now_unix,
-            'last_update' => $now_unix
-        ]);
-
-    }
-
 }
 
 // Usa la misma clave en Base64 (32 bytes al decodificar)
@@ -571,3 +247,80 @@ function des_barsi(string $tokenB64): string {
     }
     return $plaintext;
 }    
+
+function visita($nombre = 'visitas') {
+
+    // 🔥 Asegurar charset
+    DB::query("SET NAMES 'utf8mb4'");
+
+    // 🔥 Incrementar variable dinámica
+    DB::query("
+        UPDATE reg_vari 
+        SET valor = IFNULL(valor,0) + 1
+        WHERE nombre = %s
+    ", $nombre);
+
+}
+
+function generarCodigoUnico(): string {
+
+    do {
+
+        // 🔹 5 dígitos + 1 letra mayúscula (igual que tu diseño)
+        $numeros = str_pad((string)random_int(0, 99999), 5, '0', STR_PAD_LEFT);
+        $letra   = chr(random_int(65, 90)); // A-Z
+
+        $codigo = $numeros . $letra;
+
+        // 🔥 TABLA CORRECTA
+        $existe = DB::queryFirstField(
+            "SELECT 1 FROM reg_usu WHERE cod_usu = %s",
+            $codigo
+        );
+
+    } while ($existe);
+
+    return $codigo;
+}
+
+
+function firma($xin, $yuan){
+
+    if(!$xin || !$yuan){
+
+        Flight::json([
+            'status' => 'error',
+            'msg' => 'Firma incompleta'
+        ], 401);
+
+        exit;
+
+    }
+    // 50 segundos
+    if(abs((time() * 1000) - $xin) > 50000){
+
+        Flight::json([
+            'status' => 'error',
+            'msg' => 'Firma expirada'
+        ], 401);
+
+        exit;
+
+    }
+
+    $hash_server = md5(
+        $xin . 'Diedao_qi_ci,_zhan_qilai_ba_ci'
+    );
+
+    if($yuan !== $hash_server){
+
+        Flight::json([
+            'status' => 'error',
+            'msg' => 'Firma inválida'
+        ], 401);
+
+        exit;
+
+    }
+
+}

@@ -7,9 +7,7 @@ Flight::route('GET /menu', function () {
     include DEFINITION;
     autentificar_administrador();
 
-    global $path_public;
-
-    include $path_public . '/admin/tab_menu/inicio.php';
+    include VARPATH . '/public/admin/tab_menu/inicio.php';
 });
 
 
@@ -488,4 +486,21 @@ Flight::route('GET /rol/menus/@rol:[0-9]+', function($rol){
         ], 500);
     }
 
+});
+
+/* ================================
+   GUARDAR MENU INICIO POR ROL
+================================ */
+Flight::route('POST /rol/guardar-menu-inicio', function () {
+
+    $data = Flight::request()->data->getData();
+
+    $rol_id      = intval($data['rol_id']);
+    $submenu_id  = intval($data['submenu_id']);
+
+    DB::update('reg_rol', [
+        'submenu_inicio' => $submenu_id
+    ], "rol_id=%i", $rol_id);
+
+    Flight::json(['status'=>'ok']);
 });

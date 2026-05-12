@@ -17,7 +17,7 @@
         <tr>
           <th>ID</th>
           <th>Nombre</th>
-          <th>Color</th>
+          <th>Icono</th>
           <th>Breve</th>
           <th>Acciones</th>
         </tr>
@@ -52,6 +52,43 @@
             </select>
           </div>
         </div>
+
+        <div class="control-group">
+          <label>Emoji</label>
+          <div class="controls">
+
+            <input class="input-small text-center text-large"
+                   v-model="nuevo.icon"
+                   placeholder="😀">
+
+            <select class="input-medium"
+                    @change="nuevo.icon = $event.target.value">
+
+              <option value="">Seleccionar</option>
+              <option>😀</option>
+              <option>😁</option>
+              <option>😂</option>
+              <option>😍</option>
+              <option>😎</option>
+              <option>🥳</option>
+              <option>🔥</option>
+              <option>💎</option>
+              <option>🛒</option>
+              <option>🍎</option>
+              <option>🍔</option>
+              <option>🥬</option>
+              <option>🍞</option>
+              <option>🍗</option>
+              <option>🧃</option>
+              <option>🧼</option>
+              <option>🧴</option>
+              <option>👕</option>
+              <option>👟</option>
+
+            </select>
+
+          </div>
+        </div>        
 
         <div class="control-group">
           <label>Descripción breve</label>
@@ -93,6 +130,43 @@
             </select>
           </div>
         </div>
+
+        <div class="control-group">
+          <label>Emoji</label>
+          <div class="controls">
+
+            <input class="input-small text-center text-large"
+                   v-model="form.icon"
+                   placeholder="😀">
+
+            <select class="input-medium"
+                    @change="form.icon = $event.target.value">
+
+              <option value="">Seleccionar</option>
+              <option>😀</option>
+              <option>😁</option>
+              <option>😂</option>
+              <option>😍</option>
+              <option>😎</option>
+              <option>🥳</option>
+              <option>🔥</option>
+              <option>💎</option>
+              <option>🛒</option>
+              <option>🍎</option>
+              <option>🍔</option>
+              <option>🥬</option>
+              <option>🍞</option>
+              <option>🍗</option>
+              <option>🧃</option>
+              <option>🧼</option>
+              <option>🧴</option>
+              <option>👕</option>
+              <option>👟</option>
+
+            </select>
+
+          </div>
+        </div>        
 
         <div class="control-group">
           <label>Descripción breve</label>
@@ -169,7 +243,7 @@ new Vue({
             this.dt.row.add([
               c.id,
               c.name,
-              `<span style="padding:5px;background:${c.color};color:#fff">${c.color}</span>`,
+              `<span style="font-size:22px">${c.icon || '❓'}</span>`,
               c.brief,
               actions
             ]);
@@ -180,7 +254,7 @@ new Vue({
     },
 
     abrirModalCrear(){
-      this.nuevo = { name:'', icon:'', color:'#999999', brief:'' };
+      this.nuevo = { name:'', icon:'😀', color:'#999999', brief:'' };
       $('#modalCrearCategory').modal('show');
     },
 

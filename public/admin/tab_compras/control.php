@@ -9,10 +9,7 @@ Flight::route('GET /compras', function () {
     include DEFINITION;
     autentificar_administrador();
 
-    global $path_public;
-    global $administrador_actual;
-
-    include $path_public . '/admin/tab_compras/inicio.php';
+    require_once VARPATH . '/public/admin/tab_compras/inicio.php';
 });
 
 

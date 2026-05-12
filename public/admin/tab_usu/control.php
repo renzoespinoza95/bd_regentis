@@ -5,44 +5,64 @@
 Flight::route('GET /usu/inicio', function () {
     include DEFINITION;
     autentificar_administrador();
-    include $path_public . '/admin/tab_usu/inicio.php';
+    require_once VARPATH . '/public/admin/tab_usu/inicio.php';
 });
 
-
-/* 
-+++ PROTOTIPO DE JWT +++ 
 Flight::route('GET /usuario/listar', function(){
-    // 1) Carga tu definición y genera el mismo secreto que en el login
     include DEFINITION;
-    // 2) Leer el header Authorization (soporta distintas formas)
-    $headers = function_exists('getallheaders') 
-             ? getallheaders() 
-             : [];
-    $auth = $headers['Authorization'] 
-         ?? $headers['authorization'] 
-         ?? ($_SERVER['HTTP_AUTHORIZATION'] ?? '');
+    try{
+        DB::query("SET NAMES 'utf8mb4'");
 
-    // 3) Extraer “Bearer <token>”
-    if (! preg_match('/Bearer\s+(.+)/', $auth, $m)) {
-        Flight::halt(401, 'Token faltante');
+        $rows = DB::query("
+            SELECT 
+                u.usu_id,
+                u.cod_usu,
+                u.img_perfil,
+                u.sobrenombre,
+                u.nombres_apellidos,
+                u.fecha_nacimiento,
+                u.celular,
+                u.provincia,
+                u.fecha_creacion,
+                u.tipoxusu_id,
+                u.dni,
+                u.google_uid,
+                r.nombre AS rol_nombre,
+                u.is_activo,
+                -- 🔥 AGREGAMOS EL ID DEL NEGOCIO AQUÍ
+                n.neg_id, 
+                IFNULL(NULLIF(n.nombre,''), '—') AS negocio_nombre
+            FROM reg_usu u
+            LEFT JOIN reg_rol r 
+                ON r.rol_id = u.rol_id
+            LEFT JOIN reg_negxusu nxu
+                ON nxu.usu_id = u.usu_id
+                AND nxu.is_activo = 1
+            LEFT JOIN reg_neg n
+                ON n.neg_id = nxu.neg_id
+            ORDER BY u.usu_id DESC
+        ");
+
+        if (ob_get_length()) ob_clean();
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($rows, JSON_UNESCAPED_UNICODE);
+        exit;
+
+    }catch(Exception $e){
+        if (ob_get_length()) ob_clean();
+        echo json_encode(['status'=>'error','msg'=>$e->getMessage()], JSON_UNESCAPED_UNICODE);
+        exit;
     }
-    $jwt = $m[1];
+});
 
-    // 4) Decodificar y validar con el mismo $valor_key
-    try {
-        $payload = JWT::decode($jwt, $secreto_jwt);
-    } catch (\Throwable $e) {
-        Flight::halt(401, 'Token inválido o expirado');
-    }
+Flight::route('GET /tipoxusu/listar', function(){
+    include DEFINITION;
 
-    // 5) Ya autenticado, devolvemos listado de usuarios
-    DB::query("SET NAMES 'utf8'");
-    $rows = DB::query('SELECT * FROM usu ORDER BY usu_id DESC');
+    $rows = DB::query('SELECT * FROM reg_tipoxusu ORDER BY 1 DESC');
     Flight::json($rows);
 });
-*/
 
-Flight::route('POST /usuario/crear', function () {
+Flight::route('POST /reg/usuario/crear', function () {
     header('Content-Type: application/json; charset=utf-8');
 
     try {
@@ -170,30 +190,157 @@ Flight::route('POST /usuario/editar', function () {
 });
 
 Flight::route('POST /usuario/liquidar', function () {
-    $d = json_decode(Flight::request()->getBody(), true);
 
-    $u = DB::queryFirstRow(
-            "SELECT cod_usu, sobrenombre
-               FROM usu
-              WHERE usu_id = %s",
-            $d['usu_id']
+    DB::query("SET NAMES 'utf8mb4'");
+
+    $d = json_decode(
+        Flight::request()->getBody(),
+        true
+    ) ?: [];
+
+    $usu_id = intval(
+        $d['usu_id'] ?? 0
     );
 
-    $cod_usu = $u['cod_usu'];
-    $sobrenombre = $u['sobrenombre'];
+    /* ======================================
+       VALIDAR
+    ====================================== */
+    if(!$usu_id){
 
-    DB::update('usu', [
-        'google_uid'     => $cod_usu,
-        'img_perfil'     => '1.jpg',
-        'sobrenombre'    => 'liquidado_' . $cod_usu,
-        'celular'        => '0',
-        'is_activo'      => '0',
-        'is_premium'     => '0',
-        'descripcion'     => 'antes ' . $sobrenombre,
-        'fecha_fin_premium'=> '2000-01-01'
-    ], 'usu_id = %i', $d['usu_id']);
+        Flight::json([
+            'success' => false,
+            'msg' => 'usu_id requerido'
+        ],400);
 
-    Flight::json(['success' => true]);
+        return;
+    }
+
+    /* ======================================
+       OBTENER USUARIO
+    ====================================== */
+    $u = DB::queryFirstRow("
+        SELECT *
+        FROM reg_usu
+        WHERE usu_id = %i
+        LIMIT 1
+    ", $usu_id);
+
+    if(!$u){
+
+        Flight::json([
+            'success' => false,
+            'msg' => 'Usuario no encontrado'
+        ],404);
+
+        return;
+    }
+
+    /* ======================================
+       RESPALDO JSON
+    ====================================== */
+    $backup_json = json_encode(
+        $u,
+        JSON_UNESCAPED_UNICODE |
+        JSON_UNESCAPED_SLASHES
+    );
+
+    /* ======================================
+       GENERAR NUEVO CÓDIGO
+    ====================================== */
+    $base_cod = trim($u['cod_usu']);
+
+    if($base_cod == ''){
+        $base_cod = 'USUARIO_'.$usu_id;
+    }
+
+    $nuevo_cod = 'LIQ_' . $base_cod;
+
+    /* ======================================
+       VALIDAR DUPLICADOS
+    ====================================== */
+    $existe = DB::queryFirstField("
+        SELECT COUNT(*)
+        FROM reg_usu
+        WHERE (
+            cod_usu = %s
+            OR google_uid = %s
+        )
+        AND usu_id <> %i
+    ", $nuevo_cod, $nuevo_cod, $usu_id);
+
+    if($existe > 0){
+
+        $nuevo_cod = 'LIQ_' . $base_cod . '_' . $usu_id;
+
+        $existe2 = DB::queryFirstField("
+            SELECT COUNT(*)
+            FROM reg_usu
+            WHERE (
+                cod_usu = %s
+                OR google_uid = %s
+            )
+            AND usu_id <> %i
+        ", $nuevo_cod, $nuevo_cod, $usu_id);
+
+        if($existe2 > 0){
+
+            Flight::json([
+                'success' => false,
+                'msg' => 'No se pudo generar código único'
+            ],400);
+
+            return;
+        }
+    }
+
+    /* ======================================
+       LIQUIDAR
+    ====================================== */
+    DB::update('reg_usu', [
+
+        'cod_usu'            => $nuevo_cod,
+
+        'google_uid'         => $nuevo_cod,
+
+        'nombres_apellidos'  => $nuevo_cod,
+
+        'email'              => $nuevo_cod,
+
+        'img_perfil'         => 'https://barsi-img.b-cdn.net/recursos/logo-regentis.png',
+
+        'sobrenombre'        => 'liquidado_' . $nuevo_cod,
+
+        'celular'            => '0',
+
+        'dni'                => null,
+
+        'provincia'          => null,
+
+        'fecha_nacimiento'   => null,
+
+        'is_activo'          => 0,
+
+        'is_premium'         => 0,
+
+        'fecha_fin_premium'  => '2000-01-01',
+
+        'descripcion'        => $backup_json
+
+    ], 'usu_id = %i', $usu_id);
+
+    /* ======================================
+       RESPONSE
+    ====================================== */
+    Flight::json([
+
+        'success' => true,
+
+        'usu_id' => $usu_id,
+
+        'nuevo_cod' => $nuevo_cod
+
+    ]);
+
 });
 
 /* ---- Eliminar ---- */
@@ -259,9 +406,9 @@ Flight::route('GET /chat/listar/@uid', function ($uid) {
           END AS su_visto,
           ch.ultimo_mensaje,
           ch.is_bloqueado
-        FROM chat ch
-        JOIN usu u1 ON u1.usu_id = ch.usu1_id
-        JOIN usu u2 ON u2.usu_id = ch.usu2_id
+        FROM reg_chat ch
+        JOIN reg_usu u1 ON u1.usu_id = ch.usu1_id
+        JOIN reg_usu u2 ON u2.usu_id = ch.usu2_id
         WHERE ch.usu1_id = %i OR ch.usu2_id = %i
         ORDER BY ch.fecha_creacion DESC
     ",
@@ -510,20 +657,6 @@ Flight::route('POST /app/actualizaTipoxusu', function () {
         ], 500);
     }
 });
-
-function generarCodigoUnico(): string {
-    do {
-        // Generar 5 dígitos + 1 letra mayúscula
-        $numeros = str_pad((string)random_int(0, 99999), 5, '0', STR_PAD_LEFT);
-        $letra = chr(random_int(65, 90)); // Letras A-Z
-        $codigo = $numeros . $letra;
-
-        // Verificar si ya existe en la base de datos
-        $existe = DB::queryFirstField("SELECT 1 FROM usu WHERE cod_usu = %s", $codigo);
-    } while ($existe); // Si existe, genera otro
-
-    return $codigo;
-}
 
 // Devuelve la cantidad de chats sin leer para el usuario
 Flight::route('GET /chat/nuevosMensajes/@uid', function ($uid) {
@@ -1656,3 +1789,396 @@ function google_tokeninfo(string $idToken): array
     return [];
 }
 
+Flight::route('POST /xico/usu/crear', function () {
+    try {
+        DB::query("SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci'");
+
+        $d = json_decode(Flight::request()->getBody(), true) ?: [];
+
+        // 🔥 Insert
+        DB::insert('reg_usu', [
+          'cod_usu'            => $d['cod_usuario'] ?? null,
+          'dni'                => $d['dni'] ?? null, // 🔥 ESTA ES LA CLAVE
+          'google_uid'         => $d['google_uid'] ?? null,
+          'img_perfil'         => $d['img_perfil'] ?? null,
+          'sobrenombre'        => $d['sobrenombre'] ?? null,
+          'celular'            => $d['celular'] ?? null,
+          'provincia'          => $d['provincia'] ?? null,
+          'fecha_nacimiento'   => $d['fecha_nacimiento'] ?? null,
+          'tipoxusu_id'        => $d['tipoxusu_id'] ?? null,
+          'is_activo'          => isset($d['is_activo']) ? (int)$d['is_activo'] : 1,
+          'is_premium'         => isset($d['is_premium']) ? (int)$d['is_premium'] : 0,
+          'fecha_fin_premium'  => $d['fecha_fin_premium'] ?? null,
+          'fecha_creacion'     => date('Y-m-d H:i:s')
+        ]);
+
+        Flight::json([
+            'success'=>true,
+            'usu_id'=>DB::insertId()
+        ]);
+
+    } catch(Exception $e){
+        Flight::json(['success'=>false,'msg'=>$e->getMessage()],500);
+    }
+});
+
+Flight::route('POST /xico/usu/editar', function () {
+    try {
+        DB::query("SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci'");
+
+        $d = json_decode(Flight::request()->getBody(), true) ?: [];
+
+        // 🔥 PASO VITAL: Definir la variable $usu_id para usarla después
+        $usu_id = $d['usu_id'] ?? null;
+
+        if (empty($usu_id)) {
+            Flight::json(['success'=>false,'msg'=>'usu_id requerido'], 400);
+            return;
+        }
+
+        // 1. Actualizar tabla principal
+        DB::update('reg_usu', [
+            'cod_usu'            => $d['cod_usuario'] ?? null,
+            'google_uid'         => $d['google_uid'] ?? null,
+            'dni'                => $d['dni'] ?? null,
+            'img_perfil'         => $d['img_perfil'] ?? null,
+            'sobrenombre'        => $d['sobrenombre'] ?? null,
+            'celular'            => $d['celular'] ?? null,
+            'provincia'          => $d['provincia'] ?? null,
+            'fecha_nacimiento'   => $d['fecha_nacimiento'] ?? null,
+            'tipoxusu_id'        => $d['tipoxusu_id'] ?? null,
+            'nombres_apellidos' => $d['nombres_apellidos'] ?? null,
+            'is_activo'          => isset($d['is_activo']) ? (int)$d['is_activo'] : 1,
+            'is_premium'         => isset($d['is_premium']) ? (int)$d['is_premium'] : 0,
+            'fecha_fin_premium'  => $d['fecha_fin_premium'] ?? null
+        ], "usu_id=%i", $usu_id);
+
+        // 2. 🔥 Lógica para reg_negxusu
+        // 🔥 NUEVA LÓGICA DE ACTUALIZACIÓN O INSERCIÓN (UPSERT)
+        if (!empty($d['neg_id'])) {
+            $neg_id = (int)$d['neg_id'];
+
+            // 1. Verificamos si el usuario ya tiene ALGÚN negocio asignado
+            $relacionExistente = DB::queryFirstRow("SELECT * FROM reg_negxusu WHERE usu_id = %i", $usu_id);
+
+            if ($relacionExistente) {
+                // 2. Si ya existe una relación, simplemente actualizamos el neg_id
+                DB::update('reg_negxusu', [
+                    'neg_id'    => $neg_id,
+                    'is_activo' => 1 // Nos aseguramos de que esté activo al editar
+                ], "usu_id=%i", $usu_id);
+            } else {
+                // 3. Si no tiene ninguna relación previa, creamos una nueva
+                DB::insert('reg_negxusu', [
+                    'usu_id'          => $usu_id,
+                    'neg_id'          => $neg_id,
+                    'is_activo'       => 1,
+                    'fecha_creacion'  => date('Y-m-d H:i:s')
+                ]);
+            }
+        }
+
+        Flight::json(['success' => true]);
+
+    } catch(Exception $e){
+        Flight::json(['success' => false, 'msg' => $e->getMessage()], 500);
+    }
+});
+
+// En app.php o control.php
+Flight::route('GET /xico/negocios/validados', function() {
+    try {
+        $rows = DB::query("SELECT neg_id, nombre FROM reg_neg WHERE is_validado = 1 ORDER BY nombre ASC");
+        Flight::json($rows);
+    } catch (Exception $e) {
+        Flight::json(['success' => false, 'msg' => $e->getMessage()], 500);
+    }
+});
+
+Flight::route(
+    'POST /usuario/subirAvatarBunny',
+    function () {
+
+    include DEFINITION;
+
+    autentificar_administrador();
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    $url    = $_POST['url'] ?? '';
+    $usu_id = intval($_POST['usu_id'] ?? 0);
+
+    /* ======================================
+       VALIDAR
+    ====================================== */
+    if (!$url) {
+
+        Flight::json([
+
+            'success' => false,
+
+            'error' => 'URL requerida'
+        ]);
+
+        return;
+    }
+
+    if (!$usu_id) {
+
+        Flight::json([
+
+            'success' => false,
+
+            'error' => 'usu_id requerido'
+        ]);
+
+        return;
+    }
+
+    try {
+
+        /* ======================================
+           DESCARGAR IMAGEN
+        ====================================== */
+
+        $context = stream_context_create([
+
+            'http' => [
+
+                'timeout' => 30,
+
+                'header' =>
+                    "User-Agent: Mozilla/5.0\r\n"
+            ]
+        ]);
+
+        $img = file_get_contents(
+            $url,
+            false,
+            $context
+        );
+
+        if (!$img) {
+
+            Flight::json([
+
+                'success' => false,
+
+                'error' =>
+                    'No se pudo descargar avatar'
+            ]);
+
+            return;
+        }
+
+        /* ======================================
+           TEMP FILE
+        ====================================== */
+
+        $tmp =
+            tempnam(
+                sys_get_temp_dir(),
+                'avatar_'
+            ) . '.jpg';
+
+        file_put_contents(
+            $tmp,
+            $img
+        );
+
+        /* ======================================
+           NOMBRE
+        ====================================== */
+
+        $filename =
+
+            'avatar_' .
+
+            date('Ymd_His') .
+
+            '_' .
+
+            rand(1000,9999) .
+
+            '.jpg';
+
+        /* ======================================
+           URL STORAGE
+        ====================================== */
+
+        $storageUrl =
+
+            rtrim(
+                BUNNY_STORAGE_URL,
+                '/'
+            ) .
+
+            '/' .
+
+            SLIDER_DIR .
+
+            '/' .
+
+            $filename;
+
+        $headers = [
+
+            "AccessKey: " .
+            BUNNY_STORAGE_ACCESSKEY,
+
+            "Content-Type: image/jpeg"
+        ];
+
+        /* ======================================
+           SUBIR BUNNY
+        ====================================== */
+
+        $fp = fopen($tmp, 'r');
+
+        $ch = curl_init($storageUrl);
+
+        curl_setopt(
+            $ch,
+            CURLOPT_PUT,
+            true
+        );
+
+        curl_setopt(
+            $ch,
+            CURLOPT_INFILE,
+            $fp
+        );
+
+        curl_setopt(
+            $ch,
+            CURLOPT_INFILESIZE,
+            filesize($tmp)
+        );
+
+        curl_setopt(
+            $ch,
+            CURLOPT_HTTPHEADER,
+            $headers
+        );
+
+        curl_setopt(
+            $ch,
+            CURLOPT_RETURNTRANSFER,
+            true
+        );
+
+        $response =
+            curl_exec($ch);
+
+        $status =
+            curl_getinfo(
+                $ch,
+                CURLINFO_HTTP_CODE
+            );
+
+        $error =
+            curl_error($ch);
+
+        curl_close($ch);
+
+        fclose($fp);
+
+        unlink($tmp);
+
+        /* ======================================
+           ERROR CURL
+        ====================================== */
+
+        if ($error) {
+
+            Flight::json([
+
+                'success' => false,
+
+                'error' => $error
+            ]);
+
+            return;
+        }
+
+        /* ======================================
+           STATUS
+        ====================================== */
+
+        if (
+            $status != 200 &&
+            $status != 201
+        ) {
+
+            Flight::json([
+
+                'success' => false,
+
+                'error' =>
+                    'Bunny HTTP ' .
+                    $status,
+
+                'response' =>
+                    $response
+            ]);
+
+            return;
+        }
+
+        /* ======================================
+           CDN
+        ====================================== */
+
+        $cdn =
+
+            rtrim(
+                BUNNY_CDN_BASE,
+                '/'
+            ) .
+
+            '/' .
+
+            SLIDER_DIR .
+
+            '/' .
+
+            $filename;
+
+        /* ======================================
+           🔥 UPDATE USUARIO
+        ====================================== */
+
+        DB::update(
+
+            'reg_usu',
+
+            [
+                'img_perfil' => $cdn
+            ],
+
+            'usu_id=%i',
+
+            $usu_id
+        );
+
+        /* ======================================
+           RESPONSE
+        ====================================== */
+
+        Flight::json([
+
+            'success' => true,
+
+            'url' => $cdn
+        ]);
+
+    } catch(Exception $e){
+
+        Flight::json([
+
+            'success' => false,
+
+            'error' => $e->getMessage()
+        ]);
+    }
+});

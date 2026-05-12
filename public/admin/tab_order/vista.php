@@ -17,7 +17,7 @@
         <ul class="dropdown-menu pull-right">
           <li>
             <a href="#" @click.prevent="abrirModalCrear">
-              <i class="fa fa-plus"></i> Nueva venta
+              <i class="fa fa-plus"></i> Venta
             </a>
           </li>
           <li>
@@ -28,11 +28,6 @@
           <li>
             <a href="#" @click.prevent="abrirReporteVentas">
               <i class="fa fa-plus"></i> Ventas por Fecha
-            </a>
-          </li>
-          <li>
-            <a href="#" @click.prevent="abrirModalAgregar">
-              <i class="fa fa-plus"></i> Agregar trabajador
             </a>
           </li>
           <li>
@@ -154,9 +149,9 @@
         <label>Cliente</label>
         <v-select
           :options="clientes"
-          label="label"
-          v-model="nueva.cliente"
-        ></v-select>
+          :get-option-label="c => `${c.dni} - ${c.nombre}`"
+          v-model="nueva.cliente">
+        </v-select>
       </div>
 
       <div class="control-group">
@@ -210,7 +205,7 @@
 </table>
 
 <button class="btn btn-success" @click="abrirModalAgregarItemNuevaOrden">
-  Agregar productos
+  + Productos
 </button>
 
 
@@ -342,16 +337,13 @@
         <h3>Clientes</h3>
       </div>
       <div class="modal-body">
-
-        <button class="btn btn-success" @click="abrirModalNuevoCliente">
-          + Agregar Cliente
-        </button>
-
-        <table id="tablaClientes" class="table table-bordered table-striped">
+        <table id="tablaClientes" class="table table-bordered">
           <thead>
             <tr>
               <th>DNI</th>
               <th>Nombre</th>
+              <th>Puesto</th>
+              <th>Dirección</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -359,6 +351,9 @@
 
       </div>
       <div class="modal-footer">
+        <button class="btn btn-success" @click="abrirModalNuevoCliente">
+          + Cliente
+        </button>
         <button class="btn" data-dismiss="modal">Cerrar</button>
       </div>
     </div>
@@ -377,6 +372,15 @@
 
         <label>Nombre</label>
         <input v-model="clienteForm.nombre">
+
+        <label>Dirección</label>
+        <input v-model="clienteForm.direccion">
+
+        <label>Distrito</label>
+        <input v-model="clienteForm.distrito">
+
+        <label>Puesto</label>
+        <input v-model="clienteForm.puesto">
 
       </div>
       <div class="modal-footer">
@@ -403,6 +407,9 @@
 
         <label>Teléfono</label>
         <input v-model="clienteEdit.telefono">
+
+        <label>Puesto</label>
+        <input v-model="clienteEdit.puesto">        
 
         <label>Email</label>
         <input v-model="clienteEdit.email">
@@ -580,7 +587,13 @@ new Vue({
     administradores:[],
 
     clientes:[],
-    clienteForm:{ dni:'', nombre:'' },
+    clienteForm:{
+      dni:'',
+      nombre:'',
+      direccion:'',
+      distrito:'',
+      puesto:''
+    },
     clienteEdit:{},
     dtClientes:null,
 
@@ -735,35 +748,20 @@ new Vue({
     },
 
     abrirModalCrear() {
-      axios.get(`${this.apphost}/auth/administrador-actual`).then(r=>{
 
-        const caja = r.data.caja;
+      // ⚡ sin validación de caja
+      this.nueva = {
+        cliente_id:null,
+        buyer:'',
+        address:'',
+        total_fees:0,
+        items:[],
+        caja_id: null,
+        mesa: null
+      };
 
-        if(caja.estado !== 'ABIERTA'){
-          apprise('La caja de este usuario está cerrada');
-          return;
-        }
+      $('#modalCrearOrder').modal('show');
 
-        // ✅ caja abierta
-        this.cajaActual = caja;
-        this.caja_id = caja.caja_id;
-
-        // preparar orden
-        this.nueva = {
-          cliente_id:null,
-          buyer:'',
-          address:'',
-          total_fees:0,
-          items:[],
-          caja_id: caja.caja_id,
-          mesa: null
-        };
-
-        $('#modalCrearOrder').modal('show');
-
-      }).catch(()=>{
-        apprise('No se pudo verificar el estado de la caja');
-      });
     },
 
     abrirReporteVentas(){
@@ -819,6 +817,8 @@ new Vue({
             this.dtClientes.row.add([
               c.dni,
               c.nombre,
+              c.puesto || '—',
+              c.direccion || '—',
               `<button class="btn btn-mini btn-primary editar" data-id="${c.cliente_id}">Editar</button>`
             ]);
           });
@@ -847,16 +847,32 @@ new Vue({
     },
 
     guardarCliente(){
+
       if(!this.clienteForm.dni || !this.clienteForm.nombre){
-        alert('DNI y Nombre son obligatorios');
+        apprise('DNI y Nombre son obligatorios');
         return;
       }
 
+      $.blockUI({ message:'Guardando...' });
+
       axios.post(`${this.apphost}/cliente/crear`, this.clienteForm)
       .then(()=>{
+
+        apprise('Cliente guardado');
+
         $('#modalNuevoCliente').modal('hide');
+
+        // 🔥 refresca datatable correctamente
         this.listarClientes();
+
+      })
+      .catch(e=>{
+        apprise(e.response?.data?.error || 'Error al guardar');
+      })
+      .finally(()=>{
+        $.unblockUI();
       });
+
     },
 
     actualizarCliente(){
@@ -1098,7 +1114,13 @@ new Vue({
     },
 
     abrirModalNuevoCliente(){
-      this.clienteForm = { dni:'', nombre:'' };
+      this.clienteForm = {
+        dni:'',
+        nombre:'',
+        direccion:'',
+        distrito:'',
+        puesto:''
+      };
       $('#modalNuevoCliente').modal('show');
     },    
 
@@ -1266,7 +1288,7 @@ new Vue({
 
     opcionesMesa(){
       return [
-        { mesa_id: 0, label: 'DIRECTO' },
+        { mesa_id: null, label: 'DIRECTO' },
         ...this.mesas
           .filter(m => m.estado === 'DISPONIBLE')
           .map(m => ({

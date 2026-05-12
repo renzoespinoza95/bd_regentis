@@ -7,8 +7,7 @@
 Flight::route('GET /order', function () {
     include DEFINITION;
     autentificar_administrador();
-    global $path_public;
-    include $path_public . '/admin/tab_order/inicio.php';
+    require_once VARPATH . '/public/admin/tab_order/inicio.php';
 });
 
 
@@ -27,7 +26,7 @@ Flight::route('GET /product_order/listar', function(){
           po.total_fees,
           po.modo_order_id,
           mo.nombre AS modo_order,
-          cl.nombre AS cliente,
+          cl.nombres_apellidos AS cliente,
           m.nombre AS mesa_nombre,
           u.nombres_apellidos AS administrador,
           tp.descripcion AS tipo_pago,
@@ -59,163 +58,227 @@ function generarCodigoOrden(){
   return strtoupper(bin2hex(random_bytes(4)));
 }
 
-
 /* ======================================
    CREAR ORDEN
 ====================================== */
-Flight::route('POST /product_order/crear', function () {
+Flight::route('POST /product_order/crear', function(){
 
     include DEFINITION;
     autentificar_administrador();
+
     global $administrador_actual;
 
-    $usu_id = $administrador_actual['usu_id'];
-    $neg_id = $administrador_actual['neg_id'];
-
-    $caja = DB::queryFirstRow("
-        SELECT *
-        FROM pos_caja
-        WHERE usu_id = %i
-        AND neg_id = %i
-        AND DATE(fecha_apertura) = CURDATE()
-        AND estado = 'ABIERTA'
-        ORDER BY fecha_apertura DESC
-        LIMIT 1
-    ", $usu_id, $neg_id);
-
-    if (!$caja) {
-        Flight::json([
-            'status'=>'error',
-            'msg'=>'La caja de este usuario está cerrada'
-        ],403);
-        return;
-    }
+    $neg_id = intval($administrador_actual['neg_id']);
+    $usu_id = intval($administrador_actual['usu_id']);
 
     $d = Flight::request()->data->getData();
 
-    if (empty($d['cliente_id'])) {
-        Flight::json(['status'=>'error','msg'=>'Debe seleccionar cliente'],400);
-        return;
+    $cliente_id   = intval($d['cliente_id']);
+    $tipo_pago_id = intval($d['tipo_pago_id']);
+    $mesa_id      = isset($d['mesa_id']) ? intval($d['mesa_id']) : null;
+    $items        = $d['items'] ?? [];
+
+    if($mesa_id <= 0){
+        $mesa_id = null;
     }
 
-    if (empty($d['tipo_pago_id'])) {
-        Flight::json(['status'=>'error','msg'=>'Debe seleccionar tipo de pago'],400);
+    if(empty($items)){
+
+        Flight::json([
+            'error'=>'No hay items'
+        ],400);
+
         return;
-    }
-
-    if (empty($d['items']) || !is_array($d['items'])) {
-        Flight::json(['status'=>'error','msg'=>'Debe agregar productos'],400);
-        return;
-    }
-
-    $mesa_id = isset($d['mesa_id']) ? (int)$d['mesa_id'] : -1;
-
-    if ($mesa_id < 0) {
-        Flight::json(['status'=>'error','msg'=>'Seleccione mesa o DIRECTO'],400);
-        return;
-    }
-
-    $modo_order_id = 1;
-    $mesa_id_db = null;
-    $fecha_inicio = null;
-
-    if ($mesa_id > 0) {
-
-        $ocupada = DB::queryFirstField("
-            SELECT COUNT(*)
-            FROM pos_product_order
-            WHERE mesa_id=%i AND modo_order_id=2 AND neg_id=%i
-        ", $mesa_id, $neg_id);
-
-        if ($ocupada) {
-            Flight::json(['status'=>'error','msg'=>'Mesa ocupada'],409);
-            return;
-        }
-
-        $modo_order_id = 2;
-        $mesa_id_db = $mesa_id;
-        $fecha_inicio = date('Y-m-d H:i:s');
-
-        DB::update('resto_mesa',
-            ['estado'=>'OCUPADA'],
-            "mesa_id=%i AND neg_id=%i",
-            $mesa_id,$neg_id
-        );
     }
 
     DB::startTransaction();
 
-    try {
+    try{
 
-        $now = time()*1000;
+        $now = date('Y-m-d H:i:s');
 
+        /* ======================================
+           🧾 CREAR ORDEN
+        ====================================== */
         DB::insert('pos_product_order',[
-            'serial'=>generarCodigoOrden(),
-            'usu_id'=>$usu_id,
-            'cliente_id'=>$d['cliente_id'],
-            'caja_id'=>$caja['caja_id'],
-            'tipo_pago_id'=>$d['tipo_pago_id'],
-            'mesa_id'=>$mesa_id_db,
-            'modo_order_id'=>$modo_order_id,
-            'total_fees'=>0,
-            'tax'=>0,
-            'fecha_inicio'=>$fecha_inicio,
-            'fecha_creacion'=>date('Y-m-d H:i:s'),
-            'fecha_modificacion'=>date('Y-m-d H:i:s'),
-            'created_at'=>$now,
-            'last_update'=>$now,
-            'neg_id'=>$neg_id
+
+            'neg_id'             => $neg_id,
+            'cliente_id'         => $cliente_id,
+            'tipo_pago_id'       => $tipo_pago_id,
+            'mesa_id'            => $mesa_id,
+            'modo_order_id'      => $mesa_id ? 2 : 1,
+            'usu_id'             => $usu_id,
+            'total_fees'         => 0,
+            'tax'                => 0,
+            'fecha_creacion'     => $now,
+            'fecha_modificacion' => $now
+
         ]);
 
         $order_id = DB::insertId();
 
-        foreach ($d['items'] as $i) {
+        $total = 0;
 
+        /* ======================================
+           📦 DETALLE
+        ====================================== */
+        foreach($items as $it){
+
+            $product_id = intval($it['product_id']);
+            $amount     = intval($it['amount']);
+            $price      = floatval($it['price_item']);
+
+            if($amount <= 0){
+                continue;
+            }
+
+            $subtotal = $amount * $price;
+
+            $total += $subtotal;
+
+            /* ======================================
+               🔍 PRODUCTO
+            ====================================== */
+            $p = DB::queryFirstRow("
+                SELECT
+                    product_id,
+                    name
+                FROM pos_product
+                WHERE product_id=%i
+                LIMIT 1
+            ", $product_id);
+
+            if(!$p){
+
+                DB::rollback();
+
+                Flight::json([
+                    'status'=>'error',
+                    'msg'=>'Producto no encontrado'
+                ],400);
+
+                return;
+            }
+
+            /* ======================================
+               🔍 INVENTARIO ACTUAL
+            ====================================== */
+            $inventario = DB::queryFirstRow("
+                SELECT
+                    inventario_id,
+                    stock_actual
+                FROM pos_inventario
+                WHERE product_id=%i
+                  AND neg_id=%i
+                LIMIT 1
+            ", $product_id, $neg_id);
+
+            if(!$inventario){
+
+                DB::rollback();
+
+                Flight::json([
+                    'status'=>'error',
+                    'msg'=>'Inventario no encontrado para el producto: '.$p['name']
+                ],400);
+
+                return;
+            }
+
+            $stock_actual = intval($inventario['stock_actual']);
+
+            /* ======================================
+               🔒 VALIDAR STOCK
+            ====================================== */
+            if($stock_actual < $amount){
+
+                DB::rollback();
+
+                Flight::json([
+                    'status'=>'error',
+                    'msg'=>'Stock insuficiente para: '.$p['name']
+                ],400);
+
+                return;
+            }
+
+            $nuevo_stock = $stock_actual - $amount;
+
+            /* ======================================
+               📦 DETALLE ORDEN
+            ====================================== */
             DB::insert('pos_product_order_detail',[
-                'order_id'=>$order_id,
-                'product_id'=>$i['product_id'],
-                'product_name'=>DB::queryFirstField(
-                    "SELECT name FROM pos_product WHERE product_id=%i AND neg_id=%i",
-                    $i['product_id'],$neg_id
-                ),
-                'amount'=>$i['amount'],
-                'price_item'=>$i['price_item'],
-                'created_at'=>$now,
-                'last_update'=>$now,
-                'fecha_creacion'=>date('Y-m-d H:i:s'),
-                'fecha_modificacion'=>date('Y-m-d H:i:s')
+
+                'order_id'           => $order_id,
+                'product_id'         => $product_id,
+                'product_name'       => $p['name'],
+                'amount'             => $amount,
+                'price_item'         => $price,
+                'fecha_creacion'     => $now,
+                'fecha_modificacion' => $now
+
             ]);
 
-            registrar_movimiento_inventario(
-                $i['product_id'],
-                'SALIDA',
-                'VENTA',
-                $i['amount'],
-                $i['price_item'],
-                $order_id,
-                'pos_product_order'
-            );
+            /* ======================================
+               📉 MOVIMIENTO INVENTARIO
+            ====================================== */
+            DB::insert('pos_inventario_movimiento',[
+
+                'product_id'        => $product_id,
+                'tipo'              => 'SALIDA',
+                'origen'            => 'VENTA',
+                'cantidad'          => $amount,
+                'precio_unitario'   => $price,
+                'fecha'             => $now,
+                'referencia_id'     => $order_id,
+                'referencia_tabla'  => 'pos_product_order',
+                'stock_resultante'  => $nuevo_stock,
+                'neg_id'            => $neg_id
+
+            ]);
+
+            /* ======================================
+               🔥 ACTUALIZAR STOCK ACTUAL
+            ====================================== */
+            DB::update('pos_inventario',[
+
+                'stock_actual' => $nuevo_stock
+
+            ],"inventario_id=%i",$inventario['inventario_id']);
+
         }
 
-        recalcular_total_orden($order_id);
+        /* ======================================
+           💰 TOTAL
+        ====================================== */
+        DB::update('pos_product_order',[
+
+            'total_fees' => $total
+
+        ],"product_order_id=%i",$order_id);
 
         DB::commit();
 
         Flight::json([
+
             'status'=>'ok',
             'product_order_id'=>$order_id,
-            'mesa_id'=>$mesa_id_db
+            'total'=>$total
+
         ]);
 
-    } catch(Exception $e){
+    }catch(Exception $e){
 
         DB::rollback();
 
         Flight::json([
+
             'status'=>'error',
             'msg'=>$e->getMessage()
+
         ],500);
     }
+
 });
 
 
@@ -274,7 +337,7 @@ Flight::route('GET /yup/product_order/detalle/@id', function($id){
         SELECT 
             o.*,
             tp.descripcion AS tipo_pago,
-            CONCAT(c.dni,' - ',c.nombre) AS cliente
+            CONCAT(c.dni,' - ',c.nombres_apellidos) AS cliente
         FROM pos_product_order o
         LEFT JOIN pos_tipo_pago tp 
                ON tp.tipo_pago_id = o.tipo_pago_id
@@ -520,42 +583,37 @@ function actualizar_estado_orden($order_id, $estado){
 ====================================== */
 Flight::route('GET /cliente/listar', function(){
 
-    /* ----------------------------------
-       DEFINICIONES
-    ---------------------------------- */
-
     include DEFINITION;
-
-    /* ----------------------------------
-       AUTENTICACIÓN
-    ---------------------------------- */
-
     autentificar_administrador();
 
     global $administrador_actual;
 
     $neg_id = $administrador_actual['neg_id'];
 
-    /* ----------------------------------
-       CONSULTA
-    ---------------------------------- */
+    DB::query("SET NAMES 'utf8mb4'");
 
     $rows = DB::query("
         SELECT 
             c.cliente_id,
+            c.nombres_apellidos AS nombre,
             c.dni,
-            c.nombre
-        FROM reg_negxclie nx
-        INNER JOIN pos_cliente c
-            ON c.cliente_id = nx.cliente_id
-        WHERE nx.neg_id = %i
-        AND c.is_activo = 1
-        ORDER BY c.nombre
+            c.cod_usu,
+            c.ruc,
+            c.puesto,
+            c.direccion,
+            c.celular AS telefono,
+            c.email,
+            c.distrito,
+            c.map_lat,
+            c.map_lng
+        FROM pos_cliente c
+        WHERE 
+            (c.neg_id = %i AND c.is_activo = 1)
+            OR c.cliente_id = 1
+        ORDER BY 
+            (c.cliente_id = 1) DESC, -- 🔥 lo pone arriba
+            c.nombres_apellidos ASC
     ", $neg_id);
-
-    /* ----------------------------------
-       RESPUESTA
-    ---------------------------------- */
 
     Flight::json($rows);
 
@@ -569,58 +627,56 @@ Flight::route('POST /cliente/crear', function(){
     /* ----------------------------------
        DEFINICIONES
     ---------------------------------- */
-
     include DEFINITION;
 
     /* ----------------------------------
        AUTENTICACIÓN
     ---------------------------------- */
-
     autentificar_administrador();
 
     global $administrador_actual;
 
-    $neg_id = $administrador_actual['neg_id'];
+    $neg_id = intval($administrador_actual['neg_id']);
 
     /* ----------------------------------
-       OBTENER DATA
+       DATA
     ---------------------------------- */
-
     $d = Flight::request()->data->getData();
 
     if (empty($d['dni']) || empty($d['nombre'])) {
-
         Flight::json([
             'error' => 'Debe ingresar DNI y nombre'
         ],400);
-
         return;
     }
-
-    /* ----------------------------------
-       BUSCAR CLIENTE GLOBAL
-    ---------------------------------- */
-
-    $cliente = DB::queryFirstRow("
-        SELECT cliente_id
-        FROM pos_cliente
-        WHERE dni=%s
-        LIMIT 1
-    ", $d['dni']);
 
     DB::startTransaction();
 
     try{
 
         /* ----------------------------------
-           SI NO EXISTE → CREAR CLIENTE GLOBAL
+           BUSCAR CLIENTE GLOBAL
         ---------------------------------- */
+        $cliente = DB::queryFirstRow("
+            SELECT cliente_id
+            FROM pos_cliente
+            WHERE dni=%s
+            LIMIT 1
+        ", $d['dni']);
 
         if (!$cliente) {
 
-            DB::insert('pos_cliente',[
+            /* ----------------------------------
+               CREAR CLIENTE GLOBAL
+            ---------------------------------- */
+            DB::insert('pos_cliente', [
                 'dni'       => $d['dni'],
                 'nombre'    => $d['nombre'],
+                'direccion' => $d['direccion'] ?? '',
+                'distrito'  => $d['distrito'] ?? '',
+                'puesto'    => $d['puesto'] ?? '',
+                'telefono'  => '',
+                'email'     => '',
                 'is_activo' => 1
             ]);
 
@@ -633,27 +689,19 @@ Flight::route('POST /cliente/crear', function(){
         }
 
         /* ----------------------------------
-           VERIFICAR RELACIÓN CON NEGOCIO
+           CREAR RELACIÓN NEGOCIO ↔ CLIENTE
         ---------------------------------- */
-
-        $existe_relacion = DB::queryFirstField("
+        $existe = DB::queryFirstField("
             SELECT COUNT(*)
             FROM reg_negxclie
-            WHERE neg_id=%i
-            AND cliente_id=%i
+            WHERE neg_id=%i AND cliente_id=%i
         ", $neg_id, $cliente_id);
 
-        /* ----------------------------------
-           SI NO EXISTE RELACIÓN → CREARLA
-        ---------------------------------- */
-
-        if ($existe_relacion == 0) {
-
-            DB::insert('reg_negxclie',[
-                'neg_id' => $neg_id,
+        if($existe == 0){
+            DB::insert('reg_negxclie', [
+                'neg_id'     => $neg_id,
                 'cliente_id' => $cliente_id
             ]);
-
         }
 
         DB::commit();
@@ -663,7 +711,7 @@ Flight::route('POST /cliente/crear', function(){
             'cliente_id' => $cliente_id
         ]);
 
-    } catch(Exception $e){
+    }catch(Exception $e){
 
         DB::rollback();
 
@@ -1349,3 +1397,60 @@ Flight::route('GET /imp_ventas_fecha_admin_excel', function(){
     echo "</table>";
 });
 
+
+
+Flight::route('POST /cliente/editar', function(){
+
+    /* ----------------------------------
+       DEFINICIONES
+    ---------------------------------- */
+    include DEFINITION;
+
+    /* ----------------------------------
+       AUTENTICACIÓN
+    ---------------------------------- */
+    autentificar_administrador();
+
+    /* ----------------------------------
+       DATA
+    ---------------------------------- */
+    $d = Flight::request()->data->getData();
+
+    if (empty($d['cliente_id'])) {
+        Flight::json([
+            'error' => 'cliente_id requerido'
+        ],400);
+        return;
+    }
+
+    DB::startTransaction();
+
+    try{
+
+        DB::update('pos_cliente', [
+            'dni'       => $d['dni'] ?? '',
+            'nombre'    => $d['nombre'] ?? '',
+            'direccion' => $d['direccion'] ?? '',
+            'distrito'  => $d['distrito'] ?? '',
+            'puesto'    => $d['puesto'] ?? '',
+            'telefono'  => $d['telefono'] ?? '',
+            'email'     => $d['email'] ?? ''
+        ], "cliente_id=%i", $d['cliente_id']);
+
+        DB::commit();
+
+        Flight::json([
+            'status' => 'ok'
+        ]);
+
+    }catch(Exception $e){
+
+        DB::rollback();
+
+        Flight::json([
+            'error' => $e->getMessage()
+        ],500);
+
+    }
+
+});

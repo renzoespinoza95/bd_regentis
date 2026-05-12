@@ -8,7 +8,7 @@
       <i class="icon-plus icon-white"></i> Nuevo
     </button>
 
-    <table class="table table-bordered table-striped">
+    <table id="tablaAdmins" class="table table-bordered table-striped">
       <thead>
         <tr>
           <th>ID</th>
@@ -16,6 +16,8 @@
           <th>Cuenta</th>
           <th>Clave</th>
           <th>Rol</th>
+          <th>Tipo Usuario</th>
+          <th>Negocio</th>
           <th>Activo</th>
           <th>Acciones</th>
         </tr>
@@ -26,10 +28,11 @@
 
           <td>{{ a.usu_id }}</td>
           <td>{{ a.nombres_apellidos }}</td>
-          <td>{{ a.email }}</td>
+          <td>{{ a.sobrenombre }}</td>
           <td>{{ a.clavel }}</td>
           <td>{{ a.rol }}</td>
-
+          <td>{{ a.tipoxusu || '—' }}</td>
+          <td>{{ a.negocio || '—' }}</td>
           <td>
             <span class="label"
             :class="a.is_activo==1?'label-success':'label-important'">
@@ -65,12 +68,25 @@
 
         <label>Nombre de usuario</label>
         <input class="input-xxlarge"
-        v-model="form.email">
+        v-model="form.sobrenombre">
 
         <label>Clave</label>
-        <input class="input-large"
-        type="password"
-        v-model="form.clavel">
+        <div style="display:flex; align-items:center; gap:5px;">
+
+          <input class="input-large"
+          :type="mostrarClave ? 'text' : 'password'"
+          v-model="form.clavel">
+
+          <button class="btn btn-mini"
+          type="button"
+          @click="toggleClave">
+
+            <i class="icon-eye"
+            :class="mostrarClave ? 'icon-eye-open' : 'icon-eye-close'"></i>
+
+          </button>
+
+        </div>
 
 
         <label>Rol</label>
@@ -90,6 +106,23 @@
           </option>
 
         </select>
+
+        <label>Tipo Usuario</label>
+        <select v-model="form.tipoxusu_id" class="input-xlarge">
+          <option disabled value="">-- Seleccione --</option>
+          <option v-for="t in tiposUsuario" :value="t.tipoxusu_id">
+            {{ t.descripcion }}
+          </option>
+        </select>
+
+        <label>Negocio</label>
+
+        <v-select
+          :options="negocios"
+          label="nombre"
+          v-model="selectedNegocio"
+          placeholder="Seleccione negocio">
+        </v-select>       
 
 
         <label>
@@ -126,7 +159,7 @@
 
 
 <script>
-
+Vue.component('v-select', VueSelect.VueSelect);
 new Vue({
 
   el:'#appAdmin',
@@ -134,11 +167,12 @@ new Vue({
   data:{
 
     apphost: apphost,
-
+    mostrarClave:false,
     admins:[],
-
+    tiposUsuario:[],
+    negocios:[],
     roles:[],
-
+    selectedNegocio: null,
     form:{}
 
   },
@@ -146,14 +180,31 @@ new Vue({
 
   methods:{
 
-
     listar(){
 
-      axios.get(`${this.apphost}/admin/listar`)
-      .then(r=>this.admins=r.data);
+      axios.get(`${this.apphost}/JXEc/admin/listar`)
+      .then(r=>{
+
+        this.admins = r.data;
+
+        this.$nextTick(()=>{
+
+          if ($.fn.DataTable.isDataTable('#tablaAdmins')) {
+            $('#tablaAdmins').DataTable().destroy();
+          }
+
+          $('#tablaAdmins').DataTable({
+                language: (typeof dt_language !== 'undefined' ? dt_language : undefined),
+                scrollX: true,
+                dom: 'frtip',
+                order: [[0,'desc']]
+              });
+
+        });
+
+      });
 
     },
-
 
     nuevoAdmin(){
 
@@ -166,13 +217,35 @@ new Vue({
 
     },
 
-
     editar(a){
 
-      this.form=JSON.parse(JSON.stringify(a));
+      this.form = JSON.parse(JSON.stringify(a));
+
+      // 🔥 esperar que negocios estén cargados
+      if (!this.negocios.length) {
+
+        this.cargarNegocios().then(() => {
+          this.setNegocioSeleccionado(a);
+        });
+
+      } else {
+        this.setNegocioSeleccionado(a);
+      }
 
       $('#modalAdmin').modal('show');
 
+    },
+
+    setNegocioSeleccionado(a){
+
+      this.selectedNegocio = this.negocios.find(
+        n => n.neg_id == a.neg_id
+      ) || null;
+
+    },    
+
+    toggleClave(){
+      this.mostrarClave = !this.mostrarClave;
     },
 
 
@@ -190,17 +263,32 @@ new Vue({
       ? '/admin/editar'
       : '/admin/crear';
 
+      // 🔥 AQUÍ ESTÁ LA CLAVE
+      this.form.neg_id = this.selectedNegocio
+        ? this.selectedNegocio.neg_id
+        : null;
+
+      console.log('NEG_ID FINAL 👉', this.form.neg_id);
+      console.log('FORM 👉', this.form);
+
       axios.post(this.apphost+url,this.form)
       .then(()=>{
 
         $('#modalAdmin').modal('hide');
-
         this.listar();
 
       });
 
     },
+    cargarTiposUsuario(){
+      axios.get(`${this.apphost}/JXEc/tipoxusu/listar`)
+      .then(r => this.tiposUsuario = r.data);
+    },
 
+    cargarNegocios(){
+      axios.get(`${this.apphost}/JXEc/neg/listar`)
+      .then(r => this.negocios = r.data);
+    },
 
     eliminar(a){
 
@@ -218,9 +306,9 @@ new Vue({
   mounted(){
 
     this.listar();
-
     this.cargarRoles();
-
+    this.cargarTiposUsuario();
+    this.cargarNegocios();
   }
 
 });

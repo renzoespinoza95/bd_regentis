@@ -5,10 +5,7 @@ Flight::route('GET /prod', function () {
 
     include DEFINITION;
     autentificar_administrador();
-
-    global $path_public;
-
-    include $path_public . '/admin/tab_prod/inicio.php';
+    require_once VARPATH . '/public/admin/tab_prod/inicio.php';
 });
 
 
@@ -98,8 +95,6 @@ Flight::route('POST /product/crear', function () {
             'price'              => $d['price'],
             'price_discount'     => 0,
             'description'        => $d['description'],
-            'created_at'         => $now_unix,
-            'last_update'        => $now_unix,
             'fecha_creacion'     => $now_dt,
             'fecha_modificacion' => $now_dt
         ]);
@@ -124,7 +119,7 @@ Flight::route('POST /product/crear', function () {
 
         DB::insert('pos_product_image',[
             'product_id'=>$product_id,
-            'img'=>'sin_foto.jpg'
+            'img'=>'https://barsi-img.b-cdn.net/recursos/logo-regentis.png'
         ]);
 
         DB::commit();
@@ -168,7 +163,6 @@ Flight::route('POST /product/editar', function () {
             'name'=>$d['name'],
             'price'=>$d['price'],
             'description'=>$d['description'],
-            'last_update'=>$now_unix,
             'fecha_modificacion'=>$now_dt
         ],"product_id=%i AND neg_id=%i",$d['product_id'],$neg_id);
 
@@ -312,9 +306,7 @@ Flight::route('POST /product/categoria_crear', function () {
             'icon'=>$d['icon'],
             'brief'=>$d['brief'],
             'color'=>$d['color'],
-            'priority'=>0,
-            'created_at'=>$now_unix,
-            'last_update'=>$now_unix
+            'priority'=>0
         ]);
 
         Flight::json(['status'=>'ok']);
@@ -328,29 +320,287 @@ Flight::route('POST /product/categoria_crear', function () {
     }
 });
 
+function normalizar($txt){
+    $txt = strtolower($txt);
+    $txt = str_replace(
+        ['á','é','í','ó','ú','ñ','z'],
+        ['a','e','i','o','u','n','s'],
+        $txt
+    );
+    return $txt;
+}
+
+function limpiarBusqueda($txt){
+
+    $txt = strtolower($txt);
+
+    // 🔥 eliminar tildes y ñ
+    $txt = str_replace(
+        ['á','é','í','ó','ú','ñ'],
+        ['a','e','i','o','u','n'],
+        $txt
+    );
+
+    // 🔥 eliminar TODO lo que no sea letras o números
+    $txt = preg_replace('/[^a-z0-9\s]/', ' ', $txt);
+
+    // 🔥 quitar espacios repetidos
+    $txt = preg_replace('/\s+/', ' ', $txt);
+
+    return trim($txt);
+}
+
 Flight::route('GET /pet/product/buscar_global', function(){
 
     include DEFINITION;
     autentificar_administrador();
 
-    $q = trim(Flight::request()->query['q']);
+    $q = trim(Flight::request()->query['q'] ?? '');
 
-    if(strlen($q) < 4){
+    $q_limpio = limpiarBusqueda($q);
+
+    $q_normal = normalizar($q_limpio);
+
+    if(strlen($q) < 3){
         Flight::json([]);
         return;
     }
 
+    // 🔥 transformar búsqueda tipo Google
+    $words = explode(' ', $q_normal);
+    $search = '';
+
+    foreach($words as $w){
+        $search .= '+' . $w . '* '; // obligatorio + prefijo *
+    }
+
+    $limit = 100;
+
     $rows = DB::query("
         SELECT 
-            cod_prod_plazavea,
-            nombre,
-            categoria_global_id
-        FROM prod_plazavea
-        WHERE nombre LIKE %ss
-        ORDER BY nombre
-        LIMIT 100
-    ", $q);
+            p.cod_prod_plazavea,
+            p.nombre,
+            p.precio,
+            p.categoria_global_id,
+            cg.nombre AS categoria_nombre
+        FROM prod_plazavea p
+        LEFT JOIN reg_categoria_global cg 
+            ON cg.categoria_global_id = p.categoria_global_id
+        WHERE 
+            MATCH(p.nombre) AGAINST (%s IN BOOLEAN MODE)
+            OR LOWER(p.nombre) LIKE %s
+        LIMIT %i
+    ", trim($search), "%$q_normal%", $limit);
 
-    Flight::json($rows);
+    // 🔥 normalizar
+    foreach($rows as &$r){
+        $r['precio'] = (float)$r['precio'];
+        $r['categoria_global_id'] = (int)$r['categoria_global_id'];
+    }
+
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($rows, JSON_UNESCAPED_UNICODE);
+    exit;
+
+});
+
+function categorias_nuevo_negocio($neg_id){
+
+    $now_unix = time()*1000;
+
+    $cats = DB::query("
+        SELECT *
+        FROM reg_categoria_global
+        WHERE is_activo=1
+        ORDER BY orden ASC
+    ");
+
+    foreach($cats as $c){
+
+        DB::insert('pos_category',[
+            'neg_id'      => $neg_id,
+            'name'        => $c['nombre'],
+            'icon'        => $c['icono'],
+            'priority'    => $c['orden'],
+            'categoria_global_id'    => $c['categoria_global_id']
+        ]);
+
+    }
+
+}
+
+Flight::route('POST /tito/producto/agregar', function(){
+
+    include DEFINITION;
+    autentificar_administrador();
+
+    global $administrador_actual;
+
+    $neg_id = intval($administrador_actual['neg_id']);
+
+    $d = Flight::request()->data->getData();
+
+    $now_unix = time()*1000;
+    $now_dt   = date("Y-m-d H:i:s");
+
+    DB::startTransaction();
+
+    try{
+
+        /* =============================
+           1. VALIDAR
+        ============================== */
+
+        if(
+            !isset($d['name']) ||
+            trim($d['name']) == ''
+        ){
+
+            Flight::json([
+                'status'=>'error',
+                'msg'=>'Nombre requerido'
+            ],400);
+
+            return;
+        }
+
+        /* =============================
+           2. CREAR PRODUCTO
+        ============================== */
+
+        DB::insert('pos_product',[
+            'neg_id'             => $neg_id,
+            'name'               => trim($d['name']),
+            'price'              => floatval($d['price'] ?? 0),
+            'price_discount'     => 0,
+            'description'        => trim($d['description'] ?? ''),
+            'fecha_creacion'     => $now_dt,
+            'fecha_modificacion' => $now_dt
+        ]);
+
+        $product_id = DB::insertId();
+
+
+        /* =============================
+           3. CATEGORÍAS
+        ============================== */
+
+        if(!empty($d['categorias'])){
+
+            foreach($d['categorias'] as $cat){
+
+                $category_id = is_array($cat)
+                    ? intval($cat['category_id'])
+                    : intval($cat);
+
+                if($category_id <= 0){
+                    continue;
+                }
+
+                DB::insert('pos_product_category',[
+                    'product_id'  => $product_id,
+                    'category_id' => $category_id,
+                    'neg_id'      => $neg_id,
+                    'is_visible'  => 1
+                ]);
+            }
+        }
+
+
+        /* =============================
+           4. IMAGEN DEFAULT
+        ============================== */
+
+        DB::insert('pos_product_image',[
+            'product_id' => $product_id,
+            'img'        => 'https://barsi-img.b-cdn.net/recursos/6qz5.png',
+            'orden'      => 0,
+            'is_visible' => 1
+        ]);
+
+
+        /* =============================
+           5. INVENTARIO AJUSTE
+        ============================== */
+
+        $stock = intval($d['stock'] ?? 0);
+
+        if($stock < 0){
+            $stock = 0;
+        }
+
+        $price_ref = floatval($d['price_ref'] ?? 0);
+
+
+        /* =============================
+           6. CREAR INVENTARIO SI NO EXISTE
+        ============================== */
+
+        $inv = DB::queryFirstRow("
+            SELECT *
+            FROM pos_inventario
+            WHERE product_id=%i
+            AND neg_id=%i
+        ", $product_id, $neg_id);
+
+
+        if(!$inv){
+
+            DB::insert('pos_inventario',[
+                'product_id'   => $product_id,
+                'stock_actual' => $stock,
+                'stock_min'    => 0,
+                'stock_max'    => 999999,
+                'neg_id'       => $neg_id
+            ]);
+
+        }else{
+
+            DB::update(
+                'pos_inventario',
+                [
+                    'stock_actual' => $stock
+                ],
+                "inventario_id=%i",
+                $inv['inventario_id']
+            );
+        }
+
+
+        /* =============================
+           7. MOVIMIENTO INVENTARIO
+        ============================== */
+
+        DB::insert('pos_inventario_movimiento',[
+            'product_id'        => $product_id,
+            'tipo'              => 'AJUSTE',
+            'origen'            => 'AJUSTE',
+            'cantidad'          => $stock,
+            'precio_unitario'   => $price_ref,
+            'fecha'             => $now_dt,
+            'referencia_id'     => $product_id,
+            'referencia_tabla'  => 'pos_product',
+            'stock_resultante'  => $stock,
+            'neg_id'            => $neg_id
+        ]);
+
+
+        DB::commit();
+
+        Flight::json([
+            'status'    => 'ok',
+            'product_id'=> $product_id,
+            'stock'     => $stock
+        ]);
+
+    }catch(Exception $e){
+
+        DB::rollback();
+
+        Flight::json([
+            'status'=>'error',
+            'msg'=>$e->getMessage()
+        ],500);
+    }
 
 });

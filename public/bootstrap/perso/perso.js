@@ -1,66 +1,39 @@
-function fecha_guion(fecha) 
-{
+$(document).on('click', '.sel-fila tbody tr', function () {
 
-  var parts = fecha.split("/");
+  const $tabla = $(this).closest('table');
 
-  var month = parts[0]; // 12
-  var day = parts[1]; // 15
-  var year = parts[2]; // 2009
-  
-  return year + "-" + day + "-" + month;
+  // quitar selección solo dentro de esa tabla
+  $tabla.find('tbody tr').removeClass('fila-seleccionada');
+
+  // agregar selección a la fila clickeada
+  $(this).addClass('fila-seleccionada');
+
+}); 
+
+function agregarScrollBotones(tabla){
+
+  const $wrapper = tabla.closest('.dataTables_wrapper');
+  const $scroll = $wrapper.find('.dataTables_scroll');
+
+  if (!$scroll.length) return;
+
+  if ($scroll.find('.scroll-btn-left').length) return;
+
+  const btnLeft = $('<div class="scroll-btn-left"><i class="fa fa-angle-left"></i></div>');
+  const btnRight = $('<div class="scroll-btn-right"><i class="fa fa-angle-right"></i></div>');
+
+  $scroll.css('position','relative'); // 🔥 clave
+
+  $scroll.append(btnLeft, btnRight);
+
+  const $scrollBody = $wrapper.find('.dataTables_scrollBody');
+
+  btnLeft.on('click', () => {
+    $scrollBody.animate({ scrollLeft: $scrollBody.scrollLeft() - 200 }, 200);
+  });
+
+  btnRight.on('click', () => {
+    $scrollBody.animate({ scrollLeft: $scrollBody.scrollLeft() + 200 }, 200);
+  });
+
 }
-
-//+++ blockUI inicio +++
-var config_blockui = {
-        css: {  
-            border: 'none', 
-            padding: '15px', 
-            backgroundColor: '#000', 
-            '-webkit-border-radius': '10px', 
-            '-moz-border-radius': '10px', 
-            opacity: .5, 
-            color: '#fff' 
-         }
-};
-
-var init = {
-        css: {  
-            border: 'none', 
-            padding: '15px', 
-            backgroundColor: '#000', 
-            '-webkit-border-radius': '10px', 
-            '-moz-border-radius': '10px', 
-            opacity: .5, 
-            color: '#fff' 
-         }
-};
-
-var bu = {
-        css: {  
-            border: 'none', 
-            padding: '15px', 
-            backgroundColor: '#000', 
-            '-webkit-border-radius': '10px', 
-            '-moz-border-radius': '10px', 
-            opacity: .5, 
-            color: '#fff' 
-         }
-};
-
-var  msg_exito = function(){
-    showNotification({
-        type : "success",
-        autoClose: true,
-        duration: 4,
-        message: "Datos actualizados"
-    });
-}
-
-var  msg_error = function(){
-    showNotification({
-        type : "error",
-        autoClose: true,
-        duration: 4,
-        message: "Error al procesar"
-    });    
-}    

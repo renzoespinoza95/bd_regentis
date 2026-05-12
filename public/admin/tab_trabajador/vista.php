@@ -28,23 +28,26 @@
 			</div>
 
 		</div>
+		<div class="span12 tabla_esp_sup">
+				<table id="tablaTrabajador" class="table table-bordered table-striped">
 
-		<table id="tablaTrabajador" class="table table-bordered table-striped">
+					<thead>
+						<tr>
+							<th>ID</th>
+							<th>cod_usu</th>
+							<th>DNI</th>							
+							<th>Nombre</th>
+							<th>tipo_usuario</th>
+							<th>Teléfono</th>							
+							<th>Estado</th>
+							<th>Acciones</th>
+						</tr>
+					</thead>
 
-			<thead>
-				<tr>
-					<th>ID</th>
-					<th>Nombre</th>
-					<th>Teléfono</th>
-					<th>Estado</th>
-					<th>Acciones</th>
-				</tr>
-			</thead>
+					<tbody></tbody>
 
-			<tbody></tbody>
-
-		</table>
-
+				</table>
+		</div>
 	</div>
 
 
@@ -122,59 +125,77 @@
 
 		methods:{
 
-
 			listar(){
 
 				$.blockUI({
-
 					message:'<h4>Cargando trabajadores...</h4>'
-
 				})
 
 				axios.get(`${this.apphost}/reg/trabajador/listar`)
 				.then(r=>{
 
-					this.trabajadores=r.data
+					this.trabajadores = r.data
 
 					this.$nextTick(()=>{
 
 						if(!this.dt){
 
-							this.dt=$('#tablaTrabajador').DataTable({
-
-								language:dt_language,
-
-								scrollX:true,
-
-								order:[[0,'desc']]
-
+							this.dt = $('#tablaTrabajador').DataTable({
+								language: dt_language,
+								scrollX: true,
+								order: [[0,'desc']]
 							})
 
-							const self=this
+							const self = this
 
 							$('#tablaTrabajador tbody')
-
-							.on('click','.eliminar-trabajador',function(e){
-
-								e.preventDefault()
-
-								const id=$(this).data('id')
-
-								const t=self.trabajadores.find(x=>x.deli_trabajador_id==id)
-
-								self.eliminarTrabajador(t)
-
-							})
 
 							.on('click','.suspender-trabajador',function(e){
 
 								e.preventDefault()
 
-								const id=$(this).data('id')
+								const id = $(this).data('id')
 
-								const t=self.trabajadores.find(x=>x.deli_trabajador_id==id)
+								const t = self.trabajadores.find(x => x.negxusu_id == id)
 
 								self.suspenderTrabajador(t)
+
+							})
+
+							.on('click','.toggle-trabajador',function(e){
+
+								e.preventDefault()
+
+								const id = $(this).data('id')
+
+								const t = self.trabajadores.find(x => x.negxusu_id == id)
+
+								const accion = t.is_activo == 1 ? 'suspender' : 'habilitar'
+
+								apprise(`¿${accion} trabajador <b>${t.nombre}</b>?`,
+									{confirm:true},
+									ok=>{
+
+										if(!ok) return
+
+										axios.post(`${self.apphost}/reg/trabajador/toggle`,{
+											negxusu_id: t.negxusu_id
+										})
+										.finally(()=>self.listar())
+
+									})
+
+							})							
+
+							.on('click','.eliminar-trabajador',function(e){
+
+								e.preventDefault()
+
+								const id = $(this).data('id')
+
+								const t = self.trabajadores.find(x => x.negxusu_id == id)
+
+								self.eliminarTrabajador(t)
 
 							})
 
@@ -184,44 +205,48 @@
 
 						this.trabajadores.forEach(t=>{
 
-							const estado=t.is_activo==1
-							?'<span class="label label-success">Activo</span>'
-							:'<span class="label label-important">Suspendido</span>'
+							const estado = t.is_activo==1
+							? '<span class="label label-success">Activo</span>'
+							: '<span class="label label-important">Suspendido</span>'
 
-							const acciones=`
+							const accionToggle = t.is_activo == 1 ? 'Suspender' : 'Habilitar'
 
-<div class="btn-group">
+							const acciones = `
 
-<button class="btn btn-mini dropdown-toggle" data-toggle="dropdown">
+							<div class="btn-group">
 
-Opciones <span class="caret"></span>
+							<button class="btn btn-mini dropdown-toggle" data-toggle="dropdown">
+							⚙ <span class="caret"></span>
+							</button>
 
-</button>
+							<ul class="dropdown-menu">
 
-<ul class="dropdown-menu">
+							<li>
+							<a href="#" class="toggle-trabajador" data-id="${t.negxusu_id}">
+							${accionToggle}
+							</a>
+							</li>
 
-<li><a href="#" class="suspender-trabajador" data-id="${t.deli_trabajador_id}">Suspender</a></li>
+							<li>
+							<a href="#" class="eliminar-trabajador" data-id="${t.negxusu_id}">
+							Eliminar
+							</a>
+							</li>
 
-<li><a href="#" class="eliminar-trabajador" data-id="${t.deli_trabajador_id}">Eliminar</a></li>
+							</ul>
 
-</ul>
-
-</div>
-
+							</div>
 							`
 
 							this.dt.row.add([
-
-								t.deli_trabajador_id,
-
+								t.negxusu_id,
+								t.cod_usu,
+								t.dni,
 								t.nombre,
-
+								t.tipo_usuario,
 								t.telefono,
-
 								estado,
-
 								acciones
-
 							])
 
 						})
@@ -248,25 +273,30 @@ Opciones <span class="caret"></span>
 			buscarUsuario(){
 
 				if(!this.dni.trim()){
-
 					apprise('Escribe un DNI')
-
 					return
-
 				}
 
 				axios.get(`${this.apphost}/reg/trabajador/buscar/${this.dni}`)
-
 				.then(r=>{
 
-					this.usuarioEncontrado=r.data
+					const u = r.data
+
+					// 🔥 VALIDACIÓN
+					if(parseInt(u.tipoxusu_id) !== 1){
+
+						this.usuarioEncontrado = null
+
+						apprise('El usuario no es Visitante')
+
+						return
+					}
+
+					this.usuarioEncontrado = u
 
 				})
-
 				.catch(()=>{
-
 					apprise('Usuario no encontrado')
-
 				})
 
 			},
@@ -305,13 +335,14 @@ Opciones <span class="caret"></span>
 					{confirm:true},
 					ok=>{
 
-						if(!ok)return
+						if(!ok) return
 
-							axios.post(`${this.apphost}/reg/trabajador/suspender`,{
-
-								deli_trabajador_id:t.deli_trabajador_id
-
-							})
+						axios.post(`${this.apphost}/reg/trabajador/suspender`,{
+							negxusu_id: t.negxusu_id
+						})
+						.then(()=>{
+							apprise('Trabajador suspendido')
+						})
 						.finally(()=>this.listar())
 
 					})
@@ -324,13 +355,14 @@ Opciones <span class="caret"></span>
 					{confirm:true},
 					ok=>{
 
-						if(!ok)return
+						if(!ok) return
 
-							axios.post(`${this.apphost}/reg/trabajador/eliminar`,{
-
-								deli_trabajador_id:t.deli_trabajador_id
-
-							})
+						axios.post(`${this.apphost}/reg/trabajador/eliminar`,{
+							negxusu_id: t.negxusu_id
+						})
+						.then(()=>{
+							apprise('Trabajador eliminado')
+						})
 						.finally(()=>this.listar())
 
 					})

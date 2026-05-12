@@ -6,12 +6,9 @@
 Flight::route('GET /caja', function () {
 
     include DEFINITION;
-
     autentificar_administrador();
 
-    global $path_public;
-
-    include $path_public . '/admin/tab_caja/inicio.php';
+    require_once VARPATH . '/public/admin/tab_caja/inicio.php';
 });
 
 

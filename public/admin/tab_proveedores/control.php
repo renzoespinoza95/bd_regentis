@@ -7,29 +7,9 @@ Flight::route('GET /prov', function () {
     include DEFINITION;
     autentificar_administrador();
 
-    global $path_public;
-    global $administrador_actual;
-
-    include $path_public . '/admin/tab_proveedores/inicio.php';
+    require_once VARPATH . '/public/admin/tab_proveedores/inicio.php';
 
 });
-
-
-/* ============================================
- * VISTA PRINCIPAL /proveedores
- * ============================================ */
-Flight::route('GET /proveedores', function () {
-
-    include DEFINITION;
-    autentificar_administrador();
-
-    global $path_public;
-    global $administrador_actual;
-
-    include $path_public . '/admin/tab_proveedores/inicio.php';
-
-});
-
 
 /* ============================================
  * GET /pos_proveedor/listar
