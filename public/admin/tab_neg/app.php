@@ -28,9 +28,26 @@ Flight::route('POST /app/principal', function() {
             true
         ) ?: [];
 
-        $mercado_id = intval($d['mercado_id'] ?? 0);
+        /* =========================
+           🔥 FIRMA
+        ========================== */
 
-        $neg_id = intval($d['neg_id'] ?? 0);
+        $xin  = $d['xin'] ?? '';
+        $yuan = $d['yuan'] ?? '';
+
+        firma($xin, $yuan);
+
+        /* =========================
+           PAYLOAD
+        ========================== */
+
+        $mercado_id = intval(
+            $d['mercado_id'] ?? 0
+        );
+
+        $neg_id = intval(
+            $d['neg_id'] ?? 0
+        );
 
         /* =========================
            🔥 SI mercado_id = 0
@@ -216,6 +233,14 @@ Flight::route('POST /app/principal', function() {
         }
 
         /* =========================
+           VARIABLES SISTEMA
+        ========================== */
+
+        $version = vari('VERSION');
+
+        $playstore = vari('PLAYSTORE');
+
+        /* =========================
            RESPONSE
         ========================== */
 
@@ -231,7 +256,11 @@ Flight::route('POST /app/principal', function() {
 
                 'rubros'  => $rubros,
 
-                'negocios'=> $negocios
+                'negocios'=> $negocios,
+
+                'version' => $version,
+
+                'playstore' => $playstore
 
             ]
 

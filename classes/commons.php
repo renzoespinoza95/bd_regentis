@@ -286,6 +286,8 @@ function generarCodigoUnico(): string {
 
 function firma($xin, $yuan){
 
+    include DEFINITION;
+
     if(!$xin || !$yuan){
 
         Flight::json([
@@ -309,7 +311,7 @@ function firma($xin, $yuan){
     }
 
     $hash_server = md5(
-        $xin . 'Diedao_qi_ci,_zhan_qilai_ba_ci'
+        $xin . $fenix_key
     );
 
     if($yuan !== $hash_server){

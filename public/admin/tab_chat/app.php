@@ -515,6 +515,104 @@ Flight::route('POST /reg/tk_cant_msg', function(){
         ", $uid);
 
         /* ======================================
+           📊 TRACKING
+        ====================================== */
+
+        $tracking = $req['tracking'] ?? [];
+
+        if(is_array($tracking)){
+
+            foreach($tracking as $t){
+
+                $track_usu_id = intval($t['usu_id'] ?? 0);
+
+                $accion = trim($t['accion'] ?? '');
+
+                $descripcion = trim($t['descripcion'] ?? '');
+
+                $extra_data = $t['extra_data'] ?? [];
+
+                if(
+                    !$track_usu_id
+                    || !$accion
+                ){
+                    continue;
+                }
+
+                /* ======================================
+                   🔥 PRODUCT_ID
+                ====================================== */
+
+                $product_id = intval(
+                    $extra_data['product_id'] ?? 0
+                );
+
+                /* ======================================
+                   🔥 EVITAR MÁS DE 10 POR DÍA
+                ====================================== */
+
+                if(
+                    $accion === 'ver_producto'
+                    && $product_id > 0
+                ){
+
+                    $count = DB::queryFirstField("
+
+                        SELECT COUNT(*)
+
+                        FROM reg_usuxreg
+
+                        WHERE usu_id = %i
+
+                        AND accion = 'ver_producto'
+
+                        AND DATE(fecha_creacion)=CURDATE()
+
+                        AND JSON_EXTRACT(
+                            extra_data,
+                            '$.product_id'
+                        ) = %i
+
+                    ",
+                        $track_usu_id,
+                        $product_id
+                    );
+
+                    if($count >= 10){
+                        continue;
+                    }
+
+                }
+
+                /* ======================================
+                   💾 INSERT
+                ====================================== */
+
+                DB::insert(
+                    'reg_usuxreg',
+                    [
+
+                        'usu_id' => $track_usu_id,
+
+                        'accion' => $accion,
+
+                        'descripcion' => $descripcion,
+
+                        'extra_data' => json_encode(
+                            $extra_data,
+                            JSON_UNESCAPED_UNICODE
+                        ),
+
+                        'fecha_creacion' => date('Y-m-d H:i:s')
+
+                    ]
+                );
+
+            }
+
+        }
+
+        /* ======================================
            🚀 RESPONSE
         ====================================== */
 
@@ -703,3 +801,407 @@ Flight::route('POST /Baat/msg/enviarDirecto', function () {
     }
 
 });
+
+function enviar_auto_msg($dest_id, $clave_txt){
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    $rem_id = 2;
+
+    $dest_id = intval($dest_id);
+
+    $clave_txt = trim($clave_txt);
+
+    if(!$dest_id || !$clave_txt){
+        return false;
+    }
+
+    DB::startTransaction();
+
+    try {
+
+        /* ======================================
+           🔍 BUSCAR MENSAJE AUTOMÁTICO
+        ====================================== */
+
+        $auto = DB::queryFirstRow("
+
+            SELECT
+                auto_msg_id,
+                texto_msg
+
+            FROM reg_auto_msg
+
+            WHERE clave_txt = %s
+
+            LIMIT 1
+
+        ", $clave_txt);
+
+        if(
+            !$auto
+            || empty($auto['texto_msg'])
+        ){
+            DB::rollback();
+            return false;
+        }
+
+        /* ======================================
+           🔥 LIMPIAR HTML
+        ====================================== */
+
+        $texto = trim(
+
+            strip_tags(
+                $auto['texto_msg']
+            )
+
+        );
+
+        if($texto === ''){
+
+            DB::rollback();
+
+            return false;
+
+        }
+
+        /* ======================================
+           🔍 BUSCAR CHAT
+        ====================================== */
+
+        $chat = DB::queryFirstRow("
+
+            SELECT chat_id
+
+            FROM reg_chat
+
+            WHERE
+            (
+                usu1_id=%i
+                AND usu2_id=%i
+            )
+
+            OR
+            (
+                usu1_id=%i
+                AND usu2_id=%i
+            )
+
+            LIMIT 1
+
+        ",
+            $rem_id,
+            $dest_id,
+
+            $dest_id,
+            $rem_id
+        );
+
+        /* ======================================
+           🆕 CREAR CHAT
+        ====================================== */
+
+        if(!$chat){
+
+            DB::insert(
+                'reg_chat',
+                [
+
+                    'usu1_id' => $rem_id,
+
+                    'usu2_id' => $dest_id,
+
+                    'fecha_creacion' =>
+                        date('Y-m-d H:i:s'),
+
+                    'ultimo_mensaje' =>
+                        $texto,
+
+                    'last_seen_msg_id_u1' => 0,
+
+                    'last_seen_msg_id_u2' => 0
+
+                ]
+            );
+
+            $chat_id =
+                DB::insertId();
+
+        } else {
+
+            $chat_id =
+                intval($chat['chat_id']);
+
+        }
+
+        /* ======================================
+           💬 INSERTAR MENSAJE
+        ====================================== */
+
+        DB::insert(
+            'reg_msg',
+            [
+
+                'chat_id' => $chat_id,
+
+                'rem_id' => $rem_id,
+
+                'dest_id' => $dest_id,
+
+                'contenido_rem' => $texto,
+
+                'contenido_dest' => $texto,
+
+                'fecha_creacion' =>
+                    date('Y-m-d H:i:s')
+
+            ]
+        );
+
+        $msg_id = DB::insertId();
+
+        /* ======================================
+           🔄 ACTUALIZAR CHAT
+        ====================================== */
+
+        DB::update(
+            'reg_chat',
+            [
+
+                'ultimo_mensaje' => $texto
+
+            ],
+
+            "chat_id=%i",
+
+            $chat_id
+        );
+
+        DB::commit();
+
+        return [
+
+            'status' => 'ok',
+
+            'chat_id' => $chat_id,
+
+            'msg_id' => $msg_id
+
+        ];
+
+    } catch(Exception $e){
+
+        DB::rollback();
+
+        return [
+
+            'status' => 'error',
+
+            'msg' => $e->getMessage()
+
+        ];
+
+    }
+
+}
+
+/* =========================================
+   ENVIAR MANUAL VISUAL
+========================================= */
+
+function enviar_manual_visual(
+    $dest_id,
+    $imagenes = []
+){
+
+    /* =========================================
+       VALIDAR DESTINO
+    ========================================== */
+
+    $dest_id = intval($dest_id);
+
+    if($dest_id <= 0){
+        return false;
+    }
+
+    /* =========================================
+       BUSCAR CHAT
+       (2 ↔ usuario)
+    ========================================== */
+
+    $chat = DB::queryFirstRow("
+
+        SELECT
+
+            chat_id
+
+        FROM reg_chat
+
+        WHERE
+
+        (
+            usu1_id = 2
+            AND usu2_id = %i
+        )
+
+        OR
+
+        (
+            usu1_id = %i
+            AND usu2_id = 2
+        )
+
+        LIMIT 1
+
+    ", $dest_id, $dest_id);
+
+    /* =========================================
+       CREAR CHAT
+    ========================================== */
+
+    if(!$chat){
+
+        DB::insert('reg_chat',[
+
+            'usu1_id' => 2,
+
+            'usu2_id' => $dest_id,
+
+            'fecha_creacion' => date('Y-m-d H:i:s'),
+
+            'is_visible' => 1,
+
+            'ultimo_mensaje' => '',
+
+            'is_bloqueado' => 0
+
+        ]);
+
+        $chat_id = DB::insertId();
+
+    }else{
+
+        $chat_id = intval(
+            $chat['chat_id']
+        );
+
+    }
+
+    /* =========================================
+       MENSAJE AUTO
+    ========================================== */
+
+    $auto = DB::queryFirstRow("
+
+        SELECT
+
+            auto_msg_id,
+            clave_txt,
+            texto_msg
+
+        FROM reg_auto_msg
+
+        WHERE clave_txt = 'TXT_MANUAL_VISUAL'
+
+        LIMIT 1
+
+    ");
+
+    if(!$auto){
+        return false;
+    }
+
+    /* =========================================
+       LIMPIAR HTML
+    ========================================== */
+
+    $texto_msg = trim(
+
+        strip_tags(
+            $auto['texto_msg']
+        )
+
+    );
+
+    /* =========================================
+       VALIDAR IMÁGENES
+    ========================================== */
+
+    if(!is_array($imagenes)){
+        $imagenes = [];
+    }
+
+    /* =========================================
+       CONTEXTO JSON
+    ========================================== */
+
+    $contexto_json = json_encode([
+
+        'tipo' => 'visor_imagenes',
+
+        'data' => [
+
+            'titulo' => '✨ Mejoras visuales',
+
+            'descripcion' => $texto_msg,
+
+            'boton_texto' => 'Ver imágenes',
+
+            'imagenes' => $imagenes
+
+        ]
+
+    ], JSON_UNESCAPED_UNICODE);
+
+    /* =========================================
+       INSERTAR MENSAJE
+    ========================================== */
+
+    DB::insert('reg_msg',[
+
+        'chat_id' => $chat_id,
+
+        'rem_id' => 2,
+
+        'dest_id' => $dest_id,
+
+        'contenido_rem' => $texto_msg,
+
+        'contenido_dest' => $texto_msg,
+
+        'tipo_mensaje' => 'TEXTO',
+
+        'fecha_creacion' => date('Y-m-d H:i:s'),
+
+        'contexto_json' => $contexto_json
+
+    ]);
+
+    $msg_id = DB::insertId();
+
+    /* =========================================
+       UPDATE CHAT
+    ========================================== */
+
+    DB::update('reg_chat',[
+
+        'ultimo_mensaje' => $texto_msg
+
+    ],"chat_id=%i",$chat_id);
+
+    /* =========================================
+       RESPONSE
+    ========================================== */
+
+    return [
+
+        'ok' => true,
+
+        'chat_id' => $chat_id,
+
+        'msg_id' => $msg_id
+
+    ];
+
+}

@@ -207,6 +207,19 @@ Flight::route('POST /EUwe/registroBasico', function(){
         true
     ) ?: [];
 
+    /* ======================================
+       FIRMA
+    ====================================== */
+
+    $xin  = $data['xin'] ?? '';
+    $yuan = $data['yuan'] ?? '';
+
+    firma($xin, $yuan);
+
+    /* ======================================
+       PAYLOAD
+    ====================================== */
+
     $usu_id = intval(
         $data['usu_id'] ?? 0
     );
@@ -227,9 +240,9 @@ Flight::route('POST /EUwe/registroBasico', function(){
         $data['img_perfil'] ?? ''
     );
 
-    // ======================================
-    // VALIDAR
-    // ======================================
+    /* ======================================
+       VALIDAR
+    ====================================== */
 
     if(!$usu_id){
 
@@ -271,9 +284,9 @@ Flight::route('POST /EUwe/registroBasico', function(){
         return;
     }
 
-    // ======================================
-    // VALIDAR USUARIO
-    // ======================================
+    /* ======================================
+       VALIDAR USUARIO
+    ====================================== */
 
     $usuario = DB::queryFirstRow("
 
@@ -301,9 +314,9 @@ Flight::route('POST /EUwe/registroBasico', function(){
         return;
     }
 
-    // ======================================
-    // VALIDAR SOBRENOMBRE REPETIDO
-    // ======================================
+    /* ======================================
+       VALIDAR SOBRENOMBRE REPETIDO
+    ====================================== */
 
     $existeNick = DB::queryFirstField("
 
@@ -328,9 +341,9 @@ Flight::route('POST /EUwe/registroBasico', function(){
         return;
     }
 
-    // ======================================
-    // UPDATE
-    // ======================================
+    /* ======================================
+       UPDATE
+    ====================================== */
 
     DB::update(
         'reg_usu',
@@ -344,9 +357,14 @@ Flight::route('POST /EUwe/registroBasico', function(){
         $usu_id
     );
 
-    // ======================================
-    // RESPUESTA
-    // ======================================
+    enviar_auto_msg(
+        $usu_id,
+        'TXT_REGISTRO'
+    );
+
+    /* ======================================
+       RESPUESTA
+    ====================================== */
 
     Flight::json([
 
@@ -363,7 +381,9 @@ Flight::route('POST /EUwe/registroBasico', function(){
             'nombres_apellidos' => $nombres_apellidos,
 
             'img_perfil' => $img_perfil
+
         ]
+
     ]);
 
 });

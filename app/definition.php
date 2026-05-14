@@ -18,5 +18,6 @@
   global $dbname;
   global $secreto_jwt;
   global $version;
+  global $fenix_key;
 
   

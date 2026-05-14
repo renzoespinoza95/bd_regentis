@@ -549,8 +549,6 @@ Flight::route('POST /tito/producto/agregar', function(){
             DB::insert('pos_inventario',[
                 'product_id'   => $product_id,
                 'stock_actual' => $stock,
-                'stock_min'    => 0,
-                'stock_max'    => 999999,
                 'neg_id'       => $neg_id
             ]);
 
@@ -578,8 +576,6 @@ Flight::route('POST /tito/producto/agregar', function(){
             'cantidad'          => $stock,
             'precio_unitario'   => $price_ref,
             'fecha'             => $now_dt,
-            'referencia_id'     => $product_id,
-            'referencia_tabla'  => 'pos_product',
             'stock_resultante'  => $stock,
             'neg_id'            => $neg_id
         ]);

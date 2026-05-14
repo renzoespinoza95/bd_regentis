@@ -1,49 +1,122 @@
 <?php
-
-Flight::route('GET /MpIH/product/listar', function () {
+Flight::route('POST /MpIH/product/listar', function () {
 
     include DEFINITION;
 
-    // 🔥 RECIBIR DESDE QUERY (usuarioService)
-    $neg_id = intval(Flight::request()->query['neg_id'] ?? 0);
-    $usu_id = intval(Flight::request()->query['usu_id'] ?? 0);
+    DB::query("SET NAMES 'utf8mb4'");
+
+    $data = json_decode(
+        Flight::request()->getBody(),
+        true
+    ) ?: [];
+
+    /* =========================================
+       FIRMA
+    ========================================= */
+
+    $xin  = $data['xin'] ?? '';
+    $yuan = $data['yuan'] ?? '';
+
+    firma($xin, $yuan);
+
+    /* =========================================
+       PAYLOAD
+    ========================================= */
+
+    $neg_id = intval($data['neg_id'] ?? 0);
+
+    $usu_id = intval($data['usu_id'] ?? 0);
+
+    /* =========================================
+       VALIDAR
+    ========================================= */
 
     if(!$neg_id){
+
         Flight::json([
             'status'=>'error',
             'msg'=>'neg_id requerido'
         ],400);
+
         return;
     }
 
-    DB::query("SET NAMES 'utf8mb4'");
+    /* =========================================
+       PRODUCTOS
+    ========================================= */
 
     $rows = DB::query("
-        SELECT p.*,
-               GROUP_CONCAT(pc.category_id) AS categories_ids,
-               GROUP_CONCAT(c.name SEPARATOR ', ') AS categories_names,
-               IFNULL(MAX(i.stock_actual),0) AS stock
+
+        SELECT
+
+            p.*,
+
+            GROUP_CONCAT(
+                pc.category_id
+            ) AS categories_ids,
+
+            GROUP_CONCAT(
+                c.name
+                SEPARATOR ', '
+            ) AS categories_names,
+
+            IFNULL(
+                MAX(i.stock_actual),
+                0
+            ) AS stock
+
         FROM pos_product p
-        LEFT JOIN pos_product_category pc ON pc.product_id = p.product_id
-        LEFT JOIN pos_category c ON c.category_id = pc.category_id
-        LEFT JOIN pos_inventario i ON i.product_id = p.product_id
-        WHERE p.neg_id=%i
+
+        LEFT JOIN pos_product_category pc
+            ON pc.product_id = p.product_id
+
+        LEFT JOIN pos_category c
+            ON c.category_id = pc.category_id
+
+        LEFT JOIN pos_inventario i
+            ON i.product_id = p.product_id
+
+        WHERE p.neg_id = %i
+
         GROUP BY p.product_id
+
         ORDER BY p.product_id DESC
+
     ", $neg_id);
 
+    /* =========================================
+       NORMALIZAR categories_ids
+    ========================================= */
+
     foreach ($rows as &$r) {
+
         $r['categories_ids'] = $r['categories_ids']
-            ? array_map('intval', explode(',', $r['categories_ids']))
+
+            ? array_map(
+                'intval',
+                explode(',', $r['categories_ids'])
+            )
+
             : [];
+
     }
 
+    /* =========================================
+       RESPONSE
+    ========================================= */
+
     Flight::json([
+
         'status'=>'ok',
+
         'data'=>$rows,
+
         'neg_id'=>$neg_id,
+
         'usu_id'=>$usu_id
-    ]);
+
+    ], 200, JSON_UNESCAPED_UNICODE);
+
 });
 
 Flight::route('POST /MpIH/buscarProducto', function () {
@@ -189,12 +262,40 @@ Flight::route('GET /MylW/listar_categorias/@neg_id', function ($neg_id) {
     ]);
 });
 
-Flight::route('GET /ArWL/tienda/@neg_id', function ($neg_id) {
+Flight::route('POST /ArWL/tienda', function () {
 
     include DEFINITION;
 
-    $neg_id = intval($neg_id);
+    DB::query("SET NAMES 'utf8mb4'");
 
+    $d = json_decode(
+        Flight::request()->getBody(),
+        true
+    ) ?: [];
+
+    /* ============================================================
+       CAMPOS
+    ============================================================ */
+    $neg_id = isset($d['neg_id'])
+        ? intval($d['neg_id'])
+        : 0;
+
+    $xin = isset($d['xin'])
+        ? trim((string)$d['xin'])
+        : '';
+
+    $yuan = isset($d['yuan'])
+        ? trim((string)$d['yuan'])
+        : '';
+
+    /* ============================================================
+       VALIDAR FIRMA
+    ============================================================ */
+    firma($xin, $yuan);
+
+    /* ============================================================
+       VALIDAR NEG_ID
+    ============================================================ */
     if (!$neg_id) {
 
         Flight::json([
@@ -205,42 +306,52 @@ Flight::route('GET /ArWL/tienda/@neg_id', function ($neg_id) {
         return;
     }
 
-    DB::query("SET NAMES 'utf8mb4'");
-
     /* ============================================================
        🔥 USUARIO ACTUAL
     ============================================================ */
     global $usuario_actual;
 
-    $usu_id = intval($usuario_actual['usu_id'] ?? 0);
+    $usu_id = intval(
+        $usuario_actual['usu_id'] ?? 0
+    );
 
     /* ============================================================
        0. NEGOCIO
     ============================================================ */
     $negocio = DB::queryFirstRow("
-        SELECT *
-        FROM reg_neg
-        WHERE neg_id = %i
-    ", $neg_id);
 
+        SELECT *
+
+        FROM reg_neg
+
+        WHERE neg_id = %i
+
+    ", $neg_id);
 
     /* ============================================================
        1. SLIDERS
     ============================================================ */
     $sliders = DB::query("
-        SELECT *
-        FROM reg_slider
-        WHERE neg_id = %i
-        AND is_visible = 1
-        ORDER BY orden ASC
-    ", $neg_id);
 
+        SELECT *
+
+        FROM reg_slider
+
+        WHERE neg_id = %i
+
+        AND is_visible = 1
+
+        ORDER BY orden ASC
+
+    ", $neg_id);
 
     /* ============================================================
        2. CATEGORÍAS
     ============================================================ */
     $categorias = DB::query("
-        SELECT 
+
+        SELECT
+
             c.category_id,
             c.name,
             c.icon,
@@ -252,36 +363,48 @@ Flight::route('GET /ArWL/tienda/@neg_id', function ($neg_id) {
         FROM pos_category c
 
         WHERE c.neg_id = %i
+
         AND c.is_activo = 1
 
-        ORDER BY c.priority ASC, c.name ASC
-    ", $neg_id);
+        ORDER BY
+            c.priority ASC,
+            c.name ASC
 
+    ", $neg_id);
 
     /* ============================================================
        3. PRODUCTOS + IMAGEN
     ============================================================ */
     $productos = DB::query("
-        SELECT 
+
+        SELECT
+
             p.product_id,
             p.name,
             p.price,
             p.neg_id,
             pc.category_id,
 
-            IFNULL(MAX(i.stock_actual),0) AS stock,
+            IFNULL(
+                MAX(i.stock_actual),
+                0
+            ) AS stock,
 
             SUBSTRING_INDEX(
-                GROUP_CONCAT(pi.img ORDER BY pi.orden ASC),
-                ',', 1
+                GROUP_CONCAT(
+                    pi.img
+                    ORDER BY pi.orden ASC
+                ),
+                ',',
+                1
             ) AS img
 
         FROM pos_product p
 
-        INNER JOIN pos_product_category pc 
+        INNER JOIN pos_product_category pc
             ON pc.product_id = p.product_id
 
-        LEFT JOIN pos_inventario i 
+        LEFT JOIN pos_inventario i
             ON i.product_id = p.product_id
 
         LEFT JOIN pos_product_image pi
@@ -289,15 +412,16 @@ Flight::route('GET /ArWL/tienda/@neg_id', function ($neg_id) {
             AND pi.is_visible = 1
 
         WHERE p.neg_id = %i
+
         AND p.is_visible = 1
 
-        GROUP BY 
+        GROUP BY
             p.product_id,
             pc.category_id
 
         ORDER BY p.name ASC
-    ", $neg_id);
 
+    ", $neg_id);
 
     /* ============================================================
        4. MAPEAR PRODUCTOS
@@ -306,22 +430,39 @@ Flight::route('GET /ArWL/tienda/@neg_id', function ($neg_id) {
 
     foreach ($productos as $p) {
 
-        $cid = intval($p['category_id']);
+        $cid = intval(
+            $p['category_id']
+        );
 
         if (!isset($map[$cid])) {
             $map[$cid] = [];
         }
 
         $map[$cid][] = [
-            'product_id' => intval($p['product_id']),
-            'name'       => $p['name'],
-            'price'      => floatval($p['price']),
-            'stock'      => intval($p['stock']),
-            'neg_id'      => intval($p['neg_id']),
-            'img'        => $p['img'] ?: null
+
+            'product_id' => intval(
+                $p['product_id']
+            ),
+
+            'name' => $p['name'],
+
+            'price' => floatval(
+                $p['price']
+            ),
+
+            'stock' => intval(
+                $p['stock']
+            ),
+
+            'neg_id' => intval(
+                $p['neg_id']
+            ),
+
+            'img' => $p['img']
+                ? $p['img']
+                : null
         ];
     }
-
 
     /* ============================================================
        5. FILTRAR CATEGORÍAS VACÍAS
@@ -330,47 +471,68 @@ Flight::route('GET /ArWL/tienda/@neg_id', function ($neg_id) {
 
     foreach ($categorias as $c) {
 
-        $cid = intval($c['category_id']);
+        $cid = intval(
+            $c['category_id']
+        );
 
-        $productos_categoria = $map[$cid] ?? [];
+        $productos_categoria =
+            $map[$cid] ?? [];
 
-        if (count($productos_categoria) <= 0) {
+        if (
+            count($productos_categoria) <= 0
+        ) {
             continue;
         }
 
-        $c['productos'] = $productos_categoria;
+        $c['productos'] =
+            $productos_categoria;
 
         $categorias_filtradas[] = $c;
     }
 
-    $categorias = $categorias_filtradas;
-
+    $categorias =
+        $categorias_filtradas;
 
     /* ============================================================
        6. MÁS VENDIDOS
     ============================================================ */
     $mas_vendidos = [];
 
-    $catMasVendidos = array_filter($categorias, function ($c) {
+    $catMasVendidos = array_filter(
+        $categorias,
+        function ($c) {
 
-        $clave = strtolower(trim($c['clave_txt']));
-        $clave = str_replace('-', '_', $clave);
+            $clave = strtolower(
+                trim($c['clave_txt'])
+            );
 
-        return $clave === 'mas_vendidos';
-    });
+            $clave = str_replace(
+                '-',
+                '_',
+                $clave
+            );
+
+            return $clave === 'mas_vendidos';
+        }
+    );
 
     if ($catMasVendidos) {
 
-        $catMasVendidos = array_values($catMasVendidos)[0];
+        $catMasVendidos =
+            array_values(
+                $catMasVendidos
+            )[0];
 
-        $mas_vendidos = $catMasVendidos['productos'] ?? [];
-    }   
-
+        $mas_vendidos =
+            $catMasVendidos['productos']
+            ?? [];
+    }
 
     /* ============================================================
-       9. RESPONSE
+       RESPONSE
     ============================================================ */
     Flight::json([
+
         'status' => 'ok',
 
         'neg_id' => $neg_id,

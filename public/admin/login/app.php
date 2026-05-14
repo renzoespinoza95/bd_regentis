@@ -575,38 +575,66 @@ function firebase_decode_jwt($jwt) {
     return json_decode($payload, true);
 }
 
-
 Flight::route('POST /WAsQ/usuario/screens', function () {
 
     try {
 
         include DEFINITION;
 
-        $data = Flight::request()->data->getData();
+        DB::query("SET NAMES 'utf8mb4'");
+
+        $data = json_decode(
+            Flight::request()->getBody(),
+            true
+        ) ?: [];
+
+        /* =========================================
+           FIRMA
+        ========================================= */
+
+        $xin  = $data['xin'] ?? '';
+        $yuan = $data['yuan'] ?? '';
+
+        firma($xin, $yuan);
+
+        /* =========================================
+           usu_id
+        ========================================= */
 
         if (!isset($data['usu_id'])) {
+
             Flight::json([
                 'status' => 'error',
                 'msg'    => 'Payload incompleto'
             ], 400);
+
             return;
         }
 
         $usu_id = intval($data['usu_id']);
 
         if ($usu_id <= 0) {
+
             Flight::json([
                 'status' => 'error',
                 'msg'    => 'Usuario inválido'
             ], 400);
+
             return;
         }
 
-        // 🔎 TRAER USUARIO
+        /* =========================================
+           TRAER USUARIO
+        ========================================= */
+
         $row = DB::queryFirstRow("
+
             SELECT
+
                 u.tipoxusu_id,
+
                 nxu.neg_id
+
             FROM reg_usu u
 
             LEFT JOIN reg_negxusu nxu
@@ -614,37 +642,124 @@ Flight::route('POST /WAsQ/usuario/screens', function () {
                 AND nxu.is_activo = 1
 
             WHERE u.usu_id = %i
+
             LIMIT 1
+
         ", $usu_id);
 
         if (!$row) {
+
             Flight::json([
                 'status' => 'error',
                 'msg'    => 'Usuario no encontrado'
             ], 404);
+
             return;
         }
 
-        // 🔥 SCREENS (AHORA CON FUNCIÓN)
-        $screens = obtenerScreens(
-            $row['tipoxusu_id'],
-            $row['neg_id']
-        );
+        /* =========================================
+           SCREENS
+        ========================================= */
+
+        $screens = [];
+
+        if(
+            !empty($row['tipoxusu_id'])
+            &&
+            !empty($row['neg_id'])
+        ){
+
+            $screens = DB::query("
+
+                SELECT DISTINCT
+
+                    s.screen_id,
+                    s.nombre,
+                    s.titulo,
+                    s.explicacion,
+                    s.vue_route,
+                    s.tipoxusu_id
+
+                FROM deux_screen s
+
+                INNER JOIN deux_screenxrubro sxr
+                    ON sxr.screen_id = s.screen_id
+
+                INNER JOIN reg_rubroxneg rxn
+                    ON rxn.rubro_id = sxr.rubro_id
+                    AND rxn.neg_id = %i
+                    AND rxn.is_activo = 1
+
+                WHERE s.tipoxusu_id = %i
+                AND s.is_visible = 1
+
+                ORDER BY s.screen_id ASC
+
+            ",
+                $row['neg_id'],
+                $row['tipoxusu_id']
+            );
+
+            /* =========================================
+               RUBROS DE CADA SCREEN
+            ========================================= */
+
+            foreach($screens as &$s){
+
+                $s['rubros'] = DB::query("
+
+                    SELECT
+
+                        r.rubro_id,
+                        r.nombre,
+                        r.icono
+
+                    FROM deux_screenxrubro sxr
+
+                    INNER JOIN reg_rubro r
+                        ON r.rubro_id = sxr.rubro_id
+
+                    WHERE sxr.screen_id = %i
+                    AND r.is_activo = 1
+
+                    ORDER BY r.nombre ASC
+
+                ", $s['screen_id']);
+
+            }
+
+        }
+
+        /* =========================================
+           RESPONSE
+        ========================================= */
 
         Flight::json([
+
             'status'  => 'ok',
+
             'screens' => $screens
+
         ], 200, JSON_UNESCAPED_UNICODE);
 
     } catch (Throwable $e) {
 
         Flight::json([
+
             'status' => 'error',
-            'msg'    => 'Error interno del servidor'
+
+            'msg'    => $e->getMessage(),
+
+            'line'   => $e->getLine(),
+
+            'file'   => $e->getFile()
+
         ], 500);
+
     }
 
-});        
+});
+  
 
 function obtenerScreens($tipoxusu_id, $neg_id) {
 
