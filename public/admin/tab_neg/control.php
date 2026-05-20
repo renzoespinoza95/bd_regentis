@@ -28,7 +28,13 @@ Flight::route('GET /mercado/inicio', function () {
    NEG/LISTAR
 ========================================= */
 
+/* =========================================
+   NEG/LISTAR
+========================================= */
+
 Flight::route('GET /neg/listar', function() {
+
+    autentificar_administrador();
 
     try {
 
@@ -45,6 +51,8 @@ Flight::route('GET /neg/listar', function() {
                 n.is_activo
 
             FROM reg_neg n
+
+            WHERE n.borrado_el IS NULL
 
             ORDER BY n.neg_id DESC
 
@@ -393,33 +401,102 @@ Flight::route('POST /neg/editar', function() {
 
 });
 
+/* =========================================
+   NEG/ELIMINAR
+========================================= */
+/* =========================================
+   NEG/ELIMINAR
+========================================= */
+
 Flight::route('POST /neg/eliminar', function() {
+
     try {
+
         DB::query("SET NAMES 'utf8mb4'");
+
         $data = Flight::request()->data->getData();
 
-        $neg_id = isset($data['neg_id']) ? intval($data['neg_id']) : 0;
+        $neg_id = isset($data['neg_id'])
+            ? intval($data['neg_id'])
+            : 0;
 
         if ($neg_id <= 0) {
-            Flight::json(['status'=>'error','msg'=>'neg_id inválido'],400); return;
+
+            Flight::json([
+                'status'=>'error',
+                'msg'=>'neg_id inválido'
+            ],400);
+
+            return;
         }
 
         DB::startTransaction();
 
         try {
-            DB::delete('reg_negxusu',"neg_id=%i",$neg_id);
-            DB::delete('reg_neg',"neg_id=%i",$neg_id);
+
+            DB::update(
+
+                'reg_neg',
+
+                [
+
+                    'borrado_el' =>
+                        date('Y-m-d H:i:s'),
+
+                    'is_activo' => 0
+
+                ],
+
+                "neg_id=%i",
+
+                $neg_id
+
+            );
+
+            DB::update(
+
+                'reg_negxusu',
+
+                [
+
+                    'is_activo' => 0
+
+                ],
+
+                "neg_id=%i",
+
+                $neg_id
+
+            );
+
             DB::commit();
-        } catch (Exception $e) {
+
+            Flight::json([
+
+                'status'=>'ok'
+
+            ]);
+
+        } catch(Exception $e){
+
             DB::rollback();
+
             throw $e;
+
         }
 
-        Flight::json(['status'=>'ok']);
-
     } catch (Exception $e) {
-        Flight::json(['status'=>'error','msg'=>$e->getMessage()],500);
+
+        Flight::json([
+
+            'status'=>'error',
+
+            'msg'=>$e->getMessage()
+
+        ],500);
+
     }
+
 });
 
 /* =========================================================
@@ -802,4 +879,1512 @@ Flight::route('POST /rubroxneg/eliminar', function(){
     DB::delete('deux_rubroxneg',"rubroxneg_id=%i",$data['rubroxneg_id']);
 
     Flight::json(['status'=>'ok']);
+});
+
+function crear_tienda_fantasma(){
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    /* ======================================
+       RUBRO RANDOM
+    ====================================== */
+
+    $rubro = DB::queryFirstRow("
+
+        SELECT
+            rubro_id,
+            nombre
+
+        FROM reg_rubro
+
+        WHERE is_activo = 1
+
+        ORDER BY RAND()
+
+        LIMIT 1
+
+    ");
+
+    if(!$rubro){
+
+        return [];
+    }
+
+    /* ======================================
+       NICK RANDOM
+    ====================================== */
+
+    $nick = DB::queryFirstField("
+
+        SELECT nick
+
+        FROM tt_nick
+
+        ORDER BY RAND()
+
+        LIMIT 1
+
+    ");
+
+    /* ======================================
+       NEGOCIO
+    ====================================== */
+
+    $nombre_negocio =
+        ucfirst($nick)
+        . ' '
+        . generarSimple();
+
+    $celular =
+        '9'
+        . rand(
+            10000000,
+            99999999
+        );
+
+    /* ======================================
+       CATEGORIAS RANDOM
+    ====================================== */
+
+    $categorias = DB::query("
+
+        SELECT
+
+            categoria_global_id,
+            nombre,
+            icono
+
+        FROM reg_categoria_global
+
+        WHERE is_activo = 1
+        AND borrado_el IS NULL
+
+        ORDER BY RAND()
+
+        LIMIT 3
+
+    ");
+
+    $categorias_array = [];
+
+    foreach($categorias as $cg){
+
+        $productos_array = [];
+
+        /* ==========================
+           3 PRODUCTOS RANDOM
+        ========================== */
+
+        for($i=0; $i<3; $i++){
+
+            $plazavea_id = rand(
+                1,
+                21024
+            );
+
+            $p = DB::queryFirstRow("
+
+                SELECT
+
+                    plazavea_id,
+                    cod_prod_plazavea,
+                    nombre,
+                    marca,
+                    precio,
+                    categoria,
+                    url_imagen
+
+                FROM prod_plazavea
+
+                WHERE plazavea_id = %i
+
+                LIMIT 1
+
+            ", $plazavea_id);
+
+            if(!$p){
+                continue;
+            }
+
+            $productos_array[] = [
+
+                'cod_prod_plazavea' =>
+                    $p['cod_prod_plazavea'],
+
+                'name' =>
+                    $p['nombre'],
+
+                'tipo_producto' =>
+                    'ABARROTES',
+
+                'marca_des' =>
+                    $p['marca'],
+
+                'price' =>
+                    floatval(
+                        $p['precio']
+                    ),
+
+                'description' =>
+                    $p['categoria'],
+
+                'stock' =>
+                    rand(5,50)
+
+            ];
+
+        }
+
+        $categorias_array[] = [
+
+            'categoria_global_id' =>
+                $cg['categoria_global_id'],
+
+            'name' =>
+                $cg['nombre'],
+
+            'icon' =>
+                $cg['icono'],
+
+            'productos' =>
+                $productos_array
+
+        ];
+
+    }
+
+    /* ======================================
+       RETURN ARRAY
+    ====================================== */
+
+    return [
+
+        'negocio' => [
+
+            'nombre' =>
+                $nombre_negocio,
+
+            'descripcion' =>
+                'Tienda automática Regentis',
+
+            'mercado_id' => 1,
+
+            'puesto' =>
+                'P-' . rand(1,999),
+
+            'ciudad' => 'Lima',
+
+            'provincia' => 'Lima',
+
+            'departamento' => 'Lima',
+
+            'direccion' =>
+                'Mercado Regentis',
+
+            'celular_informes' =>
+                $celular,
+
+            'img_logo' =>
+                'https://barsi-img.b-cdn.net/recursos/sg3f.png',
+
+            'lista_yape' => [
+
+                $celular
+
+            ],
+
+            'is_activo' => 1,
+
+            'is_validado' => 1,
+
+            'rubro_id' =>
+                $rubro['rubro_id']
+
+        ],
+
+        'slider' => [
+
+            'img' =>
+                'https://barsi-img.b-cdn.net/p_info/slider_20260513_180039_4794.jpg',
+
+            'titulo_superior' =>
+                'Bienvenido a Regentis',
+
+            'descripcion' =>
+                'Promociones especiales'
+
+        ],
+
+        'categorias' =>
+            $categorias_array
+
+    ];
+
+}
+
+function generarSimple(){
+
+    $letras = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+    $mix = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+
+    $txt = '';
+
+    /* ======================================
+       3 LETRAS
+    ====================================== */
+
+    for($i=0; $i<3; $i++){
+
+        $txt .= $letras[
+            rand(0, strlen($letras)-1)
+        ];
+
+    }
+
+    /* ======================================
+       4 MIX
+    ====================================== */
+
+    for($i=0; $i<4; $i++){
+
+        $txt .= $mix[
+            rand(0, strlen($mix)-1)
+        ];
+
+    }
+
+    return $txt;
+}
+
+Flight::route('POST /Pfnf/tiendaFantasma', function(){
+
+    include DEFINITION;
+
+    autentificar_administrador();
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    $d = json_decode(
+        Flight::request()->getBody(),
+        true
+    ) ?: [];
+
+    $usu_id = intval(
+        $d['usu_id'] ?? 0
+    );
+
+    /* ======================================
+       VALIDAR
+    ====================================== */
+
+    if($usu_id <= 0){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => 'usu_id requerido'
+
+        ], 400);
+
+        return;
+    }
+
+    DB::startTransaction();
+
+    try {
+
+        $now = date('Y-m-d H:i:s');
+
+        /* ======================================
+           USUARIO
+        ====================================== */
+
+        $usuario = DB::queryFirstRow("
+
+            SELECT usu_id
+
+            FROM reg_usu
+
+            WHERE usu_id = %i
+
+            LIMIT 1
+
+        ", $usu_id);
+
+        if(!$usuario){
+
+            DB::rollback();
+
+            Flight::json([
+
+                'status' => 'error',
+
+                'msg' => 'Usuario no encontrado'
+
+            ], 404);
+
+            return;
+        }
+
+        /* ======================================
+           ARRAY FANTASMA
+        ====================================== */
+
+        $data =
+            crear_tienda_fantasma();
+
+        if(
+            empty($data)
+        ){
+
+            throw new Exception(
+                'No se pudo generar tienda'
+            );
+        }
+
+        /* ======================================
+           NEGOCIO
+        ====================================== */
+
+        $negocio =
+            $data['negocio'];
+
+        /* ======================================
+           COD NEG
+        ====================================== */
+
+        do {
+
+            $cod_neg =
+                'NEG'
+                . generarSimple();
+
+            $existe_cod =
+                DB::queryFirstField("
+
+                    SELECT neg_id
+
+                    FROM reg_neg
+
+                    WHERE cod_neg = %s
+
+                    LIMIT 1
+
+                ", $cod_neg);
+
+        } while($existe_cod);
+
+        /* ======================================
+           INSERT NEGOCIO
+        ====================================== */
+
+        DB::insert(
+            'reg_neg',
+            [
+
+                'cod_neg' =>
+                    $cod_neg,
+
+                'nombre' =>
+                    $negocio['nombre'],
+
+                'celular_informes' =>
+                    $negocio['celular_informes'],
+
+                'fecha_creacion' =>
+                    $now,
+
+                'is_activo' =>
+                    $negocio['is_activo'],
+
+                'ciudad' =>
+                    $negocio['ciudad'],
+
+                'provincia' =>
+                    $negocio['provincia'],
+
+                'departamento' =>
+                    $negocio['departamento'],
+
+                'direccion' =>
+                    $negocio['direccion'],
+
+                'is_validado' =>
+                    $negocio['is_validado'],
+
+                'img_logo' =>
+                    $negocio['img_logo'],
+
+                'puesto' =>
+                    $negocio['puesto'],
+
+                'descripcion' =>
+                    $negocio['descripcion'],
+
+                'mercado_id' =>
+                    $negocio['mercado_id'],
+
+                'lista_yape' => json_encode(
+                    $negocio['lista_yape'],
+                    JSON_UNESCAPED_UNICODE
+                )
+
+            ]
+        );
+
+        $neg_id = DB::insertId();
+
+        /* ======================================
+           RUBRO NEGOCIO
+        ====================================== */
+
+        if(
+            !empty(
+                $negocio['rubro_id']
+            )
+        ){
+
+            DB::insert(
+                'reg_rubroxneg',
+                [
+
+                    'neg_id' =>
+                        $neg_id,
+
+                    'rubro_id' =>
+                        $negocio['rubro_id'],
+
+                    'is_activo' => 1
+
+                ]
+            );
+
+        }
+        /* ======================================
+           SLIDER
+        ====================================== */
+
+        if(
+            !empty(
+                $data['slider']
+            )
+        ){
+
+            DB::insert(
+                'reg_slider',
+                [
+
+                    'img' =>
+                        $data['slider']['img'],
+
+                    'orden' => 1,
+
+                    'is_visible' => 1,
+
+                    'fecha_creacion' =>
+                        $now,
+
+                    'fecha_fin' => NULL,
+
+                    'neg_id' =>
+                        $neg_id,
+
+                    'grupo' => 'B',
+
+                    'descripcion' =>
+                        $data['slider']['descripcion'],
+
+                    'titulo_superior' =>
+                        $data['slider']['titulo_superior'],
+
+                    'borrado_el' => NULL
+
+                ]
+            );
+
+        }
+
+        /* ======================================
+           CATEGORIAS
+        ====================================== */
+
+        $productos_creados = [];
+
+        if(
+            !empty(
+                $data['categorias']
+            )
+        ){
+
+            foreach(
+                $data['categorias']
+                as $cat
+            ){
+
+                /* ==========================
+                   CATEGORY
+                ========================== */
+
+                DB::insert(
+                    'pos_category',
+                    [
+
+                        'name' =>
+                            $cat['name'],
+
+                        'icon' =>
+                            $cat['icon'],
+
+                        'brief' =>
+                            'Productos de '
+                            . $cat['name'],
+
+                        'color' =>
+                            '#FD7635',
+
+                        'priority' =>
+                            rand(1,50),
+
+                        'neg_id' =>
+                            $neg_id,
+
+                        'categoria_global_id' =>
+                            $cat['categoria_global_id'],
+
+                        'is_activo' => 1,
+
+                        'clave_txt' =>
+                            strtolower(
+                                trim(
+                                    $cat['name']
+                                )
+                            ),
+
+                        'img' =>
+                            'https://barsi-img.b-cdn.net/recursos/ffc1.png'
+
+                    ]
+                );
+
+                $category_id =
+                    DB::insertId();
+
+                /* ==========================
+                   PRODUCTOS
+                ========================== */
+
+                if(
+                    !empty(
+                        $cat['productos']
+                    )
+                ){
+
+                    foreach(
+                        $cat['productos']
+                        as $p
+                    ){
+
+                        DB::insert(
+                            'pos_product',
+                            [
+
+                                'cod_producto' =>
+                                    'AUTO_' . uniqid(),
+                                'name' =>
+                                    $p['name'],
+
+                                'tipo_producto' =>
+                                    $p['tipo_producto'],
+
+                                'marca_des' =>
+                                    $p['marca_des'],
+                                'price' =>
+                                    $p['price'],
+
+                                'description' =>
+                                    $p['description'],
+
+                                'fecha_creacion' =>
+                                    $now,
+
+                                'fecha_modificacion' =>
+                                    $now,
+
+                                'neg_id' =>
+                                    $neg_id,
+
+                                'is_visible' => 1
+
+                            ]
+                        );
+
+                        $product_id =
+                            DB::insertId();
+
+                        $productos_creados[] =
+                            $product_id;
+
+                        /* ==========================
+                           PRODUCT CATEGORY
+                        ========================== */
+
+                        DB::insert(
+                            'pos_product_category',
+                            [
+
+                                'product_id' =>
+                                    $product_id,
+
+                                'category_id' =>
+                                    $category_id,
+
+                                'is_visible' => 1,
+
+                                'neg_id' =>
+                                    $neg_id
+
+                            ]
+                        );
+
+                        /* ==========================
+                           IMAGE
+                        ========================== */
+
+                        DB::insert(
+                            'pos_product_image',
+                            [
+
+                                'product_id' =>
+                                    $product_id,
+
+                                'img' =>
+                                    'https://barsi-img.b-cdn.net/recursos/6qz5.png',
+
+                                'orden' => 1,
+
+                                'is_visible' => 1
+
+                            ]
+                        );
+
+                        /* ==========================
+                           INVENTARIO
+                        ========================== */
+
+                        DB::insert(
+                            'pos_inventario',
+                            [
+
+                                'product_id' =>
+                                    $product_id,
+
+                                'stock_actual' =>
+                                    $p['stock'],
+
+                                'neg_id' =>
+                                    $neg_id
+
+                            ]
+                        );
+
+                        DB::insert(
+                            'pos_inventario_movimiento',
+                            [
+
+                                'product_id' =>
+                                    $product_id,
+
+                                'tipo' =>
+                                    'AJUSTE',
+
+                                'origen' =>
+                                    'AJUSTE',
+
+                                'cantidad' =>
+                                    $p['stock'],
+
+                                'precio_unitario' =>
+                                    $p['price'],
+
+                                'fecha' =>
+                                    $now,
+
+                                'stock_resultante' =>
+                                    $p['stock'],
+
+                                'neg_id' =>
+                                    $neg_id
+
+                            ]
+                        );
+
+                    }
+
+                }
+
+            }
+
+        }
+
+        /* ======================================
+           MAS VENDIDOS
+        ====================================== */
+
+        $cat_mas =
+            DB::queryFirstRow("
+
+                SELECT category_id
+
+                FROM pos_category
+
+                WHERE neg_id = %i
+                AND clave_txt = 'mas-vendidos'
+
+                LIMIT 1
+
+            ", $neg_id);
+
+        if(!$cat_mas){
+
+            DB::insert(
+                'pos_category',
+                [
+
+                    'name' =>
+                        'Más vendidos',
+
+                    'icon' =>
+                        '🔥',
+
+                    'brief' =>
+                        'Productos más solicitados',
+
+                    'color' =>
+                        '#FF4D4F',
+
+                    'priority' =>
+                        999,
+
+                    'neg_id' =>
+                        $neg_id,
+
+                    'is_activo' => 1,
+
+                    'clave_txt' =>
+                        'mas-vendidos',
+
+                    'img' =>
+                        'https://barsi-img.b-cdn.net/recursos/ffc1.png'
+
+                ]
+            );
+
+            $mas_category_id =
+                DB::insertId();
+
+            shuffle(
+                $productos_creados
+            );
+
+            $top2 =
+                array_slice(
+                    $productos_creados,
+                    0,
+                    2
+                );
+
+            foreach($top2 as $pid){
+
+                DB::insert(
+                    'pos_product_category',
+                    [
+
+                        'product_id' =>
+                            $pid,
+
+                        'category_id' =>
+                            $mas_category_id,
+
+                        'is_visible' => 1,
+
+                        'neg_id' =>
+                            $neg_id
+
+                    ]
+                );
+
+            }
+
+        }
+
+        /* ======================================
+           NEGXUSU
+        ====================================== */
+
+        DB::insert(
+            'reg_negxusu',
+            [
+
+                'usu_id' =>
+                    $usu_id,
+
+                'neg_id' =>
+                    $neg_id,
+
+                'is_activo' => 1,
+
+                'fecha_creacion' =>
+                    $now
+
+            ]
+        );
+
+        /* ======================================
+           PROPIETARIO
+        ====================================== */
+
+        $tipoxusu_id =
+            DB::queryFirstField("
+
+                SELECT tipoxusu_id
+
+                FROM reg_tipoxusu
+
+                WHERE LOWER(clave_txt)
+                LIKE '%propietario%'
+
+                LIMIT 1
+
+            ");
+
+        if(!$tipoxusu_id){
+            $tipoxusu_id = 2;
+        }
+
+        DB::update(
+            'reg_usu',
+            [
+
+                'tipoxusu_id' =>
+                    $tipoxusu_id
+
+            ],
+            "usu_id=%i",
+            $usu_id
+        );
+
+        DB::commit();
+
+        Flight::json([
+
+            'status' => 'ok',
+
+            'msg' =>
+                'Tienda fantasma creada',
+
+            'neg_id' =>
+                $neg_id
+
+        ]);
+
+    } catch(Throwable $e){
+
+        DB::rollback();
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => $e->getMessage(),
+
+            'line' => $e->getLine(),
+
+            'file' => $e->getFile()
+
+        ], 500);
+
+    }
+
+});
+
+
+Flight::route('POST /OO09/productosFantasma', function(){
+
+    include DEFINITION;
+
+    autentificar_administrador();
+
+    global $administrador_actual;
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    /* ======================================
+       NEGOCIO
+    ====================================== */
+
+    $neg_id = isset($administrador_actual['neg_id'])
+        ? intval($administrador_actual['neg_id'])
+        : 0;
+
+    if($neg_id <= 0){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => 'neg_id inválido'
+
+        ], 400);
+
+        return;
+    }
+
+    DB::startTransaction();
+
+    try {
+
+        $now = date('Y-m-d H:i:s');
+
+        /* ======================================
+           CATEGORIA GLOBAL RANDOM
+        ====================================== */
+
+        $cg = DB::queryFirstRow("
+
+            SELECT
+
+                categoria_global_id,
+                nombre,
+                icono
+
+            FROM reg_categoria_global
+
+            WHERE is_activo = 1
+            AND borrado_el IS NULL
+
+            ORDER BY RAND()
+
+            LIMIT 1
+
+        ");
+
+        if(!$cg){
+
+            throw new Exception(
+                'No existe categoría global'
+            );
+        }
+
+        /* ======================================
+           VERIFICAR CATEGORY
+        ====================================== */
+
+        $category = DB::queryFirstRow("
+
+            SELECT
+
+                category_id
+
+            FROM pos_category
+
+            WHERE neg_id = %i
+            AND categoria_global_id = %i
+            AND is_activo = 1
+
+            LIMIT 1
+
+        ",
+            $neg_id,
+            $cg['categoria_global_id']
+        );
+
+        /* ======================================
+           CREAR CATEGORY
+        ====================================== */
+
+        if(!$category){
+
+            DB::insert(
+                'pos_category',
+                [
+
+                    'name' =>
+                        $cg['nombre'],
+
+                    'icon' =>
+                        $cg['icono'],
+
+                    'brief' =>
+                        'Productos de '
+                        . $cg['nombre'],
+
+                    'color' =>
+                        '#FD7635',
+
+                    'priority' =>
+                        rand(1,50),
+
+                    'neg_id' =>
+                        $neg_id,
+
+                    'categoria_global_id' =>
+                        $cg['categoria_global_id'],
+
+                    'is_activo' => 1,
+
+                    'clave_txt' =>
+                        strtolower(
+                            trim(
+                                $cg['nombre']
+                            )
+                        ),
+
+                    'img' =>
+                        'https://barsi-img.b-cdn.net/recursos/ffc1.png'
+
+                ]
+            );
+
+            $category_id =
+                DB::insertId();
+
+        }else{
+
+            $category_id =
+                intval(
+                    $category['category_id']
+                );
+
+        }
+
+        /* ======================================
+           5 PRODUCTOS RANDOM
+        ====================================== */
+
+        $productos_creados = [];
+
+        for($i=0; $i<5; $i++){
+
+            $plazavea_id = rand(
+                1,
+                21024
+            );
+
+            $p = DB::queryFirstRow("
+
+                SELECT
+
+                    plazavea_id,
+                    cod_prod_plazavea,
+                    nombre,
+                    marca,
+                    precio,
+                    categoria,
+                    url_imagen
+
+                FROM prod_plazavea
+
+                WHERE plazavea_id = %i
+
+                LIMIT 1
+
+            ", $plazavea_id);
+
+            if(!$p){
+                continue;
+            }
+
+            /* ==========================
+               PRODUCTO
+            ========================== */
+
+            DB::insert(
+                'pos_product',
+                [
+
+                    'cod_producto' =>
+                        'AUTO_' . uniqid(),
+
+                    'name' =>
+                        $p['nombre']
+                        ?? 'Producto',
+
+                    'tipo_producto' =>
+                        'ABARROTES',
+
+                    'marca_des' =>
+                        $p['marca']
+                        ?? 'GENERICO',
+
+                    'price' =>
+                        floatval(
+                            $p['precio']
+                            ?? rand(5,100)
+                        ),
+
+                    'description' =>
+                        $p['categoria']
+                        ?? '',
+
+                    'fecha_creacion' =>
+                        $now,
+
+                    'fecha_modificacion' =>
+                        $now,
+
+                    'neg_id' =>
+                        $neg_id,
+
+                    'is_visible' => 1
+
+                ]
+            );
+
+            $product_id =
+                DB::insertId();
+
+            $productos_creados[] =
+                $product_id;
+
+            /* ==========================
+               PRODUCT CATEGORY
+            ========================== */
+
+            DB::insert(
+                'pos_product_category',
+                [
+
+                    'product_id' =>
+                        $product_id,
+
+                    'category_id' =>
+                        $category_id,
+
+                    'is_visible' => 1,
+
+                    'neg_id' =>
+                        $neg_id
+
+                ]
+            );
+
+            /* ==========================
+               IMAGE
+            ========================== */
+
+            DB::insert(
+                'pos_product_image',
+                [
+
+                    'product_id' =>
+                        $product_id,
+
+                    'img' =>
+                        'https://barsi-img.b-cdn.net/recursos/6qz5.png',
+
+                    'orden' => 1,
+
+                    'is_visible' => 1
+
+                ]
+            );
+
+            /* ==========================
+               INVENTARIO
+            ========================== */
+
+            $stock = rand(5,50);
+
+            DB::insert(
+                'pos_inventario',
+                [
+
+                    'product_id' =>
+                        $product_id,
+
+                    'stock_actual' =>
+                        $stock,
+
+                    'neg_id' =>
+                        $neg_id
+
+                ]
+            );
+
+            DB::insert(
+                'pos_inventario_movimiento',
+                [
+
+                    'product_id' =>
+                        $product_id,
+
+                    'tipo' =>
+                        'AJUSTE',
+
+                    'origen' =>
+                        'AJUSTE',
+
+                    'cantidad' =>
+                        $stock,
+
+                    'precio_unitario' =>
+                        floatval(
+                            $p['precio']
+                            ?? 0
+                        ),
+
+                    'fecha' =>
+                        $now,
+
+                    'stock_resultante' =>
+                        $stock,
+
+                    'neg_id' =>
+                        $neg_id
+
+                ]
+            );
+
+        }
+
+        /* ======================================
+           MAS VENDIDOS
+        ====================================== */
+
+        $cat_mas =
+            DB::queryFirstRow("
+
+                SELECT category_id
+
+                FROM pos_category
+
+                WHERE neg_id = %i
+                AND clave_txt = 'mas-vendidos'
+
+                LIMIT 1
+
+            ", $neg_id);
+
+        if(!$cat_mas){
+
+            DB::insert(
+                'pos_category',
+                [
+
+                    'name' =>
+                        'Más vendidos',
+
+                    'icon' =>
+                        '🔥',
+
+                    'brief' =>
+                        'Productos más solicitados',
+
+                    'color' =>
+                        '#FF4D4F',
+
+                    'priority' =>
+                        999,
+
+                    'neg_id' =>
+                        $neg_id,
+
+                    'is_activo' => 1,
+
+                    'clave_txt' =>
+                        'mas-vendidos',
+
+                    'img' =>
+                        'https://barsi-img.b-cdn.net/recursos/ffc1.png'
+
+                ]
+            );
+
+            $mas_category_id =
+                DB::insertId();
+
+        }else{
+
+            $mas_category_id =
+                intval(
+                    $cat_mas['category_id']
+                );
+
+        }
+
+        shuffle(
+            $productos_creados
+        );
+
+        $top2 =
+            array_slice(
+                $productos_creados,
+                0,
+                2
+            );
+
+        foreach($top2 as $pid){
+
+            $existeRelacion =
+                DB::queryFirstField("
+
+                    SELECT 1
+
+                    FROM pos_product_category
+
+                    WHERE product_id = %i
+                    AND category_id = %i
+
+                    LIMIT 1
+
+                ",
+                    $pid,
+                    $mas_category_id
+                );
+
+            if(!$existeRelacion){
+
+                DB::insert(
+                    'pos_product_category',
+                    [
+
+                        'product_id' =>
+                            $pid,
+
+                        'category_id' =>
+                            $mas_category_id,
+
+                        'is_visible' => 1,
+
+                        'neg_id' =>
+                            $neg_id
+
+                    ]
+                );
+
+            }
+
+        }
+
+        DB::commit();
+
+        Flight::json([
+
+            'status' => 'ok',
+
+            'msg' =>
+                'Productos fantasma creados',
+
+            'category_id' =>
+                $category_id,
+
+            'productos_creados' =>
+                count(
+                    $productos_creados
+                )
+
+        ]);
+
+    } catch(Throwable $e){
+
+        DB::rollback();
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => $e->getMessage(),
+
+            'line' => $e->getLine(),
+
+            'file' => $e->getFile()
+
+        ], 500);
+
+    }
+
+});
+
+/* =========================================
+   NEG/ACTIVO
+========================================= */
+
+Flight::route('POST /neg/activo', function(){
+
+    autentificar_administrador();
+
+    try {
+
+        DB::query("SET NAMES 'utf8mb4'");
+
+        $data = Flight::request()->data->getData();
+
+        $neg_id = isset($data['neg_id'])
+            ? intval($data['neg_id'])
+            : 0;
+
+        $is_activo = isset($data['is_activo'])
+            ? intval($data['is_activo'])
+            : -1;
+
+        if($neg_id <= 0){
+
+            Flight::json([
+                'status'=>'error',
+                'msg'=>'neg_id inválido'
+            ],400);
+
+            return;
+        }
+
+        if(
+            $is_activo !== 0
+            &&
+            $is_activo !== 1
+        ){
+
+            Flight::json([
+                'status'=>'error',
+                'msg'=>'is_activo inválido'
+            ],400);
+
+            return;
+        }
+
+        DB::update(
+
+            'reg_neg',
+
+            [
+
+                'is_activo' => $is_activo
+
+            ],
+
+            "neg_id=%i",
+
+            $neg_id
+
+        );
+
+        Flight::json([
+
+            'status'=>'ok'
+
+        ]);
+
+    } catch(Exception $e){
+
+        Flight::json([
+
+            'status'=>'error',
+
+            'msg'=>$e->getMessage()
+
+        ],500);
+
+    }
+
 });

@@ -1,22 +1,33 @@
 <?php
+
 Flight::route('GET /tt/tt', function () {
     include DEFINITION;
-    $usu_id = 9;
+    dd(crear_tienda_fantasma());
+    exit;
+    $usu_id = 12;    
+    enviar_boton_tienda($usu_id);
+    echo poke();
+});
+
+
+Flight::route('GET /tt/xx', function () {
+    include DEFINITION;
+    $usu_id = 12;
     $imagenes = ['http://localhost:84/bd_landia/a1.jpg','http://localhost:84/bd_landia/a2.jpg','http://localhost:84/bd_landia/a3.jpg'];
     enviar_manual_visual($usu_id, $imagenes);
     echo poke();
 });
 
 
-// Flight::route('GET /tt/tt', function () {
-//     include DEFINITION;
-//     $usu_id = 37;
-//     enviar_auto_msg(
-//         $usu_id,
-//         'TXT_REGISTRO'
-//     );
-//     echo poke();
-// });
+Flight::route('GET /tt/yy', function () {
+    include DEFINITION;
+    $usu_id = 12;
+    enviar_auto_msg(
+        $usu_id,
+        'TXT_REGISTRO'
+    );
+    echo poke();
+});
 
 Flight::route('GET /tt/diario', function () {
     include DEFINITION;

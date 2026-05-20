@@ -26,9 +26,7 @@ Flight::route('GET /inventario/listar', function () {
             i.inventario_id,
             i.product_id,
             p.name AS producto,
-            i.stock_actual,
-            i.stock_min,
-            i.stock_max
+            i.stock_actual            
         FROM pos_inventario i
         INNER JOIN pos_product p ON p.product_id = i.product_id
         WHERE i.neg_id=%i
@@ -77,9 +75,7 @@ Flight::route('POST /inventario/crear', function () {
     DB::insert("pos_inventario",[
         "neg_id"=>$neg_id,
         "product_id"=>$d["product_id"],
-        "stock_actual"=>$d["stock_actual"],
-        "stock_min"=>$d["stock_min"],
-        "stock_max"=>$d["stock_max"]
+        "stock_actual"=>$d["stock_actual"]        
     ]);
 
     Flight::json(["status"=>"ok"]);
@@ -143,8 +139,8 @@ Flight::route('POST /inventario/editar', function () {
     $d = Flight::request()->data;
 
     DB::update("pos_inventario",[
-        "stock_min"=>$d["stock_min"],
-        "stock_max"=>$d["stock_max"]
+        "stock_min"=>$d["xx"],
+        "stock_max"=>$d["stoxxck_max"]
     ],"inventario_id=%i AND neg_id=%i",$d["inventario_id"],$neg_id);
 
     Flight::json(["status"=>"ok"]);
@@ -263,28 +259,3 @@ Flight::route('POST /inventario/movimiento', function () {
 });
 
 
-/* ============================================================
- * ACTUALIZAR LIMITES
- * ============================================================ */
-Flight::route('POST /inventario/limites', function () {
-
-    include DEFINITION;
-    autentificar_administrador();
-    global $administrador_actual;
-
-    $neg_id = intval($administrador_actual['neg_id']);
-
-    $d = Flight::request()->data;
-
-    if(!isset($d['inventario_id'])){
-        Flight::json(['status'=>'error','msg'=>'Inventario inválido'],400);
-        return;
-    }
-
-    DB::update('pos_inventario',[
-        'stock_min'=>(int)$d['stock_min'],
-        'stock_max'=>(int)$d['stock_max']
-    ],"inventario_id=%i AND neg_id=%i",$d['inventario_id'],$neg_id);
-
-    Flight::json(['status'=>'ok']);
-});

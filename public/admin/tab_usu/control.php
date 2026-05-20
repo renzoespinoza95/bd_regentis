@@ -2182,3 +2182,366 @@ Flight::route(
         ]);
     }
 });
+
+Flight::route('POST /usuario/reiniciar', function(){
+
+    include DEFINITION;
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    $d = json_decode(
+        Flight::request()->getBody(),
+        true
+    ) ?: [];
+
+    $usu_id = intval(
+        $d['usu_id'] ?? 0
+    );
+
+    if(!$usu_id){
+
+        Flight::json([
+            'status' => 'error',
+            'msg' => 'usu_id requerido'
+        ], 400);
+
+        return;
+    }
+
+    DB::startTransaction();
+
+    try {
+
+        /* ======================================
+           USUARIO
+        ====================================== */
+
+        $usuario = DB::queryFirstRow("
+
+            SELECT usu_id
+
+            FROM reg_usu
+
+            WHERE usu_id = %i
+
+            LIMIT 1
+
+        ", $usu_id);
+
+        if(!$usuario){
+
+            DB::rollback();
+
+            Flight::json([
+                'status' => 'error',
+                'msg' => 'Usuario no encontrado'
+            ], 404);
+
+            return;
+        }
+
+        /* ======================================
+           RANDOMS
+        ====================================== */
+
+        $nombre = DB::queryFirstField("
+
+            SELECT nombre
+
+            FROM tt_nombre
+
+            ORDER BY RAND()
+
+            LIMIT 1
+
+        ");
+
+        $apellido = DB::queryFirstField("
+
+            SELECT apellido
+
+            FROM tt_apellido
+
+            ORDER BY RAND()
+
+            LIMIT 1
+
+        ");
+
+        $nick = DB::queryFirstField("
+
+            SELECT nick
+
+            FROM tt_nick
+
+            ORDER BY RAND()
+
+            LIMIT 1
+
+        ");
+
+        /* ======================================
+           GENERAR DATOS
+        ====================================== */
+
+        $nombre_completo =
+            trim($nombre . ' ' . $apellido);
+
+        $dni = str_pad(
+            rand(1, 99999999),
+            8,
+            '0',
+            STR_PAD_LEFT
+        );
+
+        $celular = '9' . rand(
+            10000000,
+            99999999
+        );
+
+        /* ======================================
+           ELIMINAR NEGOCIOS
+        ====================================== */
+
+        DB::delete(
+            'reg_negxusu',
+            "usu_id=%i",
+            $usu_id
+        );
+
+        /* ======================================
+           UPDATE USUARIO
+        ====================================== */
+
+        DB::update(
+            'reg_usu',
+            [
+
+                'nombres_apellidos' =>
+                    $nombre_completo,
+
+                'sobrenombre' =>
+                    $nick,
+
+                'celular' =>
+                    $celular,
+
+                'dni' =>
+                    $dni,
+
+                'tipoxusu_id' => 1,
+
+                'rol_id' => 1,
+
+                'is_acepto_terminos' => 0,
+
+                'clavel' => '12qw12',
+
+                'img_perfil' =>
+                    'https://barsi-img.b-cdn.net/recursos/logo-regentis.png'
+
+            ],
+            "usu_id=%i",
+            $usu_id
+        );
+
+        DB::commit();
+
+        Flight::json([
+
+            'status' => 'ok',
+
+            'msg' => 'Usuario reiniciado',
+
+            'data' => [
+
+                'usu_id' => $usu_id,
+
+                'nombre' => $nombre_completo,
+
+                'nick' => $nick,
+
+                'dni' => $dni,
+
+                'celular' => $celular
+
+            ]
+
+        ]);
+
+    } catch(Exception $e){
+
+        DB::rollback();
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => $e->getMessage()
+
+        ], 500);
+
+    }
+
+});
+
+Flight::route('POST /usuario/clave12', function(){
+
+    include DEFINITION;
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    $d = json_decode(
+        Flight::request()->getBody(),
+        true
+    ) ?: [];
+
+    $usu_id = intval(
+        $d['usu_id'] ?? 0
+    );
+
+    if(!$usu_id){
+
+        Flight::json([
+            'status' => 'error',
+            'msg' => 'usu_id requerido'
+        ], 400);
+
+        return;
+    }
+
+    $usuario = DB::queryFirstRow("
+
+        SELECT usu_id
+
+        FROM reg_usu
+
+        WHERE usu_id = %i
+
+        LIMIT 1
+
+    ", $usu_id);
+
+    if(!$usuario){
+
+        Flight::json([
+            'status' => 'error',
+            'msg' => 'Usuario no encontrado'
+        ], 404);
+
+        return;
+    }
+
+    DB::update(
+        'reg_usu',
+        [
+
+            'clavel' => '12qw12'
+
+        ],
+        "usu_id=%i",
+        $usu_id
+    );
+
+    Flight::json([
+
+        'status' => 'ok',
+
+        'msg' => 'Clave actualizada correctamente'
+
+    ]);
+
+});
+
+Flight::route('POST /usuario/nuevoNegocio', function(){
+
+    include DEFINITION;
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    $d = json_decode(
+        Flight::request()->getBody(),
+        true
+    ) ?: [];
+
+    $usu_id = intval(
+        $d['usu_id'] ?? 0
+    );
+
+    if(!$usu_id){
+
+        Flight::json([
+            'status' => 'error',
+            'msg' => 'usu_id requerido'
+        ], 400);
+
+        return;
+    }
+
+    $usuario = DB::queryFirstRow("
+
+        SELECT usu_id
+
+        FROM reg_usu
+
+        WHERE usu_id = %i
+
+        LIMIT 1
+
+    ", $usu_id);
+
+    if(!$usuario){
+
+        Flight::json([
+            'status' => 'error',
+            'msg' => 'Usuario no encontrado'
+        ], 404);
+
+        return;
+    }
+
+    /* ======================================
+       ENVIAR BOTÓN TIENDA
+    ====================================== */
+
+    $r = enviar_boton_tienda(
+        $usu_id
+    );
+
+    /* ======================================
+       FOTO RANDOM MASCOTAS
+    ====================================== */
+
+    $img_perfil = 'https://loremflickr.com/300/300/puppy?lock='
+        . rand(1,999999);
+
+    DB::update(
+        'reg_usu',
+        [
+
+            'img_perfil' => $img_perfil
+
+        ],
+        "usu_id=%i",
+        $usu_id
+    );
+
+    if(!$r){
+
+        Flight::json([
+            'status' => 'error',
+            'msg' => 'No se pudo enviar'
+        ], 500);
+
+        return;
+    }
+
+    Flight::json([
+
+        'status' => 'ok',
+
+        'msg' => 'Botón enviado correctamente'
+
+    ]);
+
+});

@@ -171,7 +171,7 @@ $admin_nombre = $administrador_actual['nombres_apellidos'];
 
         <tr>
           <th>Sobrenombre</th>
-          <td>{{ misDatos.email }}</td>
+          <td>{{ misDatos.sobrenombre }}</td>
         </tr>
 
         <tr>

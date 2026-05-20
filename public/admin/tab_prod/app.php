@@ -217,6 +217,7 @@ Flight::route('GET /MylW/listar_categorias/@neg_id', function ($neg_id) {
             p.product_id,
             p.name,
             p.price,
+            p.is_visible,
             pc.category_id,
             IFNULL(MAX(i.stock_actual),0) AS stock
         FROM pos_product p
@@ -241,6 +242,7 @@ Flight::route('GET /MylW/listar_categorias/@neg_id', function ($neg_id) {
 
         $map[$cid][] = [
             'product_id' => intval($p['product_id']),
+            'is_visible' => intval($p['is_visible']),
             'name'       => $p['name'],
             'price'      => floatval($p['price']),
             'stock'      => intval($p['stock'])
@@ -548,5 +550,769 @@ Flight::route('POST /ArWL/tienda', function () {
             'mas_vendidos' => $mas_vendidos
         ]
     ]);
+
+});
+
+Flight::route('POST /VG0a/productoStock', function(){
+
+    include DEFINITION;
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    $d = json_decode(
+        Flight::request()->getBody(),
+        true
+    ) ?: [];
+
+    /* ======================================
+       CAMPOS
+    ====================================== */
+
+    $product_id = intval(
+        $d['product_id'] ?? 0
+    );
+
+    $stock = intval(
+        $d['stock'] ?? 0
+    );
+
+    $xin = trim(
+        $d['xin'] ?? ''
+    );
+
+    $yuan = trim(
+        $d['yuan'] ?? ''
+    );
+
+    /* ======================================
+       FIRMA
+    ====================================== */
+
+    firma(
+        $xin,
+        $yuan
+    );
+
+    /* ======================================
+       VALIDAR
+    ====================================== */
+
+    if($product_id <= 0){
+
+        Flight::json([
+            'status' => 'error',
+            'msg' => 'product_id requerido'
+        ], 400);
+
+        return;
+    }
+
+    if($stock <= 0){
+
+        Flight::json([
+            'status' => 'error',
+            'msg' => 'stock inválido'
+        ], 400);
+
+        return;
+    }
+
+    DB::startTransaction();
+
+    try {
+
+        $now = date('Y-m-d H:i:s');
+
+        /* ======================================
+           PRODUCTO
+        ====================================== */
+
+        $producto = DB::queryFirstRow("
+
+            SELECT
+
+                p.product_id,
+                p.price,
+                p.neg_id,
+
+                i.stock_actual
+
+            FROM pos_product p
+
+            LEFT JOIN pos_inventario i
+                ON i.product_id = p.product_id
+
+            WHERE p.product_id = %i
+
+            LIMIT 1
+
+        ", $product_id);
+
+        if(!$producto){
+
+            DB::rollback();
+
+            Flight::json([
+                'status' => 'error',
+                'msg' => 'Producto no encontrado'
+            ], 404);
+
+            return;
+        }
+
+        /* ======================================
+           STOCKS
+        ====================================== */
+
+        $stock_actual = intval(
+            $producto['stock_actual'] ?? 0
+        );
+
+        $nuevo_stock =
+            $stock_actual + $stock;
+
+        /* ======================================
+           INVENTARIO
+        ====================================== */
+
+        $existeInventario =
+            DB::queryFirstField("
+
+                SELECT 1
+
+                FROM pos_inventario
+
+                WHERE product_id = %i
+
+                LIMIT 1
+
+            ", $product_id);
+
+        if($existeInventario){
+
+            DB::update(
+                'pos_inventario',
+                [
+
+                    'stock_actual' =>
+                        $nuevo_stock
+
+                ],
+                "product_id=%i",
+                $product_id
+            );
+
+        }else{
+
+            DB::insert(
+                'pos_inventario',
+                [
+
+                    'product_id' =>
+                        $product_id,
+
+                    'stock_actual' =>
+                        $nuevo_stock,
+
+                    'neg_id' =>
+                        $producto['neg_id']
+
+                ]
+            );
+
+        }
+
+        /* ======================================
+           MOVIMIENTO
+        ====================================== */
+
+        DB::insert(
+            'pos_inventario_movimiento',
+            [
+
+                'product_id' =>
+                    $product_id,
+
+                'tipo' => 'AJUSTE',
+
+                'origen' => 'AJUSTE',
+
+                'cantidad' =>
+                    $stock,
+
+                'precio_unitario' =>
+                    floatval(
+                        $producto['price']
+                    ),
+
+                'fecha' => $now,
+
+                'stock_resultante' =>
+                    $nuevo_stock,
+
+                'neg_id' =>
+                    $producto['neg_id']
+
+            ]
+        );
+
+        DB::commit();
+
+        /* ======================================
+           RESPONSE
+        ====================================== */
+
+        Flight::json([
+
+            'status' => 'ok',
+
+            'msg' => 'Stock actualizado correctamente',
+
+            'data' => [
+
+                'product_id' =>
+                    $product_id,
+
+                'stock_anterior' =>
+                    $stock_actual,
+
+                'stock_agregado' =>
+                    $stock,
+
+                'stock_actual' =>
+                    $nuevo_stock
+
+            ]
+
+        ]);
+
+    } catch(Exception $e){
+
+        DB::rollback();
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => $e->getMessage()
+
+        ], 500);
+
+    }
+
+});
+
+
+Flight::route('POST /CF3a/productoVisible', function(){
+
+    include DEFINITION;
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    $d = json_decode(
+        Flight::request()->getBody(),
+        true
+    ) ?: [];
+
+    /* ======================================
+       CAMPOS
+    ====================================== */
+
+    $product_id = intval(
+        $d['product_id'] ?? 0
+    );
+
+    $is_visible = intval(
+        $d['is_visible'] ?? -1
+    );
+
+    $xin = trim(
+        $d['xin'] ?? ''
+    );
+
+    $yuan = trim(
+        $d['yuan'] ?? ''
+    );
+
+    /* ======================================
+       FIRMA
+    ====================================== */
+
+    firma(
+        $xin,
+        $yuan
+    );
+
+    /* ======================================
+       VALIDAR
+    ====================================== */
+
+    if($product_id <= 0){
+
+        Flight::json([
+            'status' => 'error',
+            'msg' => 'product_id requerido'
+        ], 400);
+
+        return;
+    }
+
+    if(
+        $is_visible !== 0
+        &&
+        $is_visible !== 1
+    ){
+
+        Flight::json([
+            'status' => 'error',
+            'msg' => 'is_visible inválido'
+        ], 400);
+
+        return;
+    }
+
+    try {
+
+        /* ======================================
+           VALIDAR PRODUCTO
+        ====================================== */
+
+        $producto = DB::queryFirstRow("
+
+            SELECT
+
+                product_id,
+                is_visible
+
+            FROM pos_product
+
+            WHERE product_id = %i
+
+            LIMIT 1
+
+        ", $product_id);
+
+        if(!$producto){
+
+            Flight::json([
+                'status' => 'error',
+                'msg' => 'Producto no encontrado'
+            ], 404);
+
+            return;
+        }
+
+        /* ======================================
+           UPDATE
+        ====================================== */
+
+        DB::update(
+            'pos_product',
+            [
+
+                'is_visible' => $is_visible,
+
+                'fecha_modificacion' =>
+                    date('Y-m-d H:i:s')
+
+            ],
+            "product_id=%i",
+            $product_id
+        );
+
+        /* ======================================
+           RESPONSE
+        ====================================== */
+
+        Flight::json([
+
+            'status' => 'ok',
+
+            'msg' => 'Visibilidad actualizada',
+
+            'data' => [
+
+                'product_id' =>
+                    $product_id,
+
+                'is_visible' =>
+                    $is_visible
+
+            ]
+
+        ]);
+
+    } catch(Exception $e){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => $e->getMessage()
+
+        ], 500);
+
+    }
+
+});
+
+Flight::route('POST /RvKx/nuevoProducto', function(){
+
+    include DEFINITION;
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    $d = json_decode(
+        Flight::request()->getBody(),
+        true
+    ) ?: [];
+
+    /* ======================================
+       FIRMA
+    ====================================== */
+
+    $xin = trim(
+        $d['xin'] ?? ''
+    );
+
+    $yuan = trim(
+        $d['yuan'] ?? ''
+    );
+
+    firma(
+        $xin,
+        $yuan
+    );
+
+    /* ======================================
+       CAMPOS
+    ====================================== */
+
+    $neg_id = intval(
+        $d['neg_id'] ?? 0
+    );
+
+    $name = trim(
+        $d['name'] ?? ''
+    );
+
+    $price = floatval(
+        $d['price'] ?? 0
+    );
+
+    $stock = intval(
+        $d['stock'] ?? 0
+    );
+
+    $description = trim(
+        $d['description'] ?? ''
+    );
+
+    $categorias = $d['categorias'] ?? [];
+
+    /* ======================================
+       VALIDAR
+    ====================================== */
+
+    if($neg_id <= 0){
+
+        Flight::json([
+
+            'status'=>'error',
+
+            'msg'=>'neg_id requerido'
+
+        ],400);
+
+        return;
+    }
+
+    if(!$name){
+
+        Flight::json([
+
+            'status'=>'error',
+
+            'msg'=>'name requerido'
+
+        ],400);
+
+        return;
+    }
+
+    if($price <= 0){
+
+        Flight::json([
+
+            'status'=>'error',
+
+            'msg'=>'price inválido'
+
+        ],400);
+
+        return;
+    }
+
+    DB::startTransaction();
+
+    try{
+
+        $now_dt = date(
+            "Y-m-d H:i:s"
+        );
+
+        /* ======================================
+           NEGOCIO
+        ====================================== */
+
+        $negocio = DB::queryFirstRow("
+
+            SELECT neg_id
+
+            FROM reg_neg
+
+            WHERE neg_id = %i
+            AND borrado_el IS NULL
+
+            LIMIT 1
+
+        ", $neg_id);
+
+        if(!$negocio){
+
+            DB::rollback();
+
+            Flight::json([
+
+                'status'=>'error',
+
+                'msg'=>'Negocio no encontrado'
+
+            ],404);
+
+            return;
+        }
+
+        /* ======================================
+           CREAR PRODUCTO
+        ====================================== */
+
+        DB::insert(
+
+    'pos_product',
+
+    [
+
+        'cod_producto' =>
+            'PROD-'
+            . date('YmdHis')
+            . '-'
+            . rand(100,999),
+
+        'name' =>
+            $name,
+
+        'tipo_producto' =>
+            'ABARROTES',
+
+        'marca_des' =>
+            trim(
+                $d['marca_des']
+                ?? 'GENERICA'
+            ),
+
+        'price' =>
+            $price,
+
+        'description' =>
+            $description,
+
+        'fecha_creacion' =>
+            $now_dt,
+
+        'fecha_modificacion' =>
+            $now_dt,
+
+        'neg_id' =>
+            $neg_id,
+
+        'subcategoria_id' => null,
+
+        'is_visible' => 1,
+
+        'borrado_el' => null
+
+    ]
+
+);
+
+        $product_id = DB::insertId();
+
+        /* ======================================
+           CATEGORÍAS
+        ====================================== */
+
+        if(!empty($categorias)){
+
+            foreach($categorias as $cat){
+
+                $category_id = is_array($cat)
+
+                    ? intval(
+                        $cat['category_id']
+                        ?? 0
+                    )
+
+                    : intval($cat);
+
+                if($category_id <= 0){
+                    continue;
+                }
+
+                DB::insert(
+
+                    'pos_product_category',
+
+                    [
+
+                        'product_id' =>
+                            $product_id,
+
+                        'category_id' =>
+                            $category_id,
+
+                        'neg_id' =>
+                            $neg_id,
+
+                        'is_visible' => 1
+
+                    ]
+
+                );
+
+            }
+
+        }
+
+        /* ======================================
+           IMAGEN DEFAULT
+        ====================================== */
+
+        DB::insert(
+
+            'pos_product_image',
+
+            [
+
+                'product_id' =>
+                    $product_id,
+
+                'img' =>
+                    'https://barsi-img.b-cdn.net/recursos/6qz5.png',
+
+                'orden' => 0,
+
+                'is_visible' => 1
+
+            ]
+
+        );
+
+        /* ======================================
+           INVENTARIO
+        ====================================== */
+
+        if($stock < 0){
+            $stock = 0;
+        }
+
+        DB::insert(
+
+            'pos_inventario',
+
+            [
+
+                'product_id' =>
+                    $product_id,
+
+                'stock_actual' =>
+                    $stock,
+
+                'neg_id' =>
+                    $neg_id
+
+            ]
+
+        );
+
+        /* ======================================
+           MOVIMIENTO INVENTARIO
+        ====================================== */
+
+        DB::insert(
+
+            'pos_inventario_movimiento',
+
+            [
+
+                'product_id' =>
+                    $product_id,
+
+                'tipo' =>
+                    'AJUSTE',
+
+                'origen' =>
+                    'AJUSTE',
+
+                'cantidad' =>
+                    $stock,
+
+                'precio_unitario' =>
+                    $price,
+
+                'fecha' =>
+                    $now_dt,
+
+                'stock_resultante' =>
+                    $stock,
+
+                'neg_id' =>
+                    $neg_id
+
+            ]
+
+        );
+
+        DB::commit();
+
+        /* ======================================
+           RESPONSE
+        ====================================== */
+
+        Flight::json([
+
+            'status'=>'ok',
+
+            'msg'=>'Producto creado correctamente',
+
+            'product_id'=>$product_id,
+
+            'stock'=>$stock
+
+        ]);
+
+    }catch(Exception $e){
+
+        DB::rollback();
+
+        Flight::json([
+
+            'status'=>'error',
+
+            'msg'=>$e->getMessage()
+
+        ],500);
+
+    }
 
 });

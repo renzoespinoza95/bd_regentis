@@ -856,6 +856,40 @@ const appNeg = new Vue({
 
               })
 
+              .on('change', '.toggle-activo-neg', function(){
+
+                  const neg_id = $(this).data('id')
+
+                  const is_activo =
+                    $(this).is(':checked')
+                      ? 1
+                      : 0
+
+                  axios.post(
+
+                    `${self.apphost}/neg/activo`,
+
+                    {
+
+                      neg_id,
+                      is_activo
+
+                    }
+
+                  )
+                  .then(()=>{
+
+                    apprise('Estado actualizado')
+
+                  })
+                  .catch(()=>{
+
+                    apprise('Error al actualizar')
+
+                  })
+
+              })              
+
               .on('click', 'a.eliminar-neg', function(e){
 
                 e.preventDefault();
@@ -897,10 +931,22 @@ const appNeg = new Vue({
             const mercadoNombre =
               this.obtenerNombreMercado(n.mercado_id);
 
-            const activo =
-              parseInt(n.is_activo,10)
-                ? 'SI'
-                : 'NO';
+            const activo = `
+
+              <label class="switch-mini">
+
+                <input
+                  type="checkbox"
+                  class="toggle-activo-neg"
+                  data-id="${n.neg_id}"
+                  ${parseInt(n.is_activo,10) ? 'checked' : ''}
+                >
+
+                <span></span>
+
+              </label>
+
+            `;
 
             /* =========================================
                RUBROS BONITOS 😏

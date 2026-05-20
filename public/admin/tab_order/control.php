@@ -17,37 +17,111 @@ Flight::route('GET /order', function () {
 Flight::route('GET /product_order/listar', function(){
 
     autentificar_administrador();
+
     global $administrador_actual;
 
+    DB::query("SET NAMES 'utf8mb4'");
+
     $rows = DB::query("
-        SELECT 
-          po.product_order_id,
-          po.serial,
-          po.total_fees,
-          po.modo_order_id,
-          mo.nombre AS modo_order,
-          cl.nombres_apellidos AS cliente,
-          m.nombre AS mesa_nombre,
-          u.nombres_apellidos AS administrador,
-          tp.descripcion AS tipo_pago,
-          po.fecha_creacion
+
+        SELECT
+
+            po.product_order_id,
+
+            po.serial,
+
+            po.total_fees,
+
+            po.tax,
+
+            po.tipo_pago,
+
+            po.modo_order,
+
+            po.fecha_inicio,
+
+            po.fecha_fin,
+
+            po.fecha_creacion,
+
+            po.fecha_modificacion,
+
+            po.neg_id,
+
+            po.caja_id,
+
+            po.mesa_id,
+
+            po.credi_credito_id,
+
+            IFNULL(
+                cl.nombres_apellidos,
+                'Cliente'
+            ) AS cliente,
+
+            IFNULL(
+                m.nombre,
+                ''
+            ) AS mesa_nombre,
+
+            IFNULL(
+                u.nombres_apellidos,
+                ''
+            ) AS administrador
+
         FROM pos_product_order po
-        LEFT JOIN pos_cliente cl ON cl.cliente_id = po.cliente_id
-        LEFT JOIN resto_mesa m ON m.mesa_id = po.mesa_id
-        LEFT JOIN pos_modo_order mo ON mo.modo_order_id = po.modo_order_id
-        LEFT JOIN pos_tipo_pago tp ON tp.tipo_pago_id = po.tipo_pago_id
-        LEFT JOIN reg_usu u ON u.usu_id = po.usu_id
+
+        LEFT JOIN pos_cliente cl
+            ON cl.cliente_id = po.cliente_id
+
+        LEFT JOIN resto_mesa m
+            ON m.mesa_id = po.mesa_id
+
+        LEFT JOIN reg_usu u
+            ON u.usu_id = po.usu_id
+
         WHERE po.neg_id = %i
+
         ORDER BY po.product_order_id DESC
+
     ", $administrador_actual['neg_id']);
 
-
+    /* ======================================
+       FORMATEAR
+    ====================================== */
     foreach($rows as &$r){
-        $r['fecha'] = date('d/m/Y H:i', strtotime($r['fecha_creacion']));
+
+        $r['fecha'] = !empty(
+            $r['fecha_creacion']
+        )
+        ? date(
+            'd/m/Y H:i',
+            strtotime(
+                $r['fecha_creacion']
+            )
+        )
+        : null;
+
+        $r['total_fees'] = floatval(
+            $r['total_fees']
+        );
+
+        $r['tax'] = floatval(
+            $r['tax']
+        );
+
+        $r['product_order_id'] = intval(
+            $r['product_order_id']
+        );
+
+        $r['neg_id'] = intval(
+            $r['neg_id']
+        );
+
     }
 
-
     Flight::json($rows);
+
 });
 
 
@@ -74,7 +148,9 @@ Flight::route('POST /product_order/crear', function(){
     $d = Flight::request()->data->getData();
 
     $cliente_id   = intval($d['cliente_id']);
-    $tipo_pago_id = intval($d['tipo_pago_id']);
+    $tipo_pago = trim(
+    $d['tipo_pago'] ?? ''
+    );
     $mesa_id      = isset($d['mesa_id']) ? intval($d['mesa_id']) : null;
     $items        = $d['items'] ?? [];
 
@@ -104,9 +180,9 @@ Flight::route('POST /product_order/crear', function(){
 
             'neg_id'             => $neg_id,
             'cliente_id'         => $cliente_id,
-            'tipo_pago_id'       => $tipo_pago_id,
+            'tipo_pago'          => $tipo_pago,
             'mesa_id'            => $mesa_id,
-            'modo_order_id'      => $mesa_id ? 2 : 1,
+            'modo_order'         => $modo_order,
             'usu_id'             => $usu_id,
             'total_fees'         => 0,
             'tax'                => 0,
@@ -115,7 +191,7 @@ Flight::route('POST /product_order/crear', function(){
 
         ]);
 
-        $order_id = DB::insertId();
+        $product_order_id = DB::insertId();
 
         $total = 0;
 
@@ -209,7 +285,7 @@ Flight::route('POST /product_order/crear', function(){
             ====================================== */
             DB::insert('pos_product_order_detail',[
 
-                'order_id'           => $order_id,
+                'product_order_id'           => $product_order_id,
                 'product_id'         => $product_id,
                 'product_name'       => $p['name'],
                 'amount'             => $amount,
@@ -230,8 +306,6 @@ Flight::route('POST /product_order/crear', function(){
                 'cantidad'          => $amount,
                 'precio_unitario'   => $price,
                 'fecha'             => $now,
-                'referencia_id'     => $order_id,
-                'referencia_tabla'  => 'pos_product_order',
                 'stock_resultante'  => $nuevo_stock,
                 'neg_id'            => $neg_id
 
@@ -255,14 +329,14 @@ Flight::route('POST /product_order/crear', function(){
 
             'total_fees' => $total
 
-        ],"product_order_id=%i",$order_id);
+        ],"product_order_id=%i",$product_order_id);
 
         DB::commit();
 
         Flight::json([
 
             'status'=>'ok',
-            'product_order_id'=>$order_id,
+            'product_order_id'=>$product_order_id,
             'total'=>$total
 
         ]);
@@ -331,39 +405,189 @@ Flight::route('POST /product_order/eliminar', function(){
 Flight::route('GET /yup/product_order/detalle/@id', function($id){
 
     autentificar_administrador();
+
     global $administrador_actual;
 
+    $id = intval($id);
+
+    /* ======================================
+       ORDEN
+    ====================================== */
+
     $order = DB::queryFirstRow("
+
         SELECT 
-            o.*,
-            tp.descripcion AS tipo_pago,
-            CONCAT(c.dni,' - ',c.nombres_apellidos) AS cliente
+
+            o.product_order_id,
+
+            o.usu_id,
+
+            o.total_fees,
+
+            o.tax,
+
+            o.serial,
+
+            o.fecha_creacion,
+
+            o.fecha_modificacion,
+
+            o.caja_id,
+
+            o.cliente_id,
+
+            o.tipo_pago,
+
+            o.mesa_id,
+
+            o.modo_order,
+
+            o.fecha_inicio,
+
+            o.fecha_fin,
+
+            o.neg_id,
+
+            o.credi_credito_id,
+
+            CONCAT(
+                c.dni,
+                ' - ',
+                c.nombres_apellidos
+            ) AS cliente,
+
+            c.celular,
+
+            c.direccion,
+
+            c.puesto,
+
+            m.nombre AS mesa_nombre,
+
+            n.nombre AS negocio,
+
+            u.nombres_apellidos AS administrador,
+
+            cc.estado AS credito_estado,
+
+            cc.saldo_pendiente
+
         FROM pos_product_order o
-        LEFT JOIN pos_tipo_pago tp 
-               ON tp.tipo_pago_id = o.tipo_pago_id
+
         LEFT JOIN pos_cliente c
                ON c.cliente_id = o.cliente_id
+
+        LEFT JOIN resto_mesa m
+               ON m.mesa_id = o.mesa_id
+
+        LEFT JOIN reg_neg n
+               ON n.neg_id = o.neg_id
+
+        LEFT JOIN reg_usu u
+               ON u.usu_id = o.usu_id
+
+        LEFT JOIN credi_credito cc
+               ON cc.credi_credito_id = o.credi_credito_id
+
         WHERE o.product_order_id = %i
+
         AND o.neg_id = %i
-    ", $id, $administrador_actual['neg_id']);
+
+        AND o.borrado_el IS NULL
+
+        LIMIT 1
+
+    ",
+        $id,
+        $administrador_actual['neg_id']
+    );
+
+    /* ======================================
+       VALIDAR
+    ====================================== */
+
+    if(!$order){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => 'Orden no encontrada'
+
+        ], 404);
+
+        return;
+
+    }
+
+    /* ======================================
+       DETALLES
+    ====================================== */
 
     $det = DB::query("
+
         SELECT 
-            d.*,
-            p.name AS product_name
+
+            d.product_order_detail_id,
+
+            d.product_order_id,
+
+            d.product_id,
+
+            d.product_name,
+
+            d.amount,
+
+            d.price_item,
+
+            d.fecha_creacion,
+
+            d.fecha_modificacion,
+
+            p.cod_producto,
+
+            p.tipo_producto,
+
+            p.marca_des,
+
+            p.price,
+
+            p.description,
+
+            p.is_visible,
+
+            (
+                d.amount * d.price_item
+            ) AS total_item
+
         FROM pos_product_order_detail d
-        LEFT JOIN pos_product p 
+
+        LEFT JOIN pos_product p
                ON p.product_id = d.product_id
-        WHERE d.order_id = %i
+
+        WHERE d.product_order_id = %i
+
+        AND d.borrado_el IS NULL
+
         ORDER BY d.product_order_detail_id ASC
+
     ", $id);
 
-    Flight::json([
-        'order'=>$order,
-        'detalles'=>$det
-    ]);
-});
+    /* ======================================
+       RESPONSE
+    ====================================== */
 
+    Flight::json([
+
+        'status' => 'ok',
+
+        'order' => $order,
+
+        'detalles' => $det
+
+    ]);
+
+});
 
 /* ======================================
    CREAR ITEM
@@ -381,7 +605,7 @@ Flight::route('POST /product_order_detail/crear', function(){
     try {
 
         DB::insert('pos_product_order_detail',[
-            'order_id'=>$d['order_id'],
+            'product_order_id'=>$d['product_order_id'],
             'product_id'=>$d['product_id'],
             'product_name'=>DB::queryFirstField(
                 "SELECT name FROM pos_product WHERE product_id=%i AND neg_id=%i",
@@ -401,11 +625,11 @@ Flight::route('POST /product_order_detail/crear', function(){
             'VENTA',
             $d['amount'],
             $d['price_item'],
-            $d['order_id'],
+            $d['product_order_id'],
             'pos_product_order'
         );
 
-        recalcular_total_orden($d['order_id']);
+        recalcular_total_orden($d['product_order_id']);
 
         DB::commit();
 
@@ -448,7 +672,7 @@ Flight::route('POST /product_order_detail/eliminar', function(){
             'DEVOLUCION',
             $item['amount'],
             $item['price_item'],
-            $item['order_id'],
+            $item['product_order_id'],
             'pos_product_order'
         );
 
@@ -458,7 +682,7 @@ Flight::route('POST /product_order_detail/eliminar', function(){
             $d['product_order_detail_id']
         );
 
-        recalcular_total_orden($item['order_id']);
+        recalcular_total_orden($item['product_order_id']);
 
         DB::commit();
 
@@ -479,19 +703,19 @@ Flight::route('POST /product_order_detail/eliminar', function(){
 /* ======================================
    RECALCULAR TOTAL
 ====================================== */
-function recalcular_total_orden($order_id){
+function recalcular_total_orden($product_order_id){
 
     $total = DB::queryFirstField("
         SELECT IFNULL(SUM(amount*price_item),0)
         FROM pos_product_order_detail
-        WHERE order_id=%i
-    ", $order_id);
+        WHERE product_order_id=%i
+    ", $product_order_id);
 
     DB::update('pos_product_order',[
         'total_fees'=>$total,
         'fecha_modificacion'=>date('Y-m-d H:i:s'),
         'last_update'=>time()*1000
-    ],"product_order_id=%i",$order_id);
+    ],"product_order_id=%i",$product_order_id);
 
 }
 
@@ -509,7 +733,7 @@ Flight::route('POST /product_order_detail/editar', function () {
   $old = DB::queryFirstRow(
     "SELECT d.*
      FROM pos_product_order_detail d
-     INNER JOIN pos_product_order o ON o.product_order_id = d.order_id
+     INNER JOIN pos_product_order o ON o.product_order_id = d.product_order_id
      WHERE d.product_order_detail_id=%i
      AND o.neg_id=%i",
     $d['product_order_detail_id'],
@@ -525,7 +749,7 @@ Flight::route('POST /product_order_detail/editar', function () {
       'AJUSTE',
       $old['amount'],
       $old['price_item'],
-      $old['order_id'],
+      $old['product_order_id'],
       'pos_product_order'
     );
 
@@ -535,11 +759,11 @@ Flight::route('POST /product_order_detail/editar', function () {
       'VENTA',
       $d['amount'],
       $d['price_item'],
-      $old['order_id'],
+      $old['product_order_id'],
       'pos_product_order'
     );
 
-    actualizar_estado_orden($old['order_id'], 'EDITADO');
+    actualizar_estado_orden($old['product_order_id'], 'EDITADO');
 
     DB::update('pos_product_order_detail',[
       'amount'=>$d['amount'],
@@ -548,7 +772,7 @@ Flight::route('POST /product_order_detail/editar', function () {
       'fecha_modificacion'=>date('Y-m-d H:i:s')
     ],"product_order_detail_id=%i",$d['product_order_detail_id']);
 
-    recalcular_total_orden($old['order_id']);
+    recalcular_total_orden($old['product_order_id']);
 
     DB::commit();
     Flight::json(['status'=>'ok']);
@@ -563,7 +787,7 @@ Flight::route('POST /product_order_detail/editar', function () {
 /* ======================================
    ACTUALIZAR ESTADO ORDEN
 ====================================== */
-function actualizar_estado_orden($order_id, $estado){
+function actualizar_estado_orden($product_order_id, $estado){
 
     DB::update(
         'pos_product_order',
@@ -573,7 +797,7 @@ function actualizar_estado_orden($order_id, $estado){
             'last_update'=>time()*1000
         ],
         "product_order_id=%i",
-        $order_id
+        $product_order_id
     );
 }
 
@@ -768,22 +992,6 @@ Flight::route('GET /auth/administrador-actual', function () {
     ]);
 });
 
-
-/* ======================================
-   TIPOS DE PAGO
-====================================== */
-Flight::route('GET /tipo_pago/listar', function(){
-
-    $rows = DB::query("
-        SELECT tipo_pago_id, descripcion
-        FROM pos_tipo_pago
-        ORDER BY orden ASC
-    ");
-
-    Flight::json($rows);
-});
-
-
 /* ======================================
    LISTAR MESAS
 ====================================== */
@@ -879,7 +1087,7 @@ Flight::route('GET /imp_ventas_fecha', function(){
                 d.price_item AS precio,
                 (d.amount * d.price_item) AS subtotal
             FROM pos_product_order_detail d
-            WHERE d.order_id=%i
+            WHERE d.product_order_id=%i
         ", $v['product_order_id']);
 
         $v['indice']=$i++;

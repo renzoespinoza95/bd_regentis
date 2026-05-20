@@ -19,21 +19,11 @@
             <i class="fa fa-arrow-circle-right"></i> Nuevo Producto
           </a>
         </li>
-
         <li>
-          <a href="#" @click.prevent="abrirReporteProductos">
-            <i class="fa fa-arrow-circle-right"></i> Reporte Productos
+          <a href="#" @click.prevent="crearFantasmas">
+            <i class="fa fa-magic"></i> 5 fantasmas
           </a>
         </li>
-
-
-        <li>
-          <a href="#" @click.prevent="abrirReporteCategoria">
-            <i class="fa fa-arrow-circle-right"></i> Reporte x Categoría
-          </a>
-        </li>
-
-
 
       </ul>
     </div>
@@ -409,6 +399,80 @@
       copiarPrecio(){
         this.nuevo.price = this.nuevo.price_ref;
       },
+
+      crearFantasmas(){
+
+        apprise(
+
+          '¿Crear 5 productos fantasma?',
+
+          {
+
+            'verify': true
+
+          },
+
+          (r)=>{
+
+            if(!r){
+              return;
+            }
+
+            $.blockUI({
+
+              message: 'Creando productos fantasma...'
+
+            });
+
+            axios.post(
+
+              `${this.apphost}/OO09/productosFantasma`
+
+            )
+            .then(res=>{
+
+              if(
+                res.data.status == 'ok'
+              ){
+
+                apprise(
+                  'Productos fantasma creados 🚀'
+                );
+
+                this.listar();
+
+              }else{
+
+                apprise(
+                  res.data.msg ||
+                  'No se pudo crear'
+                );
+
+              }
+
+            })
+            .catch(e=>{
+
+              apprise(
+
+                e.response?.data?.msg ||
+
+                'Error al crear productos'
+
+              );
+
+            })
+            .finally(()=>{
+
+              $.unblockUI();
+
+            });
+
+          }
+
+        );
+
+      },      
       abrirModalCrear(){
 
         this.nuevo = {

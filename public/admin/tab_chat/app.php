@@ -429,11 +429,11 @@ Flight::route('POST /reg/tk_cant_msg', function(){
                 ch.chat_id,
 
                 ch.usu1_id,
-                u1.sobrenombre AS usuario1,
+                u1.nombres_apellidos AS usuario1,
                 CONCAT('https://picsum.photos/seed/', u1.usu_id, '/40/40') AS img_usu1,
 
                 ch.usu2_id,
-                u2.sobrenombre AS usuario2,
+                u2.nombres_apellidos AS usuario2,
                 CONCAT('https://picsum.photos/seed/', u2.usu_id, '/40/40') AS img_usu2,
 
                 ch.fecha_creacion,
@@ -1149,6 +1149,193 @@ function enviar_manual_visual(
             'boton_texto' => 'Ver imágenes',
 
             'imagenes' => $imagenes
+
+        ]
+
+    ], JSON_UNESCAPED_UNICODE);
+
+    /* =========================================
+       INSERTAR MENSAJE
+    ========================================== */
+
+    DB::insert('reg_msg',[
+
+        'chat_id' => $chat_id,
+
+        'rem_id' => 2,
+
+        'dest_id' => $dest_id,
+
+        'contenido_rem' => $texto_msg,
+
+        'contenido_dest' => $texto_msg,
+
+        'tipo_mensaje' => 'TEXTO',
+
+        'fecha_creacion' => date('Y-m-d H:i:s'),
+
+        'contexto_json' => $contexto_json
+
+    ]);
+
+    $msg_id = DB::insertId();
+
+    /* =========================================
+       UPDATE CHAT
+    ========================================== */
+
+    DB::update('reg_chat',[
+
+        'ultimo_mensaje' => $texto_msg
+
+    ],"chat_id=%i",$chat_id);
+
+    /* =========================================
+       RESPONSE
+    ========================================== */
+
+    return [
+
+        'ok' => true,
+
+        'chat_id' => $chat_id,
+
+        'msg_id' => $msg_id
+
+    ];
+
+}
+
+function enviar_boton_tienda(
+    $dest_id
+){
+
+    /* =========================================
+       VALIDAR DESTINO
+    ========================================== */
+
+    $dest_id = intval($dest_id);
+
+    if($dest_id <= 0){
+        return false;
+    }
+
+    /* =========================================
+       BUSCAR CHAT
+       (2 ↔ usuario)
+    ========================================== */
+
+    $chat = DB::queryFirstRow("
+
+        SELECT
+
+            chat_id
+
+        FROM reg_chat
+
+        WHERE
+
+        (
+            usu1_id = 2
+            AND usu2_id = %i
+        )
+
+        OR
+
+        (
+            usu1_id = %i
+            AND usu2_id = 2
+        )
+
+        LIMIT 1
+
+    ", $dest_id, $dest_id);
+
+    /* =========================================
+       CREAR CHAT
+    ========================================== */
+
+    if(!$chat){
+
+        DB::insert('reg_chat',[
+
+            'usu1_id' => 2,
+
+            'usu2_id' => $dest_id,
+
+            'fecha_creacion' => date('Y-m-d H:i:s'),
+
+            'is_visible' => 1,
+
+            'ultimo_mensaje' => '',
+
+            'is_bloqueado' => 0
+
+        ]);
+
+        $chat_id = DB::insertId();
+
+    }else{
+
+        $chat_id = intval(
+            $chat['chat_id']
+        );
+
+    }
+
+    /* =========================================
+       MENSAJE AUTO
+    ========================================== */
+
+    $auto = DB::queryFirstRow("
+
+        SELECT
+
+            auto_msg_id,
+            clave_txt,
+            texto_msg
+
+        FROM reg_auto_msg
+
+        WHERE clave_txt = 'TXT_CREAR_TIENDA'
+
+        LIMIT 1
+
+    ");
+
+    if(!$auto){
+        return false;
+    }
+
+    /* =========================================
+       LIMPIAR HTML
+    ========================================== */
+
+    $texto_msg = trim(
+
+        strip_tags(
+            $auto['texto_msg']
+        )
+
+    );
+
+    /* =========================================
+       CONTEXTO JSON
+    ========================================== */
+
+    $contexto_json = json_encode([
+
+        'tipo' => 'boton_accion',
+
+        'data' => [
+
+            'titulo' => '🏪 Crear tienda',
+
+            'descripcion' => $texto_msg,
+
+            'boton_texto' => 'Crear tienda',
+
+            'ruta' => '/TyB3_crear_tienda'
 
         ]
 

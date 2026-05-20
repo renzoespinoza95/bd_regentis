@@ -59,8 +59,38 @@
                     <li><a href="#" @click.prevent="abrirModalEditar(u)">Editar</a></li>
                     <li><a href="#" @click.prevent="eliminarUsuario(u)">Liquidar</a></li>
                     <li><a href="#" @click.prevent="abrirModalDetalle(u)">Detalle</a></li>
-                    <li><a href="#" @click.prevent="abrirModalChats(u)">Chats</a></li>
-                    <li><a href="#" @click.prevent="abrirModalNuevoChat(u)">Mensaje nuevo</a></li>
+                    <li>
+                      <a
+                        href="#"
+                        @click.prevent="reiniciarUsuario(u)"
+                      >
+                        Reiniciar
+                      </a>
+                    </li>                    
+                    <li>
+                      <a
+                        href="#"
+                        @click.prevent="clave12(u)"
+                      >
+                        Clave 12
+                      </a>
+                    </li>
+                    <li>
+                      <a
+                        href="#"
+                        @click.prevent="nuevoNegocio(u)"
+                      >
+                        BtnNegocio
+                      </a>
+                    </li> 
+                    <li>
+                      <a
+                        href="#"
+                        @click.prevent="crearNegocioFantasma(u)"
+                      >
+                        NegFantasma
+                      </a>
+                    </li>                                       
                   </ul>
                 </div>
               </td>
@@ -885,6 +915,216 @@ new Vue({
 
       $('#modalCrearUsuario').modal('show');
     },
+    crearNegocioFantasma(u){
+
+      apprise(
+
+        '¿Crear negocio fantasma para este usuario?',
+
+        {
+
+          'verify': true
+
+        },
+
+        async (r) => {
+
+          if(!r){
+            return;
+          }
+
+          try {
+
+            bloquearUI(
+              'Creando negocio fantasma...'
+            );
+
+            const response = await axios.post(
+
+              this.apphost +
+              '/Pfnf/tiendaFantasma',
+
+              {
+
+                usu_id: u.usu_id
+
+              }
+
+            );
+
+            desbloquearUI();
+
+            if(
+              response.data.status === 'ok'
+            ){
+
+              apprise(
+                'Negocio fantasma creado correctamente'
+              );
+
+              this.obtenerUsuarios();
+
+            }else{
+
+              apprise(
+                response.data.msg ||
+                'No se pudo crear'
+              );
+
+            }
+
+          } catch(e){
+
+            desbloquearUI();
+
+            console.error(e);
+
+            apprise(
+              'Error al crear negocio fantasma'
+            );
+
+          }
+
+        }
+
+      );
+
+    },
+
+
+    clave12(u){
+
+      apprise(
+
+        '¿Asignar clave 12qw12 a este usuario?',
+
+        {
+
+          'verify': true
+
+        },
+
+        async (r) => {
+
+          if(!r){
+            return;
+          }
+
+          try {
+
+            const response = await axios.post(
+
+              this.apphost +
+              '/usuario/clave12',
+
+              {
+
+                usu_id: u.usu_id
+
+              }
+
+            );
+
+            if(
+              response.data.status === 'ok'
+            ){
+
+              apprise(
+                'Clave actualizada'
+              );
+
+            }else{
+
+              apprise(
+                response.data.msg ||
+                'No se pudo actualizar'
+              );
+
+            }
+
+          } catch(e){
+
+            console.error(e);
+
+            apprise(
+              'Error al actualizar clave'
+            );
+
+          }
+
+        }
+
+      );
+
+    },    
+
+    reiniciarUsuario(u){
+
+      apprise(
+
+        '¿Deseas reiniciar este usuario?',
+
+        {
+
+          'verify': true
+
+        },
+
+        async (r) => {
+
+          if(!r){
+            return;
+          }
+
+          try {
+
+            const response = await axios.post(
+
+              this.apphost +
+              '/usuario/reiniciar',
+
+              {
+
+                usu_id: u.usu_id
+
+              }
+
+            );
+
+            if(
+              response.data.status === 'ok'
+            ){
+
+              apprise(
+                'Usuario reiniciado correctamente'
+              );
+
+              this.obtenerUsuarios();
+
+            }else{
+
+              apprise(
+                response.data.msg ||
+                'No se pudo reiniciar'
+              );
+
+            }
+
+          } catch(e){
+
+            console.error(e);
+
+            apprise(
+              'Error al reiniciar usuario'
+            );
+
+          }
+
+        }
+
+      );
+
+    },  
      /* ======================================
        🎲 GENERAR AVATAR RANDOM
     ====================================== */
@@ -1351,6 +1591,72 @@ new Vue({
           apprise('Ocurrió un error al crear el chat.');
         });
     },
+
+    nuevoNegocio(u){
+
+      apprise(
+
+        '¿Enviar botón de nuevo negocio a este usuario?',
+
+        {
+
+          'verify': true
+
+        },
+
+        async (r) => {
+
+          if(!r){
+            return;
+          }
+
+          try {
+
+            const response = await axios.post(
+
+              this.apphost +
+              '/usuario/nuevoNegocio',
+
+              {
+
+                usu_id: u.usu_id
+
+              }
+
+            );
+
+            if(
+              response.data.status === 'ok'
+            ){
+
+              apprise(
+                'Botón enviado correctamente'
+              );
+
+            }else{
+
+              apprise(
+                response.data.msg ||
+                'No se pudo enviar'
+              );
+
+            }
+
+          } catch(e){
+
+            console.error(e);
+
+            apprise(
+              'Error al enviar botón'
+            );
+
+          }
+
+        }
+
+      );
+
+    },    
 
     async cargarNegociosValidados() {
           try {

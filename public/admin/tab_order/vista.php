@@ -157,11 +157,19 @@
       <div class="control-group">
         <label>Tipo de pago</label>
         <div class="controls">
-          <select v-model="nueva.tipo_pago_id">
-            <option value="">-- Seleccione --</option>
-            <option v-for="t in tiposPago" :value="t.tipo_pago_id">
-              {{ t.descripcion }}
+          <select v-model="nueva.tipo_pago">
+
+            <option value="">
+              -- Seleccione --
             </option>
+
+            <option
+              v-for="t in tiposPago"
+              :value="t"
+            >
+              {{ t }}
+            </option>
+
           </select>
         </div>
       </div>
@@ -598,7 +606,7 @@ new Vue({
     dtClientes:null,
 
     detailForm:{
-      order_id:null,
+      product_order_id:null,
       producto:null,   // 👈 objeto seleccionado
       product_id:null,
       amount:1,
@@ -613,13 +621,25 @@ new Vue({
     dt:null,
     cajaActual: null,
     caja_id: null,
-    tiposPago: [],
+    tiposPago: [
+
+  'EFECTIVO',
+
+  'YAPE',
+
+  'PLIN',
+
+  'TRANFERENCIA',
+
+  'CREDITO'
+
+],
     nueva:{
       cliente_id: null,
       telefono: '',
       total_fees: 0,
       items: [],
-      tipo_pago_id: null,
+      tipo_pago: '',
       mesa: null
     },
   },
@@ -953,7 +973,7 @@ new Vue({
       }
 
       // 4️⃣ Tipo de pago
-      if(!this.nueva.tipo_pago_id){
+      if(!this.nueva.tipo_pago){
         apprise('Seleccione tipo de pago');
         return;
       }
@@ -965,7 +985,7 @@ new Vue({
         phone: this.nueva.telefono || '',
         comment: '',
         total_fees: this.totalOrden,
-        tipo_pago_id: this.nueva.tipo_pago_id,
+        tipo_pago: this.nueva.tipo_pago,
         mesa_id: mesa_id,
         items: this.nueva.items
       }).then(()=>{
@@ -1025,7 +1045,7 @@ new Vue({
     // ----------- CRUD DETALLES -------------
     abrirCrearDetail(){
       this.detailForm = {
-        order_id: this.detalle.product_order_id,
+        product_order_id: this.detalle.product_order_id,
         product_id: null,
         amount: 1,
         price_item: 0
@@ -1186,9 +1206,6 @@ new Vue({
           label: `${c.dni} - ${c.nombre}`
         }));
     });
-
-    axios.get(`${this.apphost}/tipo_pago/listar`)
-    .then(r => this.tiposPago = r.data);  
 
     axios.get(`${this.apphost}/order/administrador/listar`)
     .then(r => {

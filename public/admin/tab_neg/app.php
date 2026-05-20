@@ -131,7 +131,7 @@ Flight::route('POST /app/principal', function() {
         }
 
         /* =========================
-           SLIDERS
+           SLIDERS PRINCIPALES
         ========================== */
 
         $sliders = DB::query("
@@ -141,16 +141,18 @@ Flight::route('POST /app/principal', function() {
                 slider_id,
                 img,
                 orden,
-                descripcion
+                descripcion,
+                titulo_superior,
+                mercado_id
 
-            FROM reg_slider
+            FROM reg_prin_slider
 
-            WHERE grupo = 'B'
-            AND is_visible = 1
+            WHERE is_visible = 1
+            AND mercado_id = %i
 
             ORDER BY orden ASC
 
-        ");
+        ", $mercado_id);
 
         /* =========================
            RUBROS

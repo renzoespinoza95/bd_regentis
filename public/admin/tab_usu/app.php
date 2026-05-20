@@ -60,7 +60,7 @@ Flight::route('GET /KT3E/listarUsuarios', function(){
             u.dni,
             u.provincia,
             u.fecha_creacion,
-
+            u.nombres_apellidos,
             u.tipoxusu_id,
             t.descripcion AS tipoxusu_descripcion,  -- 🔥 NUEVO
 
@@ -82,9 +82,8 @@ Flight::route('GET /KT3E/listarUsuarios', function(){
 
         LEFT JOIN reg_neg n
             ON n.neg_id = nxu.neg_id
-
+        WHERE u.is_fantasma = 1    
         ORDER BY u.usu_id ASC
-        LIMIT 20
     ");
 
     Flight::json($rows);
@@ -385,5 +384,420 @@ Flight::route('POST /EUwe/registroBasico', function(){
         ]
 
     ]);
+
+});
+
+
+Flight::route('POST /GbaX/buscarCodigo', function(){
+
+    include DEFINITION;
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    $data = json_decode(
+        Flight::request()->getBody(),
+        true
+    ) ?: [];
+
+    /* ======================================
+       FIRMA
+    ====================================== */
+
+    $xin = trim(
+        $data['xin'] ?? ''
+    );
+
+    $yuan = trim(
+        $data['yuan'] ?? ''
+    );
+
+    firma(
+        $xin,
+        $yuan
+    );
+
+    /* ======================================
+       COD_USU
+    ====================================== */
+
+    $cod_usu = trim(
+        $data['cod_usu'] ?? ''
+    );
+
+    /* ======================================
+       VALIDAR
+    ====================================== */
+
+    if(!$cod_usu){
+
+        Flight::json([
+
+            'ok' => false,
+
+            'msg' => 'cod_usu requerido'
+
+        ], 400);
+
+        return;
+    }
+
+    /* ======================================
+       CONSULTA
+    ====================================== */
+
+    $row = DB::queryFirstRow("
+
+        SELECT 
+
+            u.usu_id,
+            u.cod_usu,
+            u.img_perfil,
+            u.sobrenombre,
+            u.nombres_apellidos,
+            u.fecha_nacimiento,
+            u.celular,
+            u.provincia,
+            u.fecha_creacion,
+            u.tipoxusu_id,
+            u.dni,
+            u.google_uid,
+            u.email,
+            u.descripcion,
+            u.is_premium,
+            u.fecha_fin_premium,
+            u.is_activo,
+            u.is_fantasma,
+            u.is_acepto_terminos,
+            u.map_lat,
+            u.map_lng,
+
+            r.rol_id,
+            r.nombre AS rol_nombre,
+
+            n.neg_id,
+
+            IFNULL(
+
+                NULLIF(
+                    n.nombre,
+                    ''
+                ),
+
+                '—'
+
+            ) AS negocio_nombre
+
+        FROM reg_usu u
+
+        LEFT JOIN reg_rol r 
+            ON r.rol_id = u.rol_id
+
+        LEFT JOIN reg_negxusu nxu
+            ON nxu.usu_id = u.usu_id
+            AND nxu.is_activo = 1
+
+        LEFT JOIN reg_neg n
+            ON n.neg_id = nxu.neg_id
+
+        WHERE u.cod_usu = %s
+        AND u.borrado_el IS NULL
+
+        LIMIT 1
+
+    ", $cod_usu);
+
+    /* ======================================
+       NO ENCONTRADO
+    ====================================== */
+
+    if(!$row){
+
+        Flight::json([
+
+            'ok' => false,
+
+            'msg' => 'Usuario no encontrado'
+
+        ], 404);
+
+        return;
+    }
+
+    /* ======================================
+       RESPUESTA
+    ====================================== */
+
+    Flight::json([
+
+        'ok' => true,
+
+        'usuario' => $row
+
+    ]);
+
+});
+
+Flight::route('POST /Ko3d/agregarTrabajador', function(){
+
+    include DEFINITION;
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    $d = json_decode(
+        Flight::request()->getBody(),
+        true
+    ) ?: [];
+
+    /* ======================================
+       FIRMA
+    ====================================== */
+
+    $xin = trim(
+        $d['xin'] ?? ''
+    );
+
+    $yuan = trim(
+        $d['yuan'] ?? ''
+    );
+
+    firma(
+        $xin,
+        $yuan
+    );
+
+    /* ======================================
+       CAMPOS
+    ====================================== */
+
+    $usu_id = intval(
+        $d['usu_id'] ?? 0
+    );
+
+    $neg_id = intval(
+        $d['neg_id'] ?? 0
+    );
+
+    /* ======================================
+       VALIDAR
+    ====================================== */
+
+    if($usu_id <= 0){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => 'usu_id requerido'
+
+        ], 400);
+
+        return;
+    }
+
+    if($neg_id <= 0){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => 'neg_id requerido'
+
+        ], 400);
+
+        return;
+    }
+
+    /* ======================================
+       USUARIO
+    ====================================== */
+
+    $usuario = DB::queryFirstRow("
+
+        SELECT
+            usu_id,
+            nombres_apellidos,
+            tipoxusu_id
+
+        FROM reg_usu
+
+        WHERE usu_id = %i
+        AND borrado_el IS NULL
+
+        LIMIT 1
+
+    ", $usu_id);
+
+    if(!$usuario){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => 'Usuario no encontrado'
+
+        ], 404);
+
+        return;
+    }
+
+    /* ======================================
+       VALIDAR TIPO USUARIO
+    ====================================== */
+
+    if(
+        intval(
+            $usuario['tipoxusu_id']
+        ) !== 1
+    ){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' =>
+                'El usuario ya pertenece a otro tipo de cuenta'
+
+        ], 400);
+
+        return;
+    }
+
+    /* ======================================
+       NEGOCIO
+    ====================================== */
+
+    $negocio = DB::queryFirstRow("
+
+        SELECT
+            neg_id,
+            nombre
+
+        FROM reg_neg
+
+        WHERE neg_id = %i
+        AND borrado_el IS NULL
+
+        LIMIT 1
+
+    ", $neg_id);
+
+    if(!$negocio){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => 'Negocio no encontrado'
+
+        ], 404);
+
+        return;
+    }
+
+    DB::startTransaction();
+
+    try {
+
+        /* ======================================
+           DESACTIVAR RELACIONES ANTERIORES
+        ====================================== */
+
+        DB::update(
+
+            'reg_negxusu',
+
+            [
+
+                'is_activo' => 0
+
+            ],
+
+            "usu_id=%i",
+
+            $usu_id
+
+        );
+
+        /* ======================================
+           INSERTAR NUEVA RELACIÓN
+        ====================================== */
+
+        DB::insert(
+
+            'reg_negxusu',
+
+            [
+
+                'usu_id' =>
+                    $usu_id,
+
+                'neg_id' =>
+                    $neg_id,
+
+                'is_activo' => 1,
+
+                'fecha_creacion' =>
+                    date('Y-m-d H:i:s')
+
+            ]
+
+        );
+
+        $negxusu_id = DB::insertId();
+
+        /* ======================================
+           ACTUALIZAR TIPO USUARIO
+        ====================================== */
+
+        DB::update(
+
+            'reg_usu',
+
+            [
+
+                'tipoxusu_id' => 4
+
+            ],
+
+            "usu_id=%i",
+
+            $usu_id
+
+        );
+
+        DB::commit();
+
+        /* ======================================
+           RESPONSE
+        ====================================== */
+
+        Flight::json([
+
+            'status' => 'ok',
+
+            'msg' =>
+                'Trabajador agregado correctamente',
+
+            'negxusu_id' =>
+                $negxusu_id,
+
+            'tipoxusu_id' => 4
+
+        ]);
+
+    } catch(Exception $e){
+
+        DB::rollback();
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' =>
+                $e->getMessage()
+
+        ], 500);
+
+    }
 
 });
