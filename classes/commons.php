@@ -298,8 +298,8 @@ function firma($xin, $yuan){
         exit;
 
     }
-    // 30 segundos
-    if(abs((time() * 1000) - $xin) > 30000){
+    // 20 segundos
+    if(abs((time() * 1000) - $xin) > 20000){
 
         Flight::json([
             'status' => 'error',

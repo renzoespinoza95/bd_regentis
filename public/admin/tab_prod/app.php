@@ -119,149 +119,279 @@ Flight::route('POST /MpIH/product/listar', function () {
 
 });
 
-Flight::route('POST /MpIH/buscarProducto', function () {
+Flight::route('POST /MylW/listar_categorias', function () {
 
     include DEFINITION;
-
-    $d = Flight::request()->data->getData();
-
-    $neg_id = intval($d['neg_id'] ?? 0);
-    $usu_id = intval($d['usu_id'] ?? 0);
-    $texto  = trim($d['texto'] ?? '');
-
-    if(!$neg_id || !$texto){
-        Flight::json([
-            'status'=>'error',
-            'msg'=>'neg_id y texto son requeridos'
-        ],400);
-        return;
-    }
-
-    // 🔥 mínimo 2 caracteres
-    if(strlen($texto) < 2){
-        Flight::json([
-            'status'=>'ok',
-            'data'=>[]
-        ]);
-        return;
-    }
-
-    // 🔥 tipo Google: +palabra*
-    $words = explode(' ', $texto);
-    $search = '';
-
-    foreach($words as $w){
-        $search .= '+' . $w . '* ';
-    }
-
-    $limit = 20;
 
     DB::query("SET NAMES 'utf8mb4'");
 
-    $rows = DB::query("
-        SELECT 
-            p.product_id,
-            p.name,
-            p.price,
-            IFNULL(MAX(i.stock_actual),0) AS stock
-        FROM pos_product p
-        LEFT JOIN pos_inventario i ON i.product_id = p.product_id
-        WHERE p.neg_id=%i
-        AND MATCH(p.name) AGAINST (%s IN BOOLEAN MODE)
-        GROUP BY p.product_id
-        ORDER BY p.product_id DESC
-        LIMIT %i
-    ", $neg_id, trim($search), $limit);
+    $d = json_decode(
+        Flight::request()->getBody(),
+        true
+    ) ?: [];
 
-    // 🔥 normalizar tipos
-    foreach($rows as &$r){
-        $r['price'] = floatval($r['price']);
-        $r['stock'] = intval($r['stock']);
-    }
+    /* ======================================
+       CAMPOS
+    ====================================== */
 
-    Flight::json([
-        'status'=>'ok',
-        'data'=>$rows,
-        'neg_id'=>$neg_id,
-        'usu_id'=>$usu_id
-    ]);
-});
+    $neg_id = intval(
+        $d['neg_id'] ?? 0
+    );
 
-Flight::route('GET /MylW/listar_categorias/@neg_id', function ($neg_id) {
+    $xin = trim(
+        $d['xin'] ?? ''
+    );
 
-    include DEFINITION;
-    $neg_id = intval($neg_id);
+    $yuan = trim(
+        $d['yuan'] ?? ''
+    );
+
+    /* ======================================
+       FIRMA
+    ====================================== */
+
+    firma(
+        $xin,
+        $yuan
+    );
+
+    /* ======================================
+       VALIDAR
+    ====================================== */
 
     if(!$neg_id){
+
         Flight::json([
+
             'status'=>'error',
+
             'msg'=>'neg_id requerido'
+
         ],400);
+
         return;
     }
 
-    // 🔥 1. CATEGORÍAS
-    $categorias = DB::query("
-        SELECT 
-            c.category_id,
-            c.name AS descripcion
-        FROM pos_category c
-        WHERE c.neg_id=%i
-        ORDER BY c.name ASC
+    /* ======================================
+       PUBLICO GENERAL
+    ====================================== */
+
+    $publico_general_id = DB::queryFirstField("
+
+        SELECT
+
+            cliente_id
+
+        FROM pos_cliente
+
+        WHERE neg_id = %i
+
+        AND nombres_apellidos = 'PUBLICO_GENERAL'
+
+        AND borrado_el IS NULL
+
+        LIMIT 1
+
     ", $neg_id);
 
+    $publico_general_id = intval(
+        $publico_general_id
+    );
 
-    // 🔥 2. PRODUCTOS + STOCK
-    $productos = DB::query("
+    /* ======================================
+       CATEGORÍAS
+    ====================================== */
+
+    $categorias = DB::query("
+
         SELECT 
+
+            c.category_id,
+
+            c.name AS descripcion
+
+        FROM pos_category c
+
+        WHERE c.neg_id = %i
+
+        AND c.borrado_el IS NULL
+
+        ORDER BY c.name ASC
+
+    ", $neg_id);
+
+    /* ======================================
+       PRODUCTOS + STOCK
+    ====================================== */
+
+    $productos = DB::query("
+
+        SELECT 
+
             p.product_id,
+
+            p.cod_producto,
+
             p.name,
+
             p.price,
+
+            p.description,
+
             p.is_visible,
+
             pc.category_id,
-            IFNULL(MAX(i.stock_actual),0) AS stock
+
+            IFNULL(
+                MAX(i.stock_actual),
+                0
+            ) AS stock
+
         FROM pos_product p
-        JOIN pos_product_category pc 
+
+        INNER JOIN pos_product_category pc 
             ON pc.product_id = p.product_id
+
         LEFT JOIN pos_inventario i 
             ON i.product_id = p.product_id
-        WHERE p.neg_id=%i
-        GROUP BY p.product_id, pc.category_id
+
+        WHERE p.neg_id = %i
+
+        AND p.borrado_el IS NULL
+
+        GROUP BY 
+            p.product_id,
+            pc.category_id
+
     ", $neg_id);
 
+    /* ======================================
+       MAPEAR POR CATEGORÍA
+    ====================================== */
 
-    // 🔥 3. MAPEAR POR CATEGORÍA
     $map = [];
 
     foreach($productos as $p){
-        $cid = intval($p['category_id']);
+
+        $cid = intval(
+            $p['category_id']
+        );
 
         if(!isset($map[$cid])){
+
             $map[$cid] = [];
+
+        }
+
+        /* ======================================
+           IMAGENES
+        ====================================== */
+
+        $imagenes = DB::query("
+
+            SELECT
+
+                product_image_id,
+
+                img,
+
+                orden,
+
+                is_visible
+
+            FROM pos_product_image
+
+            WHERE product_id = %i
+
+            AND borrado_el IS NULL
+
+            ORDER BY orden ASC
+
+        ",
+            $p['product_id']
+        );
+
+        foreach($imagenes as &$img){
+
+            $img['product_image_id'] = intval(
+                $img['product_image_id']
+            );
+
+            $img['orden'] = intval(
+                $img['orden']
+            );
+
+            $img['is_visible'] = intval(
+                $img['is_visible']
+            );
+
         }
 
         $map[$cid][] = [
-            'product_id' => intval($p['product_id']),
-            'is_visible' => intval($p['is_visible']),
-            'name'       => $p['name'],
-            'price'      => floatval($p['price']),
-            'stock'      => intval($p['stock'])
+
+            'product_id' => intval(
+                $p['product_id']
+            ),
+
+            'cod_producto' =>
+                $p['cod_producto'],
+
+            'is_visible' => intval(
+                $p['is_visible']
+            ),
+
+            'name' =>
+                $p['name'],
+
+            'description' =>
+                $p['description'],
+
+            'price' => floatval(
+                $p['price']
+            ),
+
+            'stock' => intval(
+                $p['stock']
+            ),
+
+            'imagenes' =>
+                $imagenes
+
         ];
     }
 
+    /* ======================================
+       ASIGNAR PRODUCTOS
+    ====================================== */
 
-    // 🔥 4. ASIGNAR PRODUCTOS
     foreach($categorias as &$c){
-        $cid = intval($c['category_id']);
-        $c['productos'] = $map[$cid] ?? [];
+
+        $cid = intval(
+            $c['category_id']
+        );
+
+        $c['productos'] =
+            $map[$cid] ?? [];
+
     }
 
+    /* ======================================
+       RESPONSE
+    ====================================== */
 
     Flight::json([
+
         'status'=>'ok',
+
         'neg_id'=>$neg_id,
+
+        'publico_general_id' =>
+            $publico_general_id,
+
         'data'=>$categorias
+
     ]);
+
 });
 
 Flight::route('POST /ArWL/tienda', function () {

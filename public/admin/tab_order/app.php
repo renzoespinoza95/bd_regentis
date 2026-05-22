@@ -191,50 +191,226 @@ Flight::route('POST /M0Jk/productosCarritos', function () {
 
     DB::query("SET NAMES 'utf8mb4'");
 
-    $d = json_decode(Flight::request()->getBody(), true) ?: [];
-    $usu_id = intval($d['usu_id'] ?? 0);
+    $d = json_decode(
+        Flight::request()->getBody(),
+        true
+    ) ?: [];
+
+    /* ======================================
+       CAMPOS
+    ====================================== */
+
+    $usu_id = intval(
+        $d['usu_id'] ?? 0
+    );
+
+    $xin = trim(
+        $d['xin'] ?? ''
+    );
+
+    $yuan = trim(
+        $d['yuan'] ?? ''
+    );
+
+    /* ======================================
+       FIRMA
+    ====================================== */
+
+    firma(
+        $xin,
+        $yuan
+    );
+
+    /* ======================================
+       VALIDAR
+    ====================================== */
 
     if(!$usu_id){
-        Flight::json(['status'=>'error','msg'=>'usu_id requerido'],400);
+
+        Flight::json([
+            'status'=>'error',
+            'msg'=>'usu_id requerido'
+        ],400);
+
         return;
     }
 
     try {
 
-        $rows = DB::query("
-            SELECT 
-                c.carrito_id,
-                cd.carrito_detalle_id,
-                cd.product_id,
-                cd.cantidad,
-                cd.precio_unitario,
-                c.fecha_entrega,
+        /* ======================================
+           NEGOCIOS CON CARRITOS
+        ====================================== */
 
-                p.name,
-                p.price
+        $negocios = DB::query("
+
+            SELECT DISTINCT
+
+                n.neg_id,
+                n.nombre,
+                n.img_logo,
+                n.descripcion,
+                n.puesto
 
             FROM reg_carrito c
-            JOIN reg_carrito_detalle cd 
-                ON cd.carrito_id = c.carrito_id
-            JOIN pos_product p 
-                ON p.product_id = cd.product_id
 
-            WHERE c.usu_id=%i
-              AND c.estado='activo'
+            INNER JOIN reg_neg n
+                ON n.neg_id = c.neg_id
 
-            ORDER BY cd.carrito_detalle_id DESC
+            WHERE c.usu_id = %i
+            AND c.estado = 'activo'
+            AND n.is_activo = 1
+            AND n.borrado_el IS NULL
+
+            ORDER BY n.nombre ASC
+
         ", $usu_id);
 
+        /* ======================================
+           RECORRER NEGOCIOS
+        ====================================== */
+
+        foreach($negocios as &$neg){
+
+            /* ======================================
+               CARRITOS DEL NEGOCIO
+            ====================================== */
+
+            $carritos = DB::query("
+
+                SELECT
+
+                    carrito_id,
+                    neg_id,
+                    estado,
+                    fecha_entrega,
+                    fecha_creacion,
+                    fecha_modificacion,
+                    cliente_id,
+                    tipo_pedido
+
+                FROM reg_carrito
+
+                WHERE usu_id = %i
+                AND neg_id = %i
+                AND estado = 'activo'
+
+                ORDER BY carrito_id DESC
+
+            ",
+                $usu_id,
+                $neg['neg_id']
+            );
+
+            /* ======================================
+               RECORRER CARRITOS
+            ====================================== */
+
+            foreach($carritos as &$carrito){
+
+                /* ======================================
+                   PRODUCTOS DEL CARRITO
+                ====================================== */
+
+                $productos = DB::query("
+
+                    SELECT
+
+                        cd.carrito_detalle_id,
+                        cd.product_id,
+                        cd.cantidad,
+                        cd.precio_unitario,
+                        cd.fecha_creacion,
+                        cd.fecha_modificacion,
+
+                        p.name,
+                        p.price,
+                        p.description,
+                        p.cod_producto,
+
+                        SUBSTRING_INDEX(
+                            GROUP_CONCAT(
+                                pi.img
+                                ORDER BY pi.orden ASC
+                            ),
+                            ',',
+                            1
+                        ) AS img
+
+                    FROM reg_carrito_detalle cd
+
+                    INNER JOIN pos_product p
+                        ON p.product_id = cd.product_id
+
+                    LEFT JOIN pos_product_image pi
+                        ON pi.product_id = p.product_id
+                        AND pi.is_visible = 1
+
+                    WHERE cd.carrito_id = %i
+
+                    GROUP BY cd.carrito_detalle_id
+
+                    ORDER BY cd.carrito_detalle_id DESC
+
+                ", $carrito['carrito_id']);
+
+                /* ======================================
+                   NORMALIZAR
+                ====================================== */
+
+                foreach($productos as &$p){
+
+                    $p['product_id'] = intval(
+                        $p['product_id']
+                    );
+
+                    $p['cantidad'] = intval(
+                        $p['cantidad']
+                    );
+
+                    $p['precio_unitario'] = floatval(
+                        $p['precio_unitario']
+                    );
+
+                    $p['price'] = floatval(
+                        $p['price']
+                    );
+
+                }
+
+                $carrito['productos'] = $productos;
+
+            }
+
+            $neg['carritos'] = $carritos;
+
+        }
+
+        /* ======================================
+           RESPONSE
+        ====================================== */
+
         Flight::json([
+
             'status'=>'ok',
-            'data'=>$rows
+
+            'data'=>$negocios
+
         ]);
 
     } catch(Exception $e){
-        Flight::json(['status'=>'error','msg'=>$e->getMessage()],500);
+
+        Flight::json([
+
+            'status'=>'error',
+
+            'msg'=>$e->getMessage()
+
+        ],500);
+
     }
 
 });
+
 
 Flight::route('POST /M0Jk/eliminarProductoCarrito', function () {
 
@@ -814,11 +990,37 @@ Flight::route('GET /N5BR/detalle_pedido/@carrito_id', function ($carrito_id) {
         ", $carrito_id);
 
         /* ======================================
+           💳 YAPLINS
+        ====================================== */
+        $yaplins = DB::query("
+
+            SELECT
+
+                yaplin_id,
+
+                estado,
+
+                imagen_url,
+
+                observacion,
+
+                fecha_creacion
+
+            FROM reg_yaplin
+
+            WHERE carrito_id = %i
+
+            ORDER BY yaplin_id DESC
+
+        ", $carrito_id);
+
+        /* ======================================
            🚀 RESPONSE
         ====================================== */
         Flight::json([
             'status' => 'ok',
             'pedido' => $pedido,
+            'yaplins' => $yaplins,
             'productos' => $productos
         ]);
 
@@ -1422,6 +1624,10 @@ Flight::route('POST /YCTK/registrarVenta', function(){
         )
     );
 
+    $usu_id_vendedor = intval(
+        $d['usu_id_vendedor'] ?? 0
+    );
+
     $caja_id = isset($d['caja_id'])
         ? intval($d['caja_id'])
         : null;
@@ -1443,10 +1649,6 @@ Flight::route('POST /YCTK/registrarVenta', function(){
 
     $fecha_fin = !empty($d['fecha_fin'])
         ? $d['fecha_fin']
-        : null;
-
-    $credi_credito_id = isset($d['credi_credito_id'])
-        ? intval($d['credi_credito_id'])
         : null;
 
     $yaplin_id = isset($d['yaplin_id'])
@@ -1487,6 +1689,19 @@ Flight::route('POST /YCTK/registrarVenta', function(){
         return;
     }
 
+    if(!$usu_id_vendedor){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => 'usu_id_vendedor requerido'
+
+        ], 400);
+
+        return;
+    }
+
     /* ======================================
        VALIDAR ENUM TIPO PAGO
     ====================================== */
@@ -1497,7 +1712,7 @@ Flight::route('POST /YCTK/registrarVenta', function(){
         'YAPE',
         'PLIN',
         'TRANFERENCIA',
-        'CREDITO'
+        'POR_PAGAR'
 
     ];
 
@@ -1558,42 +1773,34 @@ Flight::route('POST /YCTK/registrarVenta', function(){
         $now = date('Y-m-d H:i:s');
 
         /* ======================================
-           VALIDAR YAPLIN
+           VALIDAR VENDEDOR
         ====================================== */
 
-        /* ======================================
-           YAPLIN
-        ====================================== */
+        $vendedor = DB::queryFirstRow("
 
-        if($yaplin_id !== null){
+            SELECT usu_id
 
-            DB::update(
-                'reg_yaplin',
-                [
+            FROM reg_usu
 
-                    'carrito_id' =>
-                        $carrito_id,
+            WHERE usu_id = %i
 
-                    'neg_id' =>
-                        $carrito['neg_id'],
+            LIMIT 1
 
-                    'cliente_id' =>
-                        $carrito['cliente_id'],
+        ", $usu_id_vendedor);
 
-                    'usu_id' =>
-                        $carrito['usu_id'],
+        if(!$vendedor){
 
-                    'estado' =>
-                        'PROCESADO',
+            DB::rollback();
 
-                    'fecha_modificacion' =>
-                        $now
+            Flight::json([
 
-                ],
-                "yaplin_id=%i",
-                $yaplin_id
-            );
+                'status' => 'error',
 
+                'msg' => 'Vendedor no encontrado'
+
+            ], 404);
+
+            return;
         }
 
         /* ======================================
@@ -1825,8 +2032,8 @@ Flight::route('POST /YCTK/registrarVenta', function(){
             'pos_product_order',
             [
 
-                'usu_id' =>
-                    $carrito['usu_id'],
+                'usu_id_vendedor' =>
+                    $usu_id_vendedor,
 
                 'total_fees' =>
                     $total,
@@ -1866,8 +2073,7 @@ Flight::route('POST /YCTK/registrarVenta', function(){
                 'neg_id' =>
                     $carrito['neg_id'],
 
-                'credi_credito_id' =>
-                    $credi_credito_id
+                'borrado_el' => null
 
             ]
         );
@@ -1903,6 +2109,9 @@ Flight::route('POST /YCTK/registrarVenta', function(){
                     'product_id' =>
                         $product_id,
 
+                    'product_name' =>
+                        $it['name'],
+
                     'amount' =>
                         $cantidad,
 
@@ -1913,14 +2122,12 @@ Flight::route('POST /YCTK/registrarVenta', function(){
                         $now,
 
                     'fecha_modificacion' =>
-                        $now
+                        $now,
+
+                    'borrado_el' => null
 
                 ]
             );
-
-            /* ======================================
-               STOCK ACTUAL
-            ====================================== */
 
             $stock_actual =
                 intval(
@@ -1941,10 +2148,6 @@ Flight::route('POST /YCTK/registrarVenta', function(){
                 $stock_actual
                 -
                 $cantidad;
-
-            /* ======================================
-               MOVIMIENTO
-            ====================================== */
 
             DB::insert(
                 'pos_inventario_movimiento',
@@ -1977,10 +2180,6 @@ Flight::route('POST /YCTK/registrarVenta', function(){
                 ]
             );
 
-            /* ======================================
-               DESCONTAR STOCK
-            ====================================== */
-
             DB::query("
 
                 UPDATE pos_inventario
@@ -1998,55 +2197,51 @@ Flight::route('POST /YCTK/registrarVenta', function(){
         }
 
         /* ======================================
-           CREDITO
+           POR PAGAR
         ====================================== */
 
         if(
-            $tipo_pago == 'CREDITO'
+            $tipo_pago == 'POR_PAGAR'
         ){
 
-            DB::insert(
-                'credi_credito',
-                [
+            $resp_deuda = deuda_movimiento(
 
-                    'neg_id' =>
-                        $carrito['neg_id'],
+                $product_order_id,
 
-                    'product_order_id' =>
-                        $product_order_id,
+                $carrito['cliente_id'],
 
-                    'cliente_id' =>
-                        $carrito['cliente_id'],
+                $carrito['neg_id'],
 
-                    'monto_total' =>
-                        $total,
+                'DEUDA_INICIAL',
 
-                    'saldo_pendiente' =>
-                        $total,
+                0,
 
-                    'fecha_inicio' =>
-                        $now,
+                'POR PAGAR',
 
-                    'estado' =>
-                        'PENDIENTE'
+                'Venta creada como deuda'
 
-                ]
             );
 
-            $nuevo_credito_id =
-                DB::insertId();
+            if(
+                empty($resp_deuda['ok'])
+            ){
 
-            DB::update(
-                'pos_product_order',
-                [
+                DB::rollback();
 
-                    'credi_credito_id' =>
-                        $nuevo_credito_id
+                Flight::json([
 
-                ],
-                "product_order_id=%i",
-                $product_order_id
-            );
+                    'status' => 'error',
+
+                    'msg' =>
+                        'Error creando deuda: '
+                        .
+                        $resp_deuda['msg']
+
+                ],500);
+
+                return;
+
+            }
 
         }
 
@@ -2122,7 +2317,7 @@ Flight::route('POST /YCTK/registrarVenta', function(){
                         $carrito['cliente_id'],
 
                     'usu_id' =>
-                        $carrito['usu_id'],
+                        $usu_id_vendedor,
 
                     'estado' =>
                         'PROCESADO',
@@ -2189,109 +2384,11 @@ Flight::route('POST /P22W/obtenerYaplin', function(){
     ) ?: [];
 
     /* ======================================
-       JSON COMPLETO
-    ====================================== */
-    $json_extraido = json_encode(
-        $d,
-        JSON_UNESCAPED_UNICODE
-    );
-
-    /* ======================================
        CAMPOS
     ====================================== */
-    $is_yaplin = isset($d['is_yaplin'])
-        ? intval((bool)$d['is_yaplin'])
-        : 0;
 
-    $billetera = isset($d['billetera'])
-        ? trim($d['billetera'])
-        : null;
-
-    $tipo_operacion = isset($d['tipo_operacion'])
-        ? trim((string)$d['tipo_operacion'])
-        : null;
-
-    $monto = isset($d['monto'])
-        ? floatval($d['monto'])
-        : 0;
-
-    $moneda = isset($d['moneda'])
-        ? trim($d['moneda'])
-        : 'PEN';
-
-    $fecha_operacion = isset($d['fecha_operacion'])
-        ? trim((string)$d['fecha_operacion'])
-        : null;
-
-    $hora_operacion = isset($d['hora_operacion'])
-        ? trim((string)$d['hora_operacion'])
-        : null;
-
-    $nombre_pagador = isset($d['nombre_pagador'])
-        ? trim((string)$d['nombre_pagador'])
-        : null;
-
-    $nombre_destinatario = isset($d['nombre_destinatario'])
-        ? trim((string)$d['nombre_destinatario'])
-        : null;
-
-    $celular_destino = isset($d['celular_destino'])
-        ? trim((string)$d['celular_destino'])
-        : null;
-
-    $celular_origen_mask = isset($d['celular_origen_mask'])
-        ? trim((string)$d['celular_origen_mask'])
-        : null;
-
-    $origen = isset($d['origen'])
-        ? trim((string)$d['origen'])
-        : null;
-
-    $destino = isset($d['destino'])
-        ? trim((string)$d['destino'])
-        : null;
-
-    $cuenta_origen_mask = isset($d['cuenta_origen_mask'])
-        ? trim((string)$d['cuenta_origen_mask'])
-        : null;
-
-    $email_mask = isset($d['email_mask'])
-        ? trim((string)$d['email_mask'])
-        : null;
-
-    $codigo_seguridad = isset($d['codigo_seguridad'])
-        ? trim((string)$d['codigo_seguridad'])
-        : null;
-
-    $nro_operacion = isset($d['nro_operacion'])
-        ? trim((string)$d['nro_operacion'])
-        : null;
-
-    $comision = isset($d['comision'])
-        ? trim((string)$d['comision'])
-        : null;
-
-    $mensaje = isset($d['mensaje'])
-        ? trim((string)$d['mensaje'])
-        : null;
-
-    $observacion = isset($d['observacion'])
-        ? trim((string)$d['observacion'])
-        : null;
-
-    /* ======================================
-       OPCIONALES EXTRA
-    ====================================== */
     $imagen_url = isset($d['imagen_url'])
         ? trim((string)$d['imagen_url'])
-        : null;
-
-    $ocr_texto = isset($d['ocr_texto'])
-        ? $d['ocr_texto']
-        : null;
-
-    $confianza_ia = isset($d['confianza_ia'])
-        ? floatval($d['confianza_ia'])
         : null;
 
     $usu_id = isset($d['usu_id'])
@@ -2310,112 +2407,58 @@ Flight::route('POST /P22W/obtenerYaplin', function(){
         ? intval($d['neg_id'])
         : null;
 
+    $observacion = isset($d['observacion'])
+        ? trim((string)$d['observacion'])
+        : null;
+
+    /* ======================================
+       VALIDAR
+    ====================================== */
+
+    if(empty($imagen_url)){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => 'imagen_url requerido'
+
+        ],400);
+
+        return;
+    }
+
     DB::startTransaction();
 
     try {
 
         /* ======================================
-           ESTADO POR DEFECTO
+           ESTADO
         ====================================== */
+
         $estado = 'PENDIENTE';
-
-        /* ======================================
-           VALIDAR YAPE REPETIDO
-           SOLO SI ES YAPE
-        ====================================== */
-        if(
-            strtoupper($billetera) === 'YAPE'
-            &&
-            !empty($codigo_seguridad)
-            &&
-            !empty($nro_operacion)
-        ){
-
-            $existe = DB::queryFirstField("
-
-                SELECT yaplin_id
-
-                FROM reg_yaplin
-
-                WHERE
-                    billetera = 'YAPE'
-                    AND codigo_seguridad = %s
-                    AND nro_operacion = %s
-
-                LIMIT 1
-
-            ",
-                $codigo_seguridad,
-                $nro_operacion
-            );
-
-            if($existe){
-                $estado = 'REPETIDO';
-            }
-        }
 
         /* ======================================
            INSERTAR
         ====================================== */
+
         DB::insert('reg_yaplin',[
 
-            'billetera'            => $billetera,
+            'imagen_url'   => $imagen_url,
 
-            'tipo_operacion'       => $tipo_operacion,
+            'usu_id'       => $usu_id,
 
-            'monto'                => $monto,
+            'cliente_id'   => $cliente_id,
 
-            'moneda'               => $moneda,
+            'neg_id'       => $neg_id,
 
-            'fecha_operacion'      => $fecha_operacion,
+            'carrito_id'   => $carrito_id,
 
-            'hora_operacion'       => $hora_operacion,
+            'estado'       => $estado,
 
-            'nombre_pagador'       => $nombre_pagador,
+            'observacion'  => $observacion,
 
-            'nombre_destinatario'  => $nombre_destinatario,
-
-            'celular_destino'      => $celular_destino,
-
-            'celular_origen_mask'  => $celular_origen_mask,
-
-            'origen'               => $origen,
-
-            'destino'              => $destino,
-
-            'cuenta_origen_mask'   => $cuenta_origen_mask,
-
-            'email_mask'           => $email_mask,
-
-            'codigo_seguridad'     => $codigo_seguridad,
-
-            'nro_operacion'        => $nro_operacion,
-
-            'comision'             => $comision,
-
-            'mensaje'              => $mensaje,
-
-            'imagen_url'           => $imagen_url,
-
-            'ocr_texto'            => $ocr_texto,
-
-            'json_extraido'        => $json_extraido,
-
-            'confianza_ia'         => $confianza_ia,
-
-            'usu_id'               => $usu_id,
-
-            'carrito_id'           => $carrito_id,
-
-            'cliente_id'           => $cliente_id,
-
-            'neg_id'               => $neg_id,
-
-            'estado'               => $estado,
-
-            'observacion'          => $observacion,
-
-            'is_activo'            => 1
+            'is_activo'    => 1
 
         ]);
 
@@ -2426,6 +2469,7 @@ Flight::route('POST /P22W/obtenerYaplin', function(){
         /* ======================================
            RESPONSE
         ====================================== */
+
         Flight::json([
 
             'status' => 'ok',
@@ -2433,8 +2477,6 @@ Flight::route('POST /P22W/obtenerYaplin', function(){
             'msg' => 'Yaplin registrado correctamente',
 
             'yaplin_id' => $yaplin_id,
-
-            'is_yaplin' => $is_yaplin,
 
             'estado' => $estado
 
@@ -2451,6 +2493,7 @@ Flight::route('POST /P22W/obtenerYaplin', function(){
             'msg' => $e->getMessage()
 
         ],500);
+
     }
 
 });
@@ -2466,6 +2509,10 @@ Flight::route('POST /ULx3/rechazarPedido', function(){
         true
     ) ?: [];
 
+    /* ======================================
+       CAMPOS
+    ====================================== */
+
     $carrito_id = intval(
         $d['carrito_id'] ?? 0
     );
@@ -2473,11 +2520,15 @@ Flight::route('POST /ULx3/rechazarPedido', function(){
     /* ======================================
        VALIDAR
     ====================================== */
+
     if(!$carrito_id){
 
         Flight::json([
+
             'status' => 'error',
+
             'msg' => 'carrito_id requerido'
+
         ],400);
 
         return;
@@ -2492,13 +2543,20 @@ Flight::route('POST /ULx3/rechazarPedido', function(){
         /* ======================================
            VALIDAR DELIVERY
         ====================================== */
+
         $delivery = DB::queryFirstRow("
+
             SELECT
+
                 deli_entrega_id,
                 estado
+
             FROM deli_entrega
+
             WHERE carrito_id = %i
+
             LIMIT 1
+
         ", $carrito_id);
 
         if(!$delivery){
@@ -2506,8 +2564,11 @@ Flight::route('POST /ULx3/rechazarPedido', function(){
             DB::rollback();
 
             Flight::json([
+
                 'status' => 'error',
+
                 'msg' => 'Delivery no encontrado'
+
             ],404);
 
             return;
@@ -2516,28 +2577,69 @@ Flight::route('POST /ULx3/rechazarPedido', function(){
         /* ======================================
            ACTUALIZAR DELIVERY
         ====================================== */
-        DB::update('deli_entrega',[
 
-            'estado' => 'rechazado',
+        DB::update(
 
-            'fecha_modificacion' => $now
+            'deli_entrega',
 
-        ],"carrito_id=%i",$carrito_id);
+            [
+
+                'estado' =>
+                    'rechazado',
+
+                'fecha_modificacion' =>
+                    $now
+
+            ],
+
+            "carrito_id=%i",
+
+            $carrito_id
+
+        );
+
+        /* ======================================
+           ACTUALIZAR CARRITO
+        ====================================== */
+
+        DB::update(
+
+            'reg_carrito',
+
+            [
+
+                'estado' =>
+                    'rechazado',
+
+                'fecha_modificacion' =>
+                    $now
+
+            ],
+
+            "carrito_id=%i",
+
+            $carrito_id
+
+        );
 
         DB::commit();
 
         /* ======================================
            RESPONSE
         ====================================== */
+
         Flight::json([
 
             'status' => 'ok',
 
-            'msg' => 'Pedido rechazado correctamente',
+            'msg' =>
+                'Pedido rechazado correctamente',
 
-            'carrito_id' => $carrito_id,
+            'carrito_id' =>
+                $carrito_id,
 
-            'deli_entrega_id' => $delivery['deli_entrega_id']
+            'deli_entrega_id' =>
+                $delivery['deli_entrega_id']
 
         ]);
 
@@ -2549,9 +2651,146 @@ Flight::route('POST /ULx3/rechazarPedido', function(){
 
             'status' => 'error',
 
-            'msg' => $e->getMessage()
+            'msg' =>
+                $e->getMessage()
 
         ],500);
+
+    }
+
+});
+
+Flight::route('POST /YCOr/rechazarPedidoDirecto', function(){
+
+    include DEFINITION;
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    $d = json_decode(
+        Flight::request()->getBody(),
+        true
+    ) ?: [];
+
+    /* ======================================
+       CAMPOS
+    ====================================== */
+
+    $carrito_id = intval(
+        $d['carrito_id'] ?? 0
+    );
+
+    /* ======================================
+       VALIDAR
+    ====================================== */
+
+    if(!$carrito_id){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => 'carrito_id requerido'
+
+        ],400);
+
+        return;
+    }
+
+    DB::startTransaction();
+
+    try {
+
+        $now = date('Y-m-d H:i:s');
+
+        /* ======================================
+           VALIDAR CARRITO
+        ====================================== */
+
+        $carrito = DB::queryFirstRow("
+
+            SELECT
+
+                carrito_id,
+                estado
+
+            FROM reg_carrito
+
+            WHERE carrito_id = %i
+
+            LIMIT 1
+
+        ", $carrito_id);
+
+        if(!$carrito){
+
+            DB::rollback();
+
+            Flight::json([
+
+                'status' => 'error',
+
+                'msg' => 'Carrito no encontrado'
+
+            ],404);
+
+            return;
+        }
+
+        /* ======================================
+           ACTUALIZAR CARRITO
+        ====================================== */
+
+        DB::update(
+
+            'reg_carrito',
+
+            [
+
+                'estado' =>
+                    'rechazado',
+
+                'fecha_modificacion' =>
+                    $now
+
+            ],
+
+            "carrito_id=%i",
+
+            $carrito_id
+
+        );
+
+        DB::commit();
+
+        /* ======================================
+           RESPONSE
+        ====================================== */
+
+        Flight::json([
+
+            'status' => 'ok',
+
+            'msg' =>
+                'Pedido rechazado correctamente',
+
+            'carrito_id' =>
+                $carrito_id
+
+        ]);
+
+    } catch(Exception $e){
+
+        DB::rollback();
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' =>
+                $e->getMessage()
+
+        ],500);
+
     }
 
 });
@@ -2668,31 +2907,49 @@ Flight::route('POST /FjeU/clienteListar', function(){
 
             SELECT
 
-                por_pagar_id,
+                p1.por_pagar_id,
 
-                product_order_id,
+                p1.product_order_id,
 
-                monto_total_order,
+                p1.monto_total_order,
 
-                monto_pagado,
+                p1.monto_pagado,
 
-                monto_restante,
+                p1.monto_restante,
 
-                tipo_pago,
+                p1.tipo_pago,
 
-                fecha_creacion
+                p1.tipo_movimiento,
 
-            FROM pos_por_pagar
+                p1.fecha_creacion
 
-            WHERE cliente_id = %i
+            FROM pos_por_pagar p1
 
-            AND neg_id = %i
+            INNER JOIN (
 
-            AND monto_restante > 0
+                SELECT
 
-            AND borrado_el IS NULL
+                    product_order_id,
 
-            ORDER BY por_pagar_id DESC
+                    MAX(por_pagar_id) AS max_id
+
+                FROM pos_por_pagar
+
+                WHERE cliente_id = %i
+
+                AND neg_id = %i
+
+                AND monto_restante > 0
+
+                AND borrado_el IS NULL
+
+                GROUP BY product_order_id
+
+            ) p2
+
+                ON p2.max_id = p1.por_pagar_id
+
+            ORDER BY p1.por_pagar_id DESC
 
         ",
             $r['cliente_id'],
@@ -2781,8 +3038,8 @@ Flight::route('POST /BnyQ/ventaDirecta', function(){
         $d['neg_id'] ?? 0
     );
 
-    $usu_id = intval(
-        $d['usu_id'] ?? 0
+    $usu_id_vendedor = intval(
+        $d['usu_id_vendedor'] ?? 0
     );
 
     $cliente_id = intval(
@@ -2849,13 +3106,17 @@ Flight::route('POST /BnyQ/ventaDirecta', function(){
         return;
     }
 
-    if(!$usu_id){
+    /* ======================================
+       VALIDAR
+    ====================================== */
+
+    if(!$usu_id_vendedor){
 
         Flight::json([
 
             'status' => 'error',
 
-            'msg' => 'usu_id requerido'
+            'msg' => 'usu_id_vendedor requerido'
 
         ],400);
 
@@ -2993,7 +3254,7 @@ Flight::route('POST /BnyQ/ventaDirecta', function(){
         }
 
         /* ======================================
-           USUARIO
+           USUARIO VENDEDOR
         ====================================== */
 
         $usuario = DB::queryFirstRow("
@@ -3006,7 +3267,7 @@ Flight::route('POST /BnyQ/ventaDirecta', function(){
 
             LIMIT 1
 
-        ", $usu_id);
+        ", $usu_id_vendedor);
 
         if(!$usuario){
 
@@ -3016,7 +3277,7 @@ Flight::route('POST /BnyQ/ventaDirecta', function(){
 
                 'status' => 'error',
 
-                'msg' => 'Usuario no encontrado'
+                'msg' => 'Vendedor no encontrado'
 
             ],404);
 
@@ -3062,32 +3323,36 @@ Flight::route('POST /BnyQ/ventaDirecta', function(){
 
         if($yaplin_id !== null){
 
-            $yaplin = DB::queryFirstRow("
+            DB::update(
 
-                SELECT yaplin_id
+                'reg_yaplin',
 
-                FROM reg_yaplin
+                [
 
-                WHERE yaplin_id = %i
+                    'carrito_id' => null,
 
-                LIMIT 1
+                    'neg_id' =>
+                        $neg_id,
 
-            ", $yaplin_id);
+                    'cliente_id' =>
+                        $cliente_id,
 
-            if(!$yaplin){
+                    'usu_id' =>
+                        $usu_id_vendedor,
 
-                DB::rollback();
+                    'estado' =>
+                        'PENDIENTE',
 
-                Flight::json([
+                    'fecha_modificacion' =>
+                        $now
 
-                    'status' => 'error',
+                ],
 
-                    'msg' => 'yaplin_id no encontrado'
+                "yaplin_id=%i",
 
-                ],404);
+                $yaplin_id
 
-                return;
-            }
+            );
 
         }
 
@@ -3150,8 +3415,8 @@ Flight::route('POST /BnyQ/ventaDirecta', function(){
                 'modo_order' =>
                     $modo_order,
 
-                'usu_id' =>
-                    $usu_id,
+                 'usu_id_vendedor' =>
+                    $usu_id_vendedor,
 
                 'caja_id' =>
                     $caja_id,
@@ -3610,7 +3875,7 @@ Flight::route('POST /HOGO/listaVentas', function(){
 
             o.product_order_id,
 
-            o.usu_id,
+            o.usu_id_vendedor,
 
             o.total_fees,
 
@@ -3662,7 +3927,7 @@ Flight::route('POST /HOGO/listaVentas', function(){
                ON m.mesa_id = o.mesa_id
 
         LEFT JOIN reg_usu u
-               ON u.usu_id = o.usu_id
+               ON u.usu_id = o.usu_id_vendedor
 
         WHERE o.neg_id = %i
         AND o.borrado_el IS NULL
@@ -4097,3 +4362,1254 @@ function deuda_movimiento(
 
 }
 
+Flight::route('POST /UHUD/realizarPago', function(){
+
+    include DEFINITION;
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    $d = json_decode(
+        Flight::request()->getBody(),
+        true
+    ) ?: [];
+
+    /* =====================================
+       CAMPOS
+    ====================================== */
+
+    $product_order_id = intval(
+        $d['product_order_id'] ?? 0
+    );
+
+    $monto_pagado = floatval(
+        $d['monto_pagado'] ?? 0
+    );
+
+    $tipo_pago = trim(
+        strtoupper(
+            $d['tipo_pago'] ?? 'EFECTIVO'
+        )
+    );
+
+    $descripcion = trim(
+        $d['descripcion'] ?? ''
+    );
+
+    $xin = trim(
+        $d['xin'] ?? ''
+    );
+
+    $yuan = trim(
+        $d['yuan'] ?? ''
+    );
+
+    /* =====================================
+       FIRMA
+    ====================================== */
+
+    firma(
+        $xin,
+        $yuan
+    );
+
+    /* =====================================
+       VALIDAR
+    ====================================== */
+
+    if(!$product_order_id){
+
+        Flight::json([
+
+            'ok' => false,
+
+            'msg' =>
+                'product_order_id requerido'
+
+        ], 400);
+
+        return;
+    }
+
+    if($monto_pagado <= 0){
+
+        Flight::json([
+
+            'ok' => false,
+
+            'msg' =>
+                'monto_pagado inválido'
+
+        ], 400);
+
+        return;
+    }
+
+    try {
+
+        /* =====================================
+           ORDEN
+        ====================================== */
+
+        $order = DB::queryFirstRow("
+
+            SELECT
+
+                product_order_id,
+                cliente_id,
+                neg_id
+
+            FROM pos_product_order
+
+            WHERE product_order_id = %i
+            AND borrado_el IS NULL
+
+            LIMIT 1
+
+        ", $product_order_id);
+
+        if(!$order){
+
+            Flight::json([
+
+                'ok' => false,
+
+                'msg' =>
+                    'Orden no encontrada'
+
+            ], 404);
+
+            return;
+        }
+
+        /* =====================================
+           IDS
+        ====================================== */
+
+        $cliente_id = intval(
+            $order['cliente_id']
+        );
+
+        $neg_id = intval(
+            $order['neg_id']
+        );
+
+        /* =====================================
+           TRANSACCION
+        ====================================== */
+
+        DB::startTransaction();
+
+        /* =====================================
+           REGISTRAR PAGO
+        ====================================== */
+
+        $movimiento = deuda_movimiento(
+
+            $product_order_id,
+
+            $cliente_id,
+
+            $neg_id,
+
+            'PAGO',
+
+            $monto_pagado,
+
+            $tipo_pago,
+
+            $descripcion
+
+        );
+
+        if(!$movimiento['ok']){
+
+            DB::rollback();
+
+            Flight::json([
+
+                'ok' => false,
+
+                'msg' =>
+                    $movimiento['msg']
+
+            ], 400);
+
+            return;
+        }
+
+        DB::commit();
+
+        /* =====================================
+           RESPONSE
+        ====================================== */
+
+        Flight::json([
+
+            'ok' => true,
+
+            'msg' =>
+                'Pago registrado correctamente',
+
+            'data' => [
+
+                'por_pagar_id' =>
+
+                    $movimiento['por_pagar_id'],
+
+                'monto_total_order' =>
+
+                    $movimiento['monto_total_order'],
+
+                'monto_pagado' =>
+
+                    $movimiento['monto_pagado'],
+
+                'monto_restante' =>
+
+                    $movimiento['monto_restante']
+
+            ]
+
+        ]);
+
+    } catch(Exception $e){
+
+        DB::rollback();
+
+        Flight::json([
+
+            'ok' => false,
+
+            'msg' => $e->getMessage()
+
+        ], 500);
+
+    }
+
+});
+
+Flight::route('POST /BAJc/mesasNegocio', function(){
+
+    include DEFINITION;
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    $d = json_decode(
+        Flight::request()->getBody(),
+        true
+    ) ?: [];
+
+    /* ======================================
+       CAMPOS
+    ====================================== */
+
+    $neg_id = intval(
+        $d['neg_id'] ?? 0
+    );
+
+    $xin = trim(
+        $d['xin'] ?? ''
+    );
+
+    $yuan = trim(
+        $d['yuan'] ?? ''
+    );
+
+    /* ======================================
+       FIRMA
+    ====================================== */
+
+    firma(
+        $xin,
+        $yuan
+    );
+
+    /* ======================================
+       VALIDAR
+    ====================================== */
+
+    if(!$neg_id){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => 'neg_id requerido'
+
+        ],400);
+
+        return;
+    }
+
+    /* ======================================
+       MESAS
+    ====================================== */
+
+    $rows = DB::query("
+
+        SELECT
+
+            mesa_id,
+
+            nombre,
+
+            estado,
+
+            neg_id
+
+        FROM resto_mesa
+
+        WHERE neg_id = %i
+
+        AND borrado_el IS NULL
+
+        ORDER BY nombre ASC
+
+    ", $neg_id);
+
+    /* ======================================
+       NORMALIZAR
+    ====================================== */
+
+    foreach($rows as &$r){
+
+        $r['mesa_id'] = intval(
+            $r['mesa_id']
+        );
+
+        $r['neg_id'] = intval(
+            $r['neg_id']
+        );
+
+    }
+
+    /* ======================================
+       RESPONSE
+    ====================================== */
+
+    Flight::json([
+
+        'status' => 'ok',
+
+        'neg_id' => $neg_id,
+
+        'data' => $rows
+
+    ]);
+
+});
+
+Flight::route('POST /b3by/atenderMesita', function(){
+
+    include DEFINITION;
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    $d = json_decode(
+        Flight::request()->getBody(),
+        true
+    ) ?: [];
+
+    /* ======================================
+       CAMPOS
+    ====================================== */
+
+    $neg_id = intval(
+        $d['neg_id'] ?? 0
+    );
+
+    $usu_id_vendedor = intval(
+        $d['usu_id_vendedor'] ?? 0
+    );
+
+    $mesa_id = intval(
+        $d['mesa_id'] ?? 0
+    );
+
+    $productos = $d['productos'] ?? [];
+
+    $xin = trim(
+        $d['xin'] ?? ''
+    );
+
+    $yuan = trim(
+        $d['yuan'] ?? ''
+    );
+
+    /* ======================================
+       FIRMA
+    ====================================== */
+
+    firma(
+        $xin,
+        $yuan
+    );
+
+    /* ======================================
+       VALIDAR
+    ====================================== */
+
+    if(!$neg_id){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => 'neg_id requerido'
+
+        ],400);
+
+        return;
+    }
+
+    if(!$usu_id_vendedor){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => 'usu_id_vendedor requerido'
+
+        ],400);
+
+        return;
+    }
+
+    if(!$mesa_id){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => 'mesa_id requerido'
+
+        ],400);
+
+        return;
+    }
+
+    if(
+        !is_array($productos)
+        ||
+        empty($productos)
+    ){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => 'productos requerido'
+
+        ],400);
+
+        return;
+    }
+
+    DB::startTransaction();
+
+    try {
+
+        $now = date('Y-m-d H:i:s');
+
+        /* ======================================
+           VALIDAR NEGOCIO
+        ====================================== */
+
+        $negocio = DB::queryFirstRow("
+
+            SELECT
+
+                neg_id,
+                nombre
+
+            FROM reg_neg
+
+            WHERE neg_id = %i
+
+            AND is_activo = 1
+
+            AND borrado_el IS NULL
+
+            LIMIT 1
+
+        ", $neg_id);
+
+        if(!$negocio){
+
+            DB::rollback();
+
+            Flight::json([
+
+                'status' => 'error',
+
+                'msg' => 'Negocio no encontrado'
+
+            ],404);
+
+            return;
+        }
+
+        /* ======================================
+           VALIDAR VENDEDOR
+        ====================================== */
+
+        $vendedor = DB::queryFirstRow("
+
+            SELECT
+
+                usu_id,
+                nombres_apellidos
+
+            FROM reg_usu
+
+            WHERE usu_id = %i
+
+            AND borrado_el IS NULL
+
+            LIMIT 1
+
+        ", $usu_id_vendedor);
+
+        if(!$vendedor){
+
+            DB::rollback();
+
+            Flight::json([
+
+                'status' => 'error',
+
+                'msg' => 'Vendedor no encontrado'
+
+            ],404);
+
+            return;
+        }
+
+        /* ======================================
+           VALIDAR MESA
+        ====================================== */
+
+        $mesa = DB::queryFirstRow("
+
+            SELECT
+
+                mesa_id,
+                nombre,
+                estado
+
+            FROM resto_mesa
+
+            WHERE mesa_id = %i
+
+            AND neg_id = %i
+
+            AND borrado_el IS NULL
+
+            LIMIT 1
+
+        ",
+            $mesa_id,
+            $neg_id
+        );
+
+        if(!$mesa){
+
+            DB::rollback();
+
+            Flight::json([
+
+                'status' => 'error',
+
+                'msg' => 'Mesa no encontrada'
+
+            ],404);
+
+            return;
+        }
+
+        /* ======================================
+           CLIENTE PUBLICO GENERAL
+        ====================================== */
+
+        $cliente_id = DB::queryFirstField("
+
+            SELECT
+
+                cliente_id
+
+            FROM pos_cliente
+
+            WHERE neg_id = %i
+
+            AND nombres_apellidos = 'PUBLICO_GENERAL'
+
+            AND borrado_el IS NULL
+
+            LIMIT 1
+
+        ", $neg_id);
+
+        if(!$cliente_id){
+
+            DB::rollback();
+
+            Flight::json([
+
+                'status' => 'error',
+
+                'msg' => 'PUBLICO_GENERAL no existe'
+
+            ],404);
+
+            return;
+        }
+
+        /* ======================================
+           BUSCAR CARRITO ACTIVO MESA
+        ====================================== */
+
+        $carrito = DB::queryFirstRow("
+
+            SELECT
+
+                carrito_id
+
+            FROM reg_carrito
+
+            WHERE mesa_id = %i
+
+            AND neg_id = %i
+
+            AND tipo_pedido = 'MESA_PEDIDO'
+
+            AND estado IN (
+                'enviado',
+                'transito'
+            )
+
+            ORDER BY carrito_id DESC
+
+            LIMIT 1
+
+        ",
+            $mesa_id,
+            $neg_id
+        );
+
+        /* ======================================
+           CREAR CARRITO
+        ====================================== */
+
+        if(!$carrito){
+
+            DB::insert(
+
+                'reg_carrito',
+
+                [
+
+                    'usu_id' =>
+                        $usu_id_vendedor,
+
+                    'neg_id' =>
+                        $neg_id,
+
+                    'estado' =>
+                        'enviado',
+
+                    'fecha_entrega' =>
+                        null,
+
+                    'fecha_creacion' =>
+                        $now,
+
+                    'fecha_modificacion' =>
+                        $now,
+
+                    'cliente_id' =>
+                        $cliente_id,
+
+                    'tipo_pedido' =>
+                        'MESA_PEDIDO',
+
+                    'usu_id_vendedor' =>
+                        $usu_id_vendedor,
+
+                    'mesa_id' =>
+                        $mesa_id
+
+                ]
+
+            );
+
+            $carrito_id = DB::insertId();
+
+        } else {
+
+            $carrito_id = intval(
+                $carrito['carrito_id']
+            );
+
+            DB::update(
+
+                'reg_carrito',
+
+                [
+
+                    'fecha_modificacion' =>
+                        $now
+
+                ],
+
+                "carrito_id=%i",
+
+                $carrito_id
+
+            );
+
+        }
+
+        /* ======================================
+           DETALLES
+        ====================================== */
+
+        foreach($productos as $p){
+
+            $product_id = intval(
+                $p['product_id'] ?? 0
+            );
+
+            $cantidad = intval(
+                $p['cantidad'] ?? 0
+            );
+
+            $precio = floatval(
+                $p['precio'] ?? 0
+            );
+
+            if(
+                !$product_id
+                ||
+                $cantidad <= 0
+            ){
+                continue;
+            }
+
+            /* ======================================
+               VALIDAR PRODUCTO
+            ====================================== */
+
+            $producto = DB::queryFirstRow("
+
+                SELECT
+
+                    product_id,
+                    name
+
+                FROM pos_product
+
+                WHERE product_id = %i
+
+                AND neg_id = %i
+
+                AND borrado_el IS NULL
+
+                LIMIT 1
+
+            ",
+                $product_id,
+                $neg_id
+            );
+
+            if(!$producto){
+
+                DB::rollback();
+
+                Flight::json([
+
+                    'status' => 'error',
+
+                    'msg' =>
+                        'Producto inválido: '
+                        .
+                        $product_id
+
+                ],404);
+
+                return;
+            }
+
+            /* ======================================
+               EXISTE EN CARRITO
+            ====================================== */
+
+            $detalle = DB::queryFirstRow("
+
+                SELECT
+
+                    carrito_detalle_id,
+                    cantidad
+
+                FROM reg_carrito_detalle
+
+                WHERE carrito_id = %i
+
+                AND product_id = %i
+
+                LIMIT 1
+
+            ",
+                $carrito_id,
+                $product_id
+            );
+
+            if($detalle){
+
+                DB::update(
+
+                    'reg_carrito_detalle',
+
+                    [
+
+                        'cantidad' =>
+
+                            intval(
+                                $detalle['cantidad']
+                            )
+
+                            +
+
+                            $cantidad,
+
+                        'precio_unitario' =>
+                            $precio,
+
+                        'fecha_modificacion' =>
+                            $now
+
+                    ],
+
+                    "carrito_detalle_id=%i",
+
+                    $detalle['carrito_detalle_id']
+
+                );
+
+            } else {
+
+                DB::insert(
+
+                    'reg_carrito_detalle',
+
+                    [
+
+                        'carrito_id' =>
+                            $carrito_id,
+
+                        'product_id' =>
+                            $product_id,
+
+                        'cantidad' =>
+                            $cantidad,
+
+                        'precio_unitario' =>
+                            $precio,
+
+                        'fecha_creacion' =>
+                            $now,
+
+                        'fecha_modificacion' =>
+                            $now
+
+                    ]
+
+                );
+
+            }
+
+        }
+
+        /* ======================================
+           MESA OCUPADA
+        ====================================== */
+
+        DB::update(
+
+            'resto_mesa',
+
+            [
+
+                'estado' =>
+                    'OCUPADA'
+
+            ],
+
+            "mesa_id=%i",
+
+            $mesa_id
+
+        );
+
+        DB::commit();
+
+        /* ======================================
+           RESPONSE
+        ====================================== */
+
+        Flight::json([
+
+            'status' => 'ok',
+
+            'msg' =>
+                'Mesita atendida correctamente',
+
+            'carrito_id' =>
+                $carrito_id,
+
+            'mesa_id' =>
+                $mesa_id,
+
+            'mesa_estado' =>
+                'OCUPADA'
+
+        ]);
+
+    } catch(Exception $e){
+
+        DB::rollback();
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' =>
+                $e->getMessage()
+
+        ],500);
+
+    }
+
+});
+
+
+Flight::route('POST /b3by/miMesita', function(){
+
+    include DEFINITION;
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    $d = json_decode(
+        Flight::request()->getBody(),
+        true
+    ) ?: [];
+
+    /* ======================================
+       CAMPOS
+    ====================================== */
+
+    $mesa_id = intval(
+        $d['mesa_id'] ?? 0
+    );
+
+    $neg_id = intval(
+        $d['neg_id'] ?? 0
+    );
+
+    $xin = trim(
+        $d['xin'] ?? ''
+    );
+
+    $yuan = trim(
+        $d['yuan'] ?? ''
+    );
+
+    /* ======================================
+       FIRMA
+    ====================================== */
+
+    firma(
+        $xin,
+        $yuan
+    );
+
+    /* ======================================
+       VALIDAR
+    ====================================== */
+
+    if(!$mesa_id){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => 'mesa_id requerido'
+
+        ],400);
+
+        return;
+    }
+
+    if(!$neg_id){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => 'neg_id requerido'
+
+        ],400);
+
+        return;
+    }
+
+    try {
+
+        /* ======================================
+           MESA
+        ====================================== */
+
+        $mesa = DB::queryFirstRow("
+
+            SELECT
+
+                mesa_id,
+                nombre,
+                estado,
+                neg_id
+
+            FROM resto_mesa
+
+            WHERE mesa_id = %i
+
+            AND neg_id = %i
+
+            AND borrado_el IS NULL
+
+            LIMIT 1
+
+        ",
+            $mesa_id,
+            $neg_id
+        );
+
+        if(!$mesa){
+
+            Flight::json([
+
+                'status' => 'error',
+
+                'msg' => 'Mesa no encontrada'
+
+            ],404);
+
+            return;
+        }
+
+        /* ======================================
+           CARRITO ACTIVO MESA
+        ====================================== */
+
+        $carrito = DB::queryFirstRow("
+
+            SELECT
+
+                c.carrito_id,
+                c.usu_id,
+                c.neg_id,
+                c.estado,
+                c.fecha_entrega,
+                c.fecha_creacion,
+                c.fecha_modificacion,
+                c.cliente_id,
+                c.tipo_pedido,
+                c.usu_id_vendedor,
+                c.mesa_id,
+
+                u.nombres_apellidos
+                    AS vendedor_nombre,
+
+                m.nombre
+                    AS mesa_nombre
+
+            FROM reg_carrito c
+
+            LEFT JOIN reg_usu u
+                ON u.usu_id =
+                   c.usu_id_vendedor
+
+            LEFT JOIN resto_mesa m
+                ON m.mesa_id =
+                   c.mesa_id
+
+            WHERE c.mesa_id = %i
+
+            AND c.neg_id = %i
+
+            AND c.estado IN (
+                'enviado',
+                'transito'
+            )
+
+            ORDER BY c.carrito_id DESC
+
+            LIMIT 1
+
+        ",
+            $mesa_id,
+            $neg_id
+        );
+
+        if(!$carrito){
+
+            Flight::json([
+
+                'status' => 'ok',
+
+                'mesa' => $mesa,
+
+                'carrito' => null,
+
+                'detalles' => []
+
+            ]);
+
+            return;
+        }
+
+        /* ======================================
+           DETALLES
+        ====================================== */
+
+        $detalles = DB::query("
+
+            SELECT
+
+                d.carrito_detalle_id,
+
+                d.carrito_id,
+
+                d.product_id,
+
+                d.cantidad,
+
+                d.precio_unitario,
+
+                d.fecha_creacion,
+
+                d.fecha_modificacion,
+
+                p.name,
+
+                p.description,
+
+                p.price,
+
+                (
+
+                    SELECT pi.img
+
+                    FROM pos_product_image pi
+
+                    WHERE pi.product_id =
+                          p.product_id
+
+                    AND pi.borrado_el IS NULL
+
+                    ORDER BY pi.orden ASC
+
+                    LIMIT 1
+
+                ) AS img
+
+            FROM reg_carrito_detalle d
+
+            LEFT JOIN pos_product p
+                ON p.product_id =
+                   d.product_id
+
+            WHERE d.carrito_id = %i
+
+            ORDER BY
+                d.carrito_detalle_id ASC
+
+        ",
+            $carrito['carrito_id']
+        );
+
+        /* ======================================
+           NORMALIZAR
+        ====================================== */
+
+        foreach($detalles as &$x){
+
+            $x['carrito_detalle_id'] =
+                intval(
+                    $x['carrito_detalle_id']
+                );
+
+            $x['carrito_id'] =
+                intval(
+                    $x['carrito_id']
+                );
+
+            $x['product_id'] =
+                intval(
+                    $x['product_id']
+                );
+
+            $x['cantidad'] =
+                intval(
+                    $x['cantidad']
+                );
+
+            $x['precio_unitario'] =
+                floatval(
+                    $x['precio_unitario']
+                );
+
+            $x['price'] =
+                floatval(
+                    $x['price']
+                );
+
+            if(empty($x['img'])){
+
+                $x['img'] =
+                    'https://picsum.photos/300?random='
+                    .
+                    $x['product_id'];
+
+            }
+
+        }
+
+        /* ======================================
+           RESPONSE
+        ====================================== */
+
+        Flight::json([
+
+            'status' => 'ok',
+
+            'mesa' => $mesa,
+
+            'carrito' => $carrito,
+
+            'detalles' => $detalles
+
+        ]);
+
+    } catch(Exception $e){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' =>
+                $e->getMessage()
+
+        ],500);
+
+    }
+
+});

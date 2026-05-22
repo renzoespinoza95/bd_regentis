@@ -1336,6 +1336,8 @@ Flight::route('POST /Pfnf/tiendaFantasma', function(){
 
         $neg_id = DB::insertId();
 
+        veri_publico_general($neg_id);
+
         /* ======================================
            RUBRO NEGOCIO
         ====================================== */

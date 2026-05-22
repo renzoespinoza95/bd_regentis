@@ -127,26 +127,6 @@ Flight::route('POST /xoxo/frida/screen/crear', function(){
         return;
     }
 
-    /* =========================================
-       VALIDAR DUPLICADO
-    ========================================= */
-
-    $existe = DB::queryFirstField("
-        SELECT COUNT(*)
-        FROM deux_screen
-        WHERE nombre = %s
-    ", $nombre);
-
-    if($existe > 0){
-
-        Flight::json([
-            'status'=>'error',
-            'msg'=>'Ya existe un screen con ese nombre'
-        ],400);
-
-        return;
-    }
-
     DB::startTransaction();
 
     try{
@@ -276,28 +256,7 @@ Flight::route('POST /xoxo/frida/screen/editar', function(){
 
         return;
     }
-
-    /* =========================================
-       VALIDAR DUPLICADO
-    ========================================= */
-
-    $existe = DB::queryFirstField("
-        SELECT COUNT(*)
-        FROM deux_screen
-        WHERE nombre = %s
-        AND screen_id <> %i
-    ", $nombre, $screen_id);
-
-    if($existe > 0){
-
-        Flight::json([
-            'status'=>'error',
-            'msg'=>'Ya existe un screen con ese nombre'
-        ],400);
-
-        return;
-    }
-
+    
     DB::startTransaction();
 
     try{

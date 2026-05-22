@@ -1,13 +1,101 @@
 <?php
+Flight::route('GET /tt/tt', function(){
 
-Flight::route('GET /tt/tt', function () {
     include DEFINITION;
-    dd(crear_tienda_fantasma());
-    exit;
-    $usu_id = 12;    
-    enviar_boton_tienda($usu_id);
-    echo poke();
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    try {
+
+        /* =====================================
+           NEGOCIOS
+        ====================================== */
+
+        $negocios = DB::query("
+
+            SELECT
+
+                neg_id,
+                nombre
+
+            FROM reg_neg
+
+            WHERE borrado_el IS NULL
+
+            ORDER BY neg_id ASC
+
+        ");
+
+        $procesados = [];
+
+        /* =====================================
+           RECORRER
+        ====================================== */
+
+        foreach($negocios as $n){
+
+            $neg_id = intval(
+                $n['neg_id']
+            );
+
+            $r = veri_publico_general(
+                $neg_id
+            );
+
+            $procesados[] = [
+
+                'neg_id' =>
+                    $neg_id,
+
+                'nombre' =>
+                    $n['nombre'],
+
+                'resultado' =>
+                    $r
+
+            ];
+
+        }
+
+        /* =====================================
+           RESPONSE
+        ====================================== */
+
+        Flight::json([
+
+            'ok' => true,
+
+            'total_negocios' =>
+                count($procesados),
+
+            'data' =>
+                $procesados
+
+        ]);
+
+    } catch(Exception $e){
+
+        Flight::json([
+
+            'ok' => false,
+
+            'msg' => $e->getMessage()
+
+        ], 500);
+
+    }
+
 });
+
+
+// Flight::route('GET /tt/tt', function () {
+//     include DEFINITION;
+//     dd(crear_tienda_fantasma());
+//     exit;
+//     $usu_id = 12;    
+//     enviar_boton_tienda($usu_id);
+//     echo poke();
+// });
 
 
 Flight::route('GET /tt/xx', function () {

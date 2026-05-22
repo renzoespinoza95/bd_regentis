@@ -86,27 +86,38 @@ Flight::route('POST /DzCy/eliminarFavoritos', function () {
 
 }); 
 
-
 Flight::route('POST /DzCy/misFavoritos', function () {
 
     DB::query("SET NAMES 'utf8mb4'");
 
-    $d = json_decode(Flight::request()->getBody(), true) ?: [];
+    $d = json_decode(
+        Flight::request()->getBody(),
+        true
+    ) ?: [];
 
-    $usu_id = intval($d['usu_id'] ?? 0);
+    $usu_id = intval(
+        $d['usu_id'] ?? 0
+    );
 
     if(!$usu_id){
+
         Flight::json([
+
             'status' => 'error',
+
             'msg' => 'usu_id requerido'
+
         ], 400);
+
         return;
     }
 
     try {
 
         $rows = DB::query("
+
             SELECT 
+
                 f.fav_id,
                 f.product_id,
                 f.fecha_creacion,
@@ -115,9 +126,25 @@ Flight::route('POST /DzCy/misFavoritos', function () {
                 p.price,
                 p.neg_id,
 
-                IFNULL(MAX(i.stock_actual),0) AS stock,
+                /* ======================================
+                   NEGOCIO
+                ====================================== */
 
-                -- 🔥 IMAGEN PRINCIPAL
+                n.nombre AS neg_nombre,
+
+                /* ======================================
+                   STOCK
+                ====================================== */
+
+                IFNULL(
+                    MAX(i.stock_actual),
+                    0
+                ) AS stock,
+
+                /* ======================================
+                   IMAGEN
+                ====================================== */
+
                 img.img AS img
 
             FROM reg_fav f
@@ -125,18 +152,36 @@ Flight::route('POST /DzCy/misFavoritos', function () {
             JOIN pos_product p 
                 ON p.product_id = f.product_id
 
-            -- 🔥 INVENTARIO
+            /* ======================================
+               NEGOCIO
+            ====================================== */
+
+            LEFT JOIN reg_neg n
+                ON n.neg_id = p.neg_id
+
+            /* ======================================
+               INVENTARIO
+            ====================================== */
+
             LEFT JOIN pos_inventario i 
                 ON i.product_id = p.product_id
 
-            -- 🔥 IMAGEN (solo 1 por producto)
+            /* ======================================
+               IMAGEN
+            ====================================== */
+
             LEFT JOIN (
+
                 SELECT 
                     product_id,
                     img
+
                 FROM pos_product_image
+
                 WHERE is_visible = 1
+
                 ORDER BY orden ASC
+
             ) img
                 ON img.product_id = p.product_id
 
@@ -145,32 +190,59 @@ Flight::route('POST /DzCy/misFavoritos', function () {
             GROUP BY f.fav_id
 
             ORDER BY f.fav_id DESC
+
         ", $usu_id);
 
+        /* ======================================
+           NORMALIZAR
+        ====================================== */
 
-        // 🔥 normalizar
         foreach($rows as &$r){
-            $r['product_id'] = intval($r['product_id']);
-            $r['fav_id']     = intval($r['fav_id']);
-            $r['price']      = floatval($r['price']);
-            $r['stock']      = intval($r['stock']);
 
-            // 🔥 fallback imagen
+            $r['product_id'] = intval(
+                $r['product_id']
+            );
+
+            $r['fav_id'] = intval(
+                $r['fav_id']
+            );
+
+            $r['price'] = floatval(
+                $r['price']
+            );
+
+            $r['stock'] = intval(
+                $r['stock']
+            );
+
             if(empty($r['img'])){
-                $r['img'] = 'https://picsum.photos/300?random=' . $r['product_id'];
+
+                $r['img'] =
+
+                    'https://picsum.photos/300?random=' .
+
+                    $r['product_id'];
             }
         }
 
         Flight::json([
+
             'status' => 'ok',
+
             'data'   => $rows
+
         ]);
 
     } catch(Exception $e){
+
         Flight::json([
+
             'status' => 'error',
+
             'msg' => $e->getMessage()
+
         ], 500);
+
     }
 
 });

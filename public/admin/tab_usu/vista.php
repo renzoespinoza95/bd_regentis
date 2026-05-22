@@ -273,6 +273,13 @@
         </form>
       </div>
       <div class="modal-footer">
+         <button
+            class="btn btn-warning"
+            @click="crearUsuarioAutomatico"
+          >
+            <i class="icon-magic icon-white"></i>
+            Automático
+          </button>
         <button class="btn btn-primary" @click="crearUsuario">Crear</button>
         <button class="btn" data-dismiss="modal">Cancelar</button>
       </div>
@@ -634,128 +641,6 @@
       </div>
     </div>
 
-<!-- Modal “Crear Chat” -->
-<div id="modalNuevoChat" class="modal hide fade fullscreen" tabindex="-1">
-  <div class="modal-header">
-    <h3>Crear Nuevo Chat + Mensaje Inicial</h3>
-  </div>
-  <div class="modal-body">
-    <form class="form-horizontal">
-      
-      <!-- Remitente (quien envía) -->
-      <div class="control-group">
-        <label class="control-label">Remitente</label>
-        <div class="controls">
-          <span class="uneditable-input">{{ remitenteNombre }}</span>
-        </div>
-      </div>
-      <input type="hidden" v-model="nuevoChat.rem_id">
-
-      <!-- Seleccionar Usuario 2 -->
-      <div class="control-group">
-        <label class="control-label">Usuario 2</label>
-        <div class="controls">
-          <v-select
-            :options="opcionesUsuarios"
-            label="text"
-            :reduce="o => o.id"
-            v-model="nuevoChat.usu2_id"
-            placeholder="Seleccione Usuario 2…"
-          ></v-select>
-        </div>
-      </div>
-
-
-      <!-- Mensaje Inicial -->
-      <div class="control-group">
-        <label class="control-label">Mensaje Inicial</label>
-        <div class="controls">
-          <textarea id="summerMensaje" v-model="nuevoChat.mensaje"></textarea>
-        </div>
-      </div>
-    </form>
-  </div>
-  <div class="modal-footer">
-    <button class="btn btn-primary" @click="crearChat">
-      <i class="icon-ok icon-white"></i> Guardar
-    </button>
-    <button class="btn" data-dismiss="modal">Cancelar</button>
-  </div>
-</div>
-
-
-<!-- Modal Chats REEMPLAZADO -->
-<div id="modalChats" class="modal hide fade fullscreen" tabindex="-1">
-  <div class="modal-header">
-    <h3>Chats de {{ usuarioActual.sobrenombre }}</h3>
-  </div>
-  <div class="modal-body">
-    
-    <!-- Accordion de chats -->
-    <div class="accordion" id="accordionChats">
-      <div class="accordion-group" v-for="c in chats" :key="c.chat_id">
-        
-        <!-- Encabezado del accordion (toggle) -->
-        <div class="accordion-heading">
-          <a 
-            class="accordion-toggle" 
-            data-toggle="collapse"
-            :data-parent="'#accordionChats'"
-            :href="'#collapseChat' + c.chat_id"
-            @click.prevent="abrirChat(c)"
-          >
-            Chat <i class="fa fa-user-circle-o"></i> {{ c.usuario1 }}&nbsp;con&nbsp;<i class="fa fa-user-circle-o"></i> {{ c.usuario2 }}
-          </a>
-        </div>
-        
-        <!-- Contenido colapsable -->
-        <div 
-          :id="'collapseChat' + c.chat_id" 
-          class="accordion-body collapse"
-        >
-          <div class="accordion-inner">
-            
-            <!-- Si ya cargó mensajes para este chat, muestro la tabla -->
-            <table 
-              class="table table-bordered table-striped" 
-              v-if="chatActual.chat_id === c.chat_id"
-            >
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Rem</th>
-                  <th>Fecha</th>
-                  <th>Contenido</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="m in mensajes" :key="m.msg_id">
-                  <td>{{ m.msg_id }}</td>
-                  <td>{{ m.sobrenombre }}</td>
-                  <td>{{ m.fecha_creacion }}</td>
-                  <td>{{ m.contenido_rem }}</td>
-                </tr>
-              </tbody>
-            </table>
-            
-            <!-- Si aún no está cargado (ni coincide chatActual), muestro un placeholder -->
-            <div v-else class="text-center">
-              <em>Selecciona el chat para ver los mensajes...</em>
-            </div>
-            
-          </div>
-        </div>
-        
-      </div>
-    </div>
-    <!-- /Accordion de chats -->
-    
-  </div>
-  <div class="modal-footer">
-    <button class="btn" data-dismiss="modal">Cerrar</button>
-  </div>
-</div>
-
 
   </div>
 </div>
@@ -887,15 +772,52 @@ new Vue({
       return t ? t.descripcion : '';
     },
     initDataTable(sel) {
+
       this.$nextTick(() => {
-        if ($.fn.DataTable.isDataTable(sel)) $(sel).DataTable().destroy();
-          $(sel).DataTable({
-                language: (typeof dt_language !== 'undefined' ? dt_language : undefined),
-                scrollX: true,
-                dom: 'frtip',
-                order: [[0,'desc']]
-              });
+
+        /* ======================================
+           DESTRUIR SI EXISTE
+        ====================================== */
+
+        if (
+
+          $.fn.DataTable.isDataTable(sel)
+
+        ) {
+
+          $(sel)
+            .DataTable()
+            .destroy();
+
+        }
+
+        /* ======================================
+           REINICIALIZAR
+        ====================================== */
+
+        $(sel).DataTable({
+
+          destroy: true,
+
+          retrieve: true,
+
+          language:
+            (
+              typeof dt_language !== 'undefined'
+                ? dt_language
+                : undefined
+            ),
+
+          scrollX: true,
+
+          dom: 'frtip',
+
+          order: [[0,'desc']]
+
+        });
+
       });
+
     },
     abrirModalCrear() {
       this.nuevo = {
@@ -1297,6 +1219,149 @@ new Vue({
           );
       }
   },
+
+crearUsuarioAutomatico(){
+
+  $.blockUI({
+
+    message:'Creando usuario automático...'
+
+  });
+
+  axios.post(
+
+    this.apphost + '/NTol/usuarioAutomatico'
+
+  )
+  .then(r=>{
+
+    if(!r.data.success){
+
+      apprise(
+        r.data.msg || 'Error'
+      );
+
+      return;
+    }
+
+    const u = r.data.usuario;
+
+    /* ======================================
+       ARRAY VUE
+    ====================================== */
+
+    this.usuarios.unshift(u);
+
+    /* ======================================
+       DATATABLE
+    ====================================== */
+
+    const dt = $('#tablaUsuarios')
+      .DataTable();
+
+    dt.row.add([
+
+      `<img
+        src="${u.img_perfil}"
+        class="avatar-mini"
+      >`,
+
+      u.usu_id,
+
+      u.cod_usu,
+
+      u.google_uid,
+
+      u.sobrenombre,
+
+      u.nombres_apellidos,
+
+      u.celular,
+
+      u.dni,
+
+      u.fecha_creacion,
+
+      u.rol_nombre,
+
+      this.getTipoDescripcion(
+        u.tipoxusu_id
+      ),
+
+      u.negocio_nombre,
+
+      `
+      <div class="btn-group">
+
+        <button
+          class="btn btn-mini dropdown-toggle"
+          data-toggle="dropdown"
+        >
+
+          ⚙ <span class="caret"></span>
+
+        </button>
+
+        <ul class="dropdown-menu">
+
+          <li>
+            <a href="#"
+              class="editar-usuario"
+              data-id="${u.usu_id}">
+              Editar
+            </a>
+          </li>
+
+          <li>
+            <a href="#"
+              class="detalle-usuario"
+              data-id="${u.usu_id}">
+              Detalle
+            </a>
+          </li>
+
+          <li>
+            <a href="#"
+              class="eliminar-usuario"
+              data-id="${u.usu_id}">
+              Liquidar
+            </a>
+          </li>
+
+        </ul>
+
+      </div>
+      `
+
+    ]).draw(false);
+
+    $('#modalCrearUsuario')
+      .modal('hide');
+
+    apprise(
+      'Usuario automático creado 🚀'
+    );
+
+  })
+  .catch(e=>{
+
+    apprise(
+
+      e.response?.data?.msg ||
+
+      'Error al crear usuario'
+
+    );
+
+  })
+  .finally(()=>{
+
+    $.unblockUI();
+
+  });
+
+},
+
     crearUsuario() {
       axios.post(this.apphost + '/xico/usu/crear', this.nuevo)
         .then((r) => {
@@ -1407,13 +1472,127 @@ new Vue({
         });
     },
 
-
     eliminarUsuario(u) {
-      apprise(`Liquidar usuario ${u.usu_id}?`,{confirm:true}, r=>{
-        if(r) axios.post(this.apphost+'/usuario/liquidar',{ usu_id:u.usu_id })
-                 .then(()=>this.obtenerUsuarios());
-      });
-    },
+
+        apprise(
+
+          `Liquidar usuario ${u.usu_id}?`,
+
+          { confirm:true },
+
+          r => {
+
+            if(!r){
+              return;
+            }
+
+            axios.post(
+
+              this.apphost + '/usuario/liquidar',
+
+              {
+
+                usu_id:u.usu_id
+
+              }
+
+            )
+            .then(()=>{
+
+              /* ======================================
+                 BUSCAR FILA REAL DEL DATATABLE
+              ====================================== */
+
+              $('#tablaUsuarios tbody tr').each(function(){
+
+                const $tr = $(this);
+
+                const idFila = $.trim(
+
+                  $tr.find('td:eq(1)').text()
+
+                );
+
+                if(
+
+                  Number(idFila) === Number(u.usu_id)
+
+                ){
+
+                  /* ======================================
+                     REEMPLAZAR CELDAS
+                  ====================================== */
+
+                  $tr.find('td:eq(2)').html('—');
+                  $tr.find('td:eq(3)').html('—');
+                  $tr.find('td:eq(4)').html('—');
+                  $tr.find('td:eq(5)').html('—');
+                  $tr.find('td:eq(6)').html('—');
+                  $tr.find('td:eq(7)').html('—');
+                  $tr.find('td:eq(8)').html('—');
+                  $tr.find('td:eq(9)').html('—');
+                  $tr.find('td:eq(10)').html('—');
+                  $tr.find('td:eq(11)').html('—');
+
+                  /* ======================================
+                     AVATAR
+                  ====================================== */
+
+                  $tr.find('td:eq(0)').html(`
+
+                    <div class="avatar-mini">
+
+                      <img
+                        src="https://barsi-img.b-cdn.net/recursos/logo-regentis.png"
+                      >
+
+                    </div>
+
+                  `);
+
+                  /* ======================================
+                     OPCIONES
+                  ====================================== */
+
+                  $tr.find('td:eq(12)').html('—');
+
+                  /* ======================================
+                     EFECTO VISUAL
+                  ====================================== */
+
+                  $tr.css({
+
+                    opacity: 0.45,
+                    background: '#f5f5f5'
+
+                  });
+
+                }
+
+              });
+
+              apprise(
+                'Usuario liquidado'
+              );
+
+            })
+            .catch(e=>{
+
+              apprise(
+
+                e.response?.data?.msg ||
+
+                'Error al liquidar'
+
+              );
+
+            });
+
+          }
+
+        );
+
+      },
 
     generarCodigo() {
         this.nuevo.cod_usuario = 'ADM' + this.randomDigits(4);

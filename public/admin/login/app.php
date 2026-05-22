@@ -513,6 +513,7 @@ Flight::route('POST /coral/crearUsuarioFirebase', function () {
             'sobrenombre'       => $sobrenombre,
             'celular'           => null,
             'dni'               => null,
+            'rol_id'            => 1,
             'is_activo'         => 1,
             'fecha_nacimiento'  => null,
             'provincia'         => null,
@@ -1175,6 +1176,8 @@ Flight::route('POST /EiwA/tiendaAutomatico', function(){
             );
         }
 
+        veri_publico_general($neg_id);
+
         /* ======================================
            RUBRO X NEGOCIO
         ====================================== */
@@ -1341,13 +1344,9 @@ Flight::route('POST /EiwA/tiendaAutomatico', function(){
 
                         'marca_des' => 'GENERICO',
 
-                        'marca_id' => 0,
-
                         'price' => floatval(
                             $p['price'] ?? 0
                         ),
-
-                        'price_discount' => 0,
 
                         'description' => $p['descripcion'] ?? null,
 

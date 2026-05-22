@@ -507,3 +507,259 @@ Flight::route('POST /H9I8/editarCliente', function(){
 
 });
 
+function veri_publico_general($neg_id){
+
+    /* =====================================
+       LIMPIAR
+    ====================================== */
+
+    $neg_id = intval(
+        $neg_id
+    );
+
+    if(!$neg_id){
+
+        return [
+
+            'ok' => false,
+
+            'msg' => 'neg_id inválido'
+
+        ];
+
+    }
+
+    /* =====================================
+       VERIFICAR NEGOCIO
+    ====================================== */
+
+    $negocio = DB::queryFirstRow("
+
+        SELECT
+
+            neg_id
+
+        FROM reg_neg
+
+        WHERE neg_id = %i
+
+        AND borrado_el IS NULL
+
+        LIMIT 1
+
+    ", $neg_id);
+
+    if(!$negocio){
+
+        return [
+
+            'ok' => false,
+
+            'msg' => 'Negocio no encontrado'
+
+        ];
+
+    }
+
+    /* =====================================
+       VERIFICAR CLIENTE
+    ====================================== */
+
+    $cliente = DB::queryFirstRow("
+
+        SELECT
+
+            cliente_id
+
+        FROM pos_cliente
+
+        WHERE neg_id = %i
+
+        AND nombres_apellidos = 'PUBLICO_GENERAL'
+
+        AND borrado_el IS NULL
+
+        LIMIT 1
+
+    ", $neg_id);
+
+    /* =====================================
+       YA EXISTE
+    ====================================== */
+
+    if($cliente){
+
+        $cliente_id = intval(
+            $cliente['cliente_id']
+        );
+
+    } else {
+
+        /* =====================================
+           CREAR CLIENTE
+        ====================================== */
+
+        DB::insert(
+
+            'pos_cliente',
+
+            [
+
+                'nombres_apellidos' =>
+                    'PUBLICO_GENERAL',
+
+                'dni' =>
+                    '999X',
+
+                'cod_usu' =>
+                    '999X',
+
+                'ruc' =>
+                    null,
+
+                'direccion' =>
+                    null,
+
+                'celular' =>
+                    null,
+
+                'email' =>
+                    null,
+
+                'is_activo' => 1,
+
+                'usu_id' =>
+                    null,
+
+                'puesto' =>
+                    null,
+
+                'distrito' =>
+                    null,
+
+                'map_lat' =>
+                    null,
+
+                'map_lng' =>
+                    null,
+
+                'neg_id' =>
+                    $neg_id,
+
+                'borrado_el' =>
+                    null
+
+            ]
+
+        );
+
+        $cliente_id = DB::insertId();
+
+    }
+
+    /* =====================================
+       VERIFICAR RUBROS
+       10 = Comida preparada
+       8  = Jugos y bebidas
+       7  = Panadería
+       12 = Restaurantes
+    ====================================== */
+
+    $tiene_rubro = DB::queryFirstField("
+
+        SELECT
+
+            COUNT(*)
+
+        FROM reg_rubroxneg
+
+        WHERE neg_id = %i
+
+        AND rubro_id IN (10,8,7,12)
+
+        AND is_activo = 1
+
+        AND n.borrado_el IS NULL
+
+    ", $neg_id);
+
+    /* =====================================
+       SI TIENE RUBRO RESTAURANTE
+       VERIFICAR MESAS
+    ====================================== */
+
+    if($tiene_rubro > 0){
+
+        $mesas_existentes = DB::queryFirstField("
+
+            SELECT
+
+                COUNT(*)
+
+            FROM resto_mesa
+
+            WHERE neg_id = %i
+
+            AND borrado_el IS NULL
+
+        ", $neg_id);
+
+        /* =====================================
+           NO TIENE MESAS
+           CREAR MESA 01 → MESA 10
+        ====================================== */
+
+        if(intval($mesas_existentes) <= 0){
+
+            for($i = 1; $i <= 10; $i++){
+
+                DB::insert(
+
+                    'resto_mesa',
+
+                    [
+
+                        'nombre' =>
+
+                            'MESA ' .
+                            str_pad(
+                                $i,
+                                2,
+                                '0',
+                                STR_PAD_LEFT
+                            ),
+
+                        'estado' =>
+                            'DISPONIBLE',
+
+                        'neg_id' =>
+                            $neg_id,
+
+                        'borrado_el' =>
+                            null
+
+                    ]
+
+                );
+
+            }
+
+        }
+
+    }
+
+    /* =====================================
+       RESPONSE
+    ====================================== */
+
+    return [
+
+        'ok' => true,
+
+        'cliente_id' => $cliente_id,
+
+        'creado' => !$cliente
+
+    ];
+
+}

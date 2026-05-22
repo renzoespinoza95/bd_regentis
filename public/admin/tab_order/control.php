@@ -78,7 +78,7 @@ Flight::route('GET /product_order/listar', function(){
             ON m.mesa_id = po.mesa_id
 
         LEFT JOIN reg_usu u
-            ON u.usu_id = po.usu_id
+            ON u.usu_id = po.usu_id_vendedor
 
         WHERE po.neg_id = %i
 
@@ -408,6 +408,8 @@ Flight::route('GET /yup/product_order/detalle/@id', function($id){
 
     global $administrador_actual;
 
+    DB::query("SET NAMES 'utf8mb4'");
+
     $id = intval($id);
 
     /* ======================================
@@ -420,7 +422,7 @@ Flight::route('GET /yup/product_order/detalle/@id', function($id){
 
             o.product_order_id,
 
-            o.usu_id,
+            o.usu_id_vendedor,
 
             o.total_fees,
 
@@ -448,12 +450,17 @@ Flight::route('GET /yup/product_order/detalle/@id', function($id){
 
             o.neg_id,
 
-            o.credi_credito_id,
-
             CONCAT(
-                c.dni,
+
+                IFNULL(c.dni,''),
+
                 ' - ',
-                c.nombres_apellidos
+
+                IFNULL(
+                    c.nombres_apellidos,
+                    ''
+                )
+
             ) AS cliente,
 
             c.celular,
@@ -466,11 +473,7 @@ Flight::route('GET /yup/product_order/detalle/@id', function($id){
 
             n.nombre AS negocio,
 
-            u.nombres_apellidos AS administrador,
-
-            cc.estado AS credito_estado,
-
-            cc.saldo_pendiente
+            u.nombres_apellidos AS vendedor
 
         FROM pos_product_order o
 
@@ -484,10 +487,7 @@ Flight::route('GET /yup/product_order/detalle/@id', function($id){
                ON n.neg_id = o.neg_id
 
         LEFT JOIN reg_usu u
-               ON u.usu_id = o.usu_id
-
-        LEFT JOIN credi_credito cc
-               ON cc.credi_credito_id = o.credi_credito_id
+               ON u.usu_id = o.usu_id_vendedor
 
         WHERE o.product_order_id = %i
 
@@ -555,6 +555,22 @@ Flight::route('GET /yup/product_order/detalle/@id', function($id){
             p.description,
 
             p.is_visible,
+
+            (
+
+                SELECT pi.img
+
+                FROM pos_product_image pi
+
+                WHERE pi.product_id = p.product_id
+
+                AND pi.borrado_el IS NULL
+
+                ORDER BY pi.orden ASC
+
+                LIMIT 1
+
+            ) AS img,
 
             (
                 d.amount * d.price_item

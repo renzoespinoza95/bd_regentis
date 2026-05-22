@@ -406,13 +406,21 @@ function insert_text_msg_app(int $chatId, int $rem, int $dest, string $texto, in
 Flight::route('POST /reg/tk_cant_msg', function(){
 
     $req = Flight::request()->data->getData();
-    $uid = intval($req['usu_id']);
+
+    $uid = intval(
+        $req['usu_id']
+    );
 
     if ($uid <= 0) {
+
         Flight::json([
+
             'estado' => 'error',
+
             'mensaje' => 'usu_id inválido'
+
         ], 400);
+
         return;
     }
 
@@ -425,43 +433,71 @@ Flight::route('POST /reg/tk_cant_msg', function(){
         ====================================== */
 
         $rows = DB::query("
+
             SELECT 
                 ch.chat_id,
 
                 ch.usu1_id,
                 u1.nombres_apellidos AS usuario1,
-                CONCAT('https://picsum.photos/seed/', u1.usu_id, '/40/40') AS img_usu1,
+                CONCAT(
+                    'https://picsum.photos/seed/',
+                    u1.usu_id,
+                    '/40/40'
+                ) AS img_usu1,
 
                 ch.usu2_id,
                 u2.nombres_apellidos AS usuario2,
-                CONCAT('https://picsum.photos/seed/', u2.usu_id, '/40/40') AS img_usu2,
+                CONCAT(
+                    'https://picsum.photos/seed/',
+                    u2.usu_id,
+                    '/40/40'
+                ) AS img_usu2,
 
                 ch.fecha_creacion,
                 ch.ultimo_mensaje,
                 ch.is_bloqueado,
 
                 (
+
                   SELECT COUNT(*)
+
                   FROM reg_msg m
+
                   WHERE m.chat_id = ch.chat_id
+
                   AND m.msg_id >
+
                     CASE 
-                      WHEN %i = ch.usu1_id THEN ch.last_seen_msg_id_u1
+
+                      WHEN %i = ch.usu1_id
+                      THEN ch.last_seen_msg_id_u1
+
                       ELSE ch.last_seen_msg_id_u2
+
                     END
+
                   AND m.dest_id = %i
+
                 ) AS no_leidos
 
             FROM reg_chat ch
-            JOIN reg_usu u1 ON u1.usu_id = ch.usu1_id
-            JOIN reg_usu u2 ON u2.usu_id = ch.usu2_id
 
-            WHERE ch.usu1_id = %i OR ch.usu2_id = %i
+            JOIN reg_usu u1
+                ON u1.usu_id = ch.usu1_id
+
+            JOIN reg_usu u2
+                ON u2.usu_id = ch.usu2_id
+
+            WHERE ch.usu1_id = %i
+            OR ch.usu2_id = %i
 
             ORDER BY ch.fecha_creacion DESC
+
         ",
-        $uid, $uid,
-        $uid, $uid
+            $uid,
+            $uid,
+            $uid,
+            $uid
         );
 
         /* ======================================
@@ -469,28 +505,60 @@ Flight::route('POST /reg/tk_cant_msg', function(){
         ====================================== */
 
         $nuevos = DB::queryFirstField("
+
             SELECT COUNT(*)
+
             FROM reg_msg m
-            JOIN reg_chat ch ON ch.chat_id = m.chat_id
-            WHERE (ch.usu1_id = %i OR ch.usu2_id = %i)
+
+            JOIN reg_chat ch
+                ON ch.chat_id = m.chat_id
+
+            WHERE (
+                ch.usu1_id = %i
+                OR ch.usu2_id = %i
+            )
+
             AND m.dest_id = %i
+
             AND m.msg_id >
+
               CASE 
-                WHEN %i = ch.usu1_id THEN ch.last_seen_msg_id_u1
+
+                WHEN %i = ch.usu1_id
+
+                THEN ch.last_seen_msg_id_u1
+
                 ELSE ch.last_seen_msg_id_u2
+
               END
-        ", $uid, $uid, $uid, $uid);
+
+        ",
+            $uid,
+            $uid,
+            $uid,
+            $uid
+        );
 
         /* ======================================
            🛒 CARRITO (ACTIVO)
         ====================================== */
 
         $carrito_count = DB::queryFirstField("
-            SELECT IFNULL(SUM(cd.cantidad),0)
+
+            SELECT IFNULL(
+                SUM(cd.cantidad),
+                0
+            )
+
             FROM reg_carrito c
-            JOIN reg_carrito_detalle cd ON cd.carrito_id = c.carrito_id
+
+            JOIN reg_carrito_detalle cd
+                ON cd.carrito_id = c.carrito_id
+
             WHERE c.usu_id = %i
-              AND c.estado = 'activo'
+
+            AND c.estado = 'activo'
+
         ", $uid);
 
         /* ======================================
@@ -498,10 +566,15 @@ Flight::route('POST /reg/tk_cant_msg', function(){
         ====================================== */
 
         $carritos_enviados = DB::queryFirstField("
+
             SELECT COUNT(*)
+
             FROM reg_carrito
+
             WHERE usu_id = %i
-              AND estado = 'enviado'
+
+            AND estado = 'enviado'
+
         ", $uid);
 
         /* ======================================
@@ -509,10 +582,101 @@ Flight::route('POST /reg/tk_cant_msg', function(){
         ====================================== */
 
         $favoritos_count = DB::queryFirstField("
+
             SELECT COUNT(*)
+
             FROM reg_fav
+
             WHERE usu_id = %i
+
         ", $uid);
+
+        /* ======================================
+           🏪 NEGOCIO DEL USUARIO
+        ====================================== */
+
+        $negocio = DB::queryFirstRow("
+
+            SELECT
+
+                n.neg_id,
+                n.nombre,
+                rxn.rubro_id
+
+            FROM reg_negxusu nxu
+
+            INNER JOIN reg_neg n
+                ON n.neg_id = nxu.neg_id
+
+            LEFT JOIN reg_rubroxneg rxn
+                ON rxn.neg_id = n.neg_id
+
+            WHERE nxu.usu_id = %i
+
+            AND nxu.is_activo = 1
+
+            AND n.is_activo = 1
+
+            AND n.borrado_el IS NULL
+
+            LIMIT 1
+
+        ", $uid);
+
+        $lista_mesas = null;
+
+        /* ======================================
+           🍽️ RUBROS CON MESAS
+        ====================================== */
+
+        if(
+            $negocio
+            &&
+            in_array(
+
+                intval(
+                    $negocio['rubro_id']
+                ),
+
+                [10,8,7,12]
+
+            )
+        ){
+
+            $lista_mesas = DB::query("
+
+                SELECT
+
+                    mesa_id,
+                    nombre,
+                    estado,
+                    neg_id
+
+                FROM resto_mesa
+
+                WHERE neg_id = %i
+
+                AND borrado_el IS NULL
+
+                ORDER BY nombre ASC
+
+            ",
+                $negocio['neg_id']
+            );
+
+            foreach($lista_mesas as &$m){
+
+                $m['mesa_id'] = intval(
+                    $m['mesa_id']
+                );
+
+                $m['neg_id'] = intval(
+                    $m['neg_id']
+                );
+
+            }
+
+        }
 
         /* ======================================
            📊 TRACKING
@@ -524,13 +688,20 @@ Flight::route('POST /reg/tk_cant_msg', function(){
 
             foreach($tracking as $t){
 
-                $track_usu_id = intval($t['usu_id'] ?? 0);
+                $track_usu_id = intval(
+                    $t['usu_id'] ?? 0
+                );
 
-                $accion = trim($t['accion'] ?? '');
+                $accion = trim(
+                    $t['accion'] ?? ''
+                );
 
-                $descripcion = trim($t['descripcion'] ?? '');
+                $descripcion = trim(
+                    $t['descripcion'] ?? ''
+                );
 
-                $extra_data = $t['extra_data'] ?? [];
+                $extra_data =
+                    $t['extra_data'] ?? [];
 
                 if(
                     !$track_usu_id
@@ -544,16 +715,18 @@ Flight::route('POST /reg/tk_cant_msg', function(){
                 ====================================== */
 
                 $product_id = intval(
-                    $extra_data['product_id'] ?? 0
+                    $extra_data['product_id']
+                    ?? 0
                 );
 
                 /* ======================================
-                   🔥 EVITAR MÁS DE 10 POR DÍA
+                   🔥 EVITAR MÁS DE 10
                 ====================================== */
 
                 if(
                     $accion === 'ver_producto'
-                    && $product_id > 0
+                    &&
+                    $product_id > 0
                 ){
 
                     $count = DB::queryFirstField("
@@ -589,23 +762,34 @@ Flight::route('POST /reg/tk_cant_msg', function(){
                 ====================================== */
 
                 DB::insert(
+
                     'reg_usuxreg',
+
                     [
 
-                        'usu_id' => $track_usu_id,
+                        'usu_id' =>
+                            $track_usu_id,
 
-                        'accion' => $accion,
+                        'accion' =>
+                            $accion,
 
-                        'descripcion' => $descripcion,
+                        'descripcion' =>
+                            $descripcion,
 
-                        'extra_data' => json_encode(
-                            $extra_data,
-                            JSON_UNESCAPED_UNICODE
-                        ),
+                        'extra_data' =>
+                            json_encode(
 
-                        'fecha_creacion' => date('Y-m-d H:i:s')
+                                $extra_data,
+
+                                JSON_UNESCAPED_UNICODE
+
+                            ),
+
+                        'fecha_creacion' =>
+                            date('Y-m-d H:i:s')
 
                     ]
+
                 );
 
             }
@@ -616,21 +800,50 @@ Flight::route('POST /reg/tk_cant_msg', function(){
            🚀 RESPONSE
         ====================================== */
 
-        Flight::json([
-            'estado'             => 'ok',
-            'mensajes_nuevos'    => (int)$nuevos,
-            'carrito_count'      => (int)$carrito_count,
-            'carritos_enviados'  => (int)$carritos_enviados, // 🔥 NUEVO
-            'favoritos_count'    => (int)$favoritos_count,
-            'data'               => $rows
-        ]);
+        $response = [
+
+            'estado' =>
+                'ok',
+
+            'mensajes_nuevos' =>
+                (int)$nuevos,
+
+            'carrito_count' =>
+                (int)$carrito_count,
+
+            'carritos_enviados' =>
+                (int)$carritos_enviados,
+
+            'favoritos_count' =>
+                (int)$favoritos_count,
+
+            'data' =>
+                $rows
+
+        ];
+
+        if($lista_mesas !== null){
+
+            $response['lista_mesas'] =
+                $lista_mesas;
+
+        }
+
+        Flight::json(
+            $response
+        );
 
     } catch (Exception $ex) {
 
         Flight::json([
+
             'estado' => 'error',
-            'mensaje' => $ex->getMessage()
+
+            'mensaje' =>
+                $ex->getMessage()
+
         ], 500);
+
     }
 
 });

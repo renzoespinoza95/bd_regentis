@@ -40,6 +40,7 @@ Flight::route('GET /usuario/listar', function(){
                 AND nxu.is_activo = 1
             LEFT JOIN reg_neg n
                 ON n.neg_id = nxu.neg_id
+            WHERE u.borrado_el IS NULL    
             ORDER BY u.usu_id DESC
         ");
 
@@ -322,7 +323,9 @@ Flight::route('POST /usuario/liquidar', function () {
 
         'is_premium'         => 0,
 
-        'fecha_fin_premium'  => '2000-01-01',
+        'fecha_fin_premium'  =>  date('Y-m-d H:i:s'),
+
+        'borrado_el'  =>  date('Y-m-d H:i:s'),
 
         'descripcion'        => $backup_json
 
@@ -2543,5 +2546,233 @@ Flight::route('POST /usuario/nuevoNegocio', function(){
         'msg' => 'Botón enviado correctamente'
 
     ]);
+
+});
+
+Flight::route('POST /NTol/usuarioAutomatico', function(){
+
+    include DEFINITION;
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    DB::startTransaction();
+
+    try{
+
+        /* ======================================
+           RANDOMS
+        ====================================== */
+
+        $nombre = DB::queryFirstField("
+
+            SELECT nombre
+
+            FROM tt_nombre
+
+            ORDER BY RAND()
+
+            LIMIT 1
+
+        ");
+
+        $apellido = DB::queryFirstField("
+
+            SELECT apellido
+
+            FROM tt_apellido
+
+            ORDER BY RAND()
+
+            LIMIT 1
+
+        ");
+
+        $nick = DB::queryFirstField("
+
+            SELECT nick
+
+            FROM tt_nick
+
+            ORDER BY RAND()
+
+            LIMIT 1
+
+        ");
+
+        /* ======================================
+           GENERAR DATOS
+        ====================================== */
+
+        $nombre_completo =
+            trim($nombre . ' ' . $apellido);
+
+        $dni = str_pad(
+
+            rand(1, 99999999),
+
+            8,
+
+            '0',
+
+            STR_PAD_LEFT
+
+        );
+
+        $celular = '9' . rand(
+
+            10000000,
+
+            99999999
+
+        );
+
+        $cod_usu =
+
+            'ADM'
+
+            . rand(1000,9999);
+
+        $google_uid = strtoupper(
+
+            substr(
+
+                md5(
+                    uniqid('',true)
+                ),
+
+                0,
+
+                10
+
+            )
+
+        );
+
+        $fecha_actual =
+            date('Y-m-d H:i:s');
+
+        /* ======================================
+           INSERT USUARIO
+        ====================================== */
+
+        DB::insert(
+
+            'reg_usu',
+
+            [
+
+                'cod_usu' =>
+                    $cod_usu,
+
+                'google_uid' =>
+                    $google_uid,
+
+                'email' =>
+                    null,
+
+                'img_perfil' =>
+
+                    'https://barsi-img.b-cdn.net/recursos/logo-regentis.png',
+
+                'sobrenombre' =>
+                    $nick,
+
+                'nombres_apellidos' =>
+                    $nombre_completo,
+
+                'celular' =>
+                    $celular,
+
+                'dni' =>
+                    $dni,
+
+                'is_activo' => 1,
+
+                'fecha_creacion' =>
+                    $fecha_actual,
+
+                'tipoxusu_id' => 1,
+
+                'rol_id' => 1,
+
+                'is_fantasma' => 1,
+
+                'is_acepto_terminos' => 0,
+
+                'clavel' => '12qw12'
+
+            ]
+
+        );
+
+        $usu_id = DB::insertId();
+
+        DB::commit();
+
+        /* ======================================
+           RESPONSE
+        ====================================== */
+
+        Flight::json([
+
+            'success' => true,
+
+            'usu_id' => $usu_id,
+
+            'usuario' => [
+
+                'usu_id' =>
+                    $usu_id,
+
+                'cod_usu' =>
+                    $cod_usu,
+
+                'google_uid' =>
+                    $google_uid,
+
+                'img_perfil' =>
+
+                    'https://barsi-img.b-cdn.net/recursos/logo-regentis.png',
+
+                'sobrenombre' =>
+                    $nick,
+
+                'nombres_apellidos' =>
+                    $nombre_completo,
+
+                'celular' =>
+                    $celular,
+
+                'dni' =>
+                    $dni,
+
+                'fecha_creacion' =>
+                    $fecha_actual,
+
+                'tipoxusu_id' => 1,
+
+                'rol_nombre' => '—',
+
+                'negocio_nombre' => '—',
+
+                'is_fantasma' => 1
+
+            ]
+
+        ]);
+
+    }catch(Exception $e){
+
+        DB::rollback();
+
+        Flight::json([
+
+            'success' => false,
+
+            'msg' => $e->getMessage()
+
+        ],500);
+
+    }
 
 });
