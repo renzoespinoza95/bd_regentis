@@ -843,22 +843,56 @@ Flight::route('POST /Ow7y/mis_pedidos', function () {
 
 });
 
-Flight::route('GET /N5BR/detalle_pedido/@carrito_id', function ($carrito_id) {
+Flight::route('POST /N5BR/detalle_pedido', function () {
+
+    include DEFINITION;
 
     DB::query("SET NAMES 'utf8mb4'");
 
     try {
 
+        $d = json_decode(
+            Flight::request()->getBody(),
+            true
+        ) ?: [];
+
+        /* ======================================
+           CAMPOS
+        ====================================== */
+
+        $carrito_id = intval(
+            $d['carrito_id'] ?? 0
+        );
+
+        $xin = trim(
+            $d['xin'] ?? ''
+        );
+
+        $yuan = trim(
+            $d['yuan'] ?? ''
+        );
+
+        /* ======================================
+           FIRMA
+        ====================================== */
+
+        firma(
+            $xin,
+            $yuan
+        );
+
         /* ======================================
            VALIDAR
         ====================================== */
-        $carrito_id = intval($carrito_id);
 
         if(!$carrito_id){
 
             Flight::json([
+
                 'status' => 'error',
+
                 'msg' => 'Pedido inválido'
+
             ], 400);
 
             return;
@@ -867,7 +901,9 @@ Flight::route('GET /N5BR/detalle_pedido/@carrito_id', function ($carrito_id) {
         /* ======================================
            🔍 OBTENER PEDIDO
         ====================================== */
+
         $pedido = DB::queryFirstRow("
+
             SELECT
 
                 c.carrito_id,
@@ -877,6 +913,8 @@ Flight::route('GET /N5BR/detalle_pedido/@carrito_id', function ($carrito_id) {
                 c.neg_id,
 
                 c.estado,
+
+                c.tipo_pedido,
 
                 c.fecha_entrega,
 
@@ -913,17 +951,38 @@ Flight::route('GET /N5BR/detalle_pedido/@carrito_id', function ($carrito_id) {
                 ========================== */
 
                 (
-                    SELECT IFNULL(SUM(cd.cantidad),0)
+
+                    SELECT IFNULL(
+                        SUM(cd.cantidad),
+                        0
+                    )
+
                     FROM reg_carrito_detalle cd
-                    WHERE cd.carrito_id = c.carrito_id
+
+                    WHERE cd.carrito_id =
+                          c.carrito_id
+
                 ) AS total_productos,
 
                 (
-                    SELECT IFNULL(SUM(
-                        cd.cantidad * cd.precio_unitario
-                    ),0)
+
+                    SELECT IFNULL(
+
+                        SUM(
+                            cd.cantidad
+                            *
+                            cd.precio_unitario
+                        ),
+
+                        0
+
+                    )
+
                     FROM reg_carrito_detalle cd
-                    WHERE cd.carrito_id = c.carrito_id
+
+                    WHERE cd.carrito_id =
+                          c.carrito_id
+
                 ) AS total_pedido
 
             FROM reg_carrito c
@@ -937,13 +996,17 @@ Flight::route('GET /N5BR/detalle_pedido/@carrito_id', function ($carrito_id) {
             WHERE c.carrito_id = %i
 
             LIMIT 1
+
         ", $carrito_id);
 
         if(!$pedido){
 
             Flight::json([
+
                 'status' => 'error',
+
                 'msg' => 'Pedido no encontrado'
+
             ], 404);
 
             return;
@@ -952,7 +1015,9 @@ Flight::route('GET /N5BR/detalle_pedido/@carrito_id', function ($carrito_id) {
         /* ======================================
            📦 PRODUCTOS
         ====================================== */
+
         $productos = DB::query("
+
             SELECT
 
                 cd.carrito_detalle_id,
@@ -968,15 +1033,27 @@ Flight::route('GET /N5BR/detalle_pedido/@carrito_id', function ($carrito_id) {
                 p.price,
 
                 (
+
                     SELECT pi.img
+
                     FROM pos_product_image pi
-                    WHERE pi.product_id = p.product_id
-                    ORDER BY pi.product_image_id ASC
+
+                    WHERE pi.product_id =
+                          p.product_id
+
+                    ORDER BY
+                        pi.product_image_id ASC
+
                     LIMIT 1
+
                 ) AS img,
 
                 (
-                    cd.cantidad * cd.precio_unitario
+
+                    cd.cantidad
+                    *
+                    cd.precio_unitario
+
                 ) AS subtotal
 
             FROM reg_carrito_detalle cd
@@ -986,12 +1063,15 @@ Flight::route('GET /N5BR/detalle_pedido/@carrito_id', function ($carrito_id) {
 
             WHERE cd.carrito_id = %i
 
-            ORDER BY cd.carrito_detalle_id ASC
+            ORDER BY
+                cd.carrito_detalle_id ASC
+
         ", $carrito_id);
 
         /* ======================================
            💳 YAPLINS
         ====================================== */
+
         $yaplins = DB::query("
 
             SELECT
@@ -1017,18 +1097,27 @@ Flight::route('GET /N5BR/detalle_pedido/@carrito_id', function ($carrito_id) {
         /* ======================================
            🚀 RESPONSE
         ====================================== */
+
         Flight::json([
+
             'status' => 'ok',
+
             'pedido' => $pedido,
+
             'yaplins' => $yaplins,
+
             'productos' => $productos
+
         ]);
 
     } catch(Exception $e){
 
         Flight::json([
+
             'status' => 'error',
+
             'msg' => $e->getMessage()
+
         ], 500);
 
     }
@@ -1097,6 +1186,7 @@ Flight::route('POST /nraz/lista_pedidos', function () {
                 c.neg_id,
 
                 c.estado,
+                c.tipo_pedido,
 
                 c.fecha_creacion AS fecha,
 
@@ -1628,14 +1718,6 @@ Flight::route('POST /YCTK/registrarVenta', function(){
         $d['usu_id_vendedor'] ?? 0
     );
 
-    $caja_id = isset($d['caja_id'])
-        ? intval($d['caja_id'])
-        : null;
-
-    $mesa_id = isset($d['mesa_id'])
-        ? intval($d['mesa_id'])
-        : null;
-
     $modo_order = trim(
         strtoupper(
             $d['modo_order']
@@ -1712,7 +1794,7 @@ Flight::route('POST /YCTK/registrarVenta', function(){
         'YAPE',
         'PLIN',
         'TRANFERENCIA',
-        'POR_PAGAR'
+        'POR PAGAR'
 
     ];
 
@@ -1804,77 +1886,6 @@ Flight::route('POST /YCTK/registrarVenta', function(){
         }
 
         /* ======================================
-           VALIDAR CAJA
-        ====================================== */
-
-        if($caja_id !== null){
-
-            $caja = DB::queryFirstRow("
-
-                SELECT caja_id
-
-                FROM pos_caja
-
-                WHERE caja_id = %i
-
-                LIMIT 1
-
-            ", $caja_id);
-
-            if(!$caja){
-
-                DB::rollback();
-
-                Flight::json([
-
-                    'status' => 'error',
-
-                    'msg' => 'Caja no encontrada'
-
-                ], 404);
-
-                return;
-            }
-
-        }
-
-        /* ======================================
-           VALIDAR MESA
-        ====================================== */
-
-        if($mesa_id !== null){
-
-            $mesa = DB::queryFirstRow("
-
-                SELECT mesa_id
-
-                FROM resto_mesa
-
-                WHERE mesa_id = %i
-                AND borrado_el IS NULL
-
-                LIMIT 1
-
-            ", $mesa_id);
-
-            if(!$mesa){
-
-                DB::rollback();
-
-                Flight::json([
-
-                    'status' => 'error',
-
-                    'msg' => 'Mesa no encontrada'
-
-                ], 404);
-
-                return;
-            }
-
-        }
-
-        /* ======================================
            CARRITO
         ====================================== */
 
@@ -1888,6 +1899,8 @@ Flight::route('POST /YCTK/registrarVenta', function(){
                 c.estado,
                 c.fecha_entrega,
                 c.cliente_id,
+                c.tipo_pedido,
+                c.mesa_id,
 
                 u.nombres_apellidos,
 
@@ -2049,17 +2062,11 @@ Flight::route('POST /YCTK/registrarVenta', function(){
                 'fecha_modificacion' =>
                     $now,
 
-                'caja_id' =>
-                    $caja_id,
-
                 'cliente_id' =>
                     $carrito['cliente_id'],
 
                 'tipo_pago' =>
                     $tipo_pago,
-
-                'mesa_id' =>
-                    $mesa_id,
 
                 'modo_order' =>
                     $modo_order,
@@ -2201,7 +2208,7 @@ Flight::route('POST /YCTK/registrarVenta', function(){
         ====================================== */
 
         if(
-            $tipo_pago == 'POR_PAGAR'
+            $tipo_pago == 'POR PAGAR'
         ){
 
             $resp_deuda = deuda_movimiento(
@@ -2249,12 +2256,29 @@ Flight::route('POST /YCTK/registrarVenta', function(){
            CARRITO
         ====================================== */
 
+        $nuevo_tipo_pedido =
+            $carrito['tipo_pedido'];
+
+        if(
+            strtoupper(
+                $carrito['tipo_pedido']
+            ) == 'MESA_PEDIDO'
+        ){
+
+            $nuevo_tipo_pedido =
+                'MESA_PAGADO';
+
+        }
+
         DB::update(
             'reg_carrito',
             [
 
                 'estado' =>
                     'comprado',
+
+                'tipo_pedido' =>
+                    $nuevo_tipo_pedido,
 
                 'fecha_modificacion' =>
                     $now
@@ -2263,6 +2287,39 @@ Flight::route('POST /YCTK/registrarVenta', function(){
             "carrito_id=%i",
             $carrito_id
         );
+
+        /* ======================================
+           LIBERAR MESA
+        ====================================== */
+
+        if(
+            strtoupper(
+                $carrito['tipo_pedido']
+            ) == 'MESA_PEDIDO'
+            &&
+            !empty(
+                $carrito['mesa_id']
+            )
+        ){
+
+            DB::update(
+
+                'resto_mesa',
+
+                [
+
+                    'estado' =>
+                        'DISPONIBLE'
+
+                ],
+
+                "mesa_id=%i",
+
+                $carrito['mesa_id']
+
+            );
+
+        }
 
         /* ======================================
            DELIVERY
@@ -2711,7 +2768,9 @@ Flight::route('POST /YCOr/rechazarPedidoDirecto', function(){
             SELECT
 
                 carrito_id,
-                estado
+                estado,
+                tipo_pedido,
+                mesa_id
 
             FROM reg_carrito
 
@@ -2737,6 +2796,26 @@ Flight::route('POST /YCOr/rechazarPedidoDirecto', function(){
         }
 
         /* ======================================
+           NUEVO TIPO PEDIDO
+        ====================================== */
+
+        $nuevo_tipo_pedido =
+            $carrito['tipo_pedido'];
+
+        if(
+
+            strtoupper(
+                $carrito['tipo_pedido']
+            ) == 'MESA_PEDIDO'
+
+        ){
+
+            $nuevo_tipo_pedido =
+                'MESA_ANULADO';
+
+        }
+
+        /* ======================================
            ACTUALIZAR CARRITO
         ====================================== */
 
@@ -2749,6 +2828,9 @@ Flight::route('POST /YCOr/rechazarPedidoDirecto', function(){
                 'estado' =>
                     'rechazado',
 
+                'tipo_pedido' =>
+                    $nuevo_tipo_pedido,
+
                 'fecha_modificacion' =>
                     $now
 
@@ -2759,6 +2841,43 @@ Flight::route('POST /YCOr/rechazarPedidoDirecto', function(){
             $carrito_id
 
         );
+
+        /* ======================================
+           LIBERAR MESA
+        ====================================== */
+
+        if(
+
+            strtoupper(
+                $carrito['tipo_pedido']
+            ) == 'MESA_PEDIDO'
+
+            &&
+
+            !empty(
+                $carrito['mesa_id']
+            )
+
+        ){
+
+            DB::update(
+
+                'resto_mesa',
+
+                [
+
+                    'estado' =>
+                        'DISPONIBLE'
+
+                ],
+
+                "mesa_id=%i",
+
+                $carrito['mesa_id']
+
+            );
+
+        }
 
         DB::commit();
 
@@ -2774,7 +2893,10 @@ Flight::route('POST /YCOr/rechazarPedidoDirecto', function(){
                 'Pedido rechazado correctamente',
 
             'carrito_id' =>
-                $carrito_id
+                $carrito_id,
+
+            'tipo_pedido' =>
+                $nuevo_tipo_pedido
 
         ]);
 
@@ -3840,12 +3962,14 @@ Flight::route('POST /HOGO/listaVentas', function(){
     $negocio = DB::queryFirstRow("
 
         SELECT
+
             neg_id,
             nombre
 
         FROM reg_neg
 
         WHERE neg_id = %i
+
         AND borrado_el IS NULL
 
         LIMIT 1
@@ -3887,13 +4011,9 @@ Flight::route('POST /HOGO/listaVentas', function(){
 
             o.fecha_modificacion,
 
-            o.caja_id,
-
             o.cliente_id,
 
             o.tipo_pago,
-
-            o.mesa_id,
 
             o.modo_order,
 
@@ -3912,9 +4032,6 @@ Flight::route('POST /HOGO/listaVentas', function(){
             c.celular
                 AS cliente_celular,
 
-            m.nombre
-                AS mesa_nombre,
-
             u.nombres_apellidos
                 AS usuario_nombre
 
@@ -3923,13 +4040,11 @@ Flight::route('POST /HOGO/listaVentas', function(){
         LEFT JOIN pos_cliente c
                ON c.cliente_id = o.cliente_id
 
-        LEFT JOIN resto_mesa m
-               ON m.mesa_id = o.mesa_id
-
         LEFT JOIN reg_usu u
                ON u.usu_id = o.usu_id_vendedor
 
         WHERE o.neg_id = %i
+
         AND o.borrado_el IS NULL
 
         ORDER BY
@@ -3943,11 +4058,35 @@ Flight::route('POST /HOGO/listaVentas', function(){
 
     foreach($ventas as &$v){
 
+        $v['product_order_id'] = intval(
+            $v['product_order_id']
+        );
+
+        $v['usu_id_vendedor'] = intval(
+            $v['usu_id_vendedor']
+        );
+
+        $v['cliente_id'] = intval(
+            $v['cliente_id']
+        );
+
+        $v['neg_id'] = intval(
+            $v['neg_id']
+        );
+
+        $v['total_fees'] = floatval(
+            $v['total_fees']
+        );
+
+        $v['tax'] = floatval(
+            $v['tax']
+        );
+
         /* ======================================
            DETALLE PRODUCTOS
         ====================================== */
 
-        $v['detalles'] = DB::query("
+        $detalles = DB::query("
 
             SELECT
 
@@ -3992,6 +4131,7 @@ Flight::route('POST /HOGO/listaVentas', function(){
 
             WHERE
                 d.product_order_id = %i
+
             AND d.borrado_el IS NULL
 
             ORDER BY
@@ -4000,6 +4140,102 @@ Flight::route('POST /HOGO/listaVentas', function(){
         ",
             $v['product_order_id']
         );
+
+        foreach($detalles as &$det){
+
+            $det['product_order_detail_id'] =
+                intval(
+                    $det['product_order_detail_id']
+                );
+
+            $det['product_order_id'] =
+                intval(
+                    $det['product_order_id']
+                );
+
+            $det['product_id'] =
+                intval(
+                    $det['product_id']
+                );
+
+            $det['amount'] =
+                intval(
+                    $det['amount']
+                );
+
+            $det['price_item'] =
+                floatval(
+                    $det['price_item']
+                );
+
+            $det['price'] =
+                floatval(
+                    $det['price']
+                );
+
+            $det['total_item'] =
+                floatval(
+                    $det['total_item']
+                );
+
+            $det['is_visible'] =
+                intval(
+                    $det['is_visible']
+                );
+
+            /* ======================================
+               IMAGENES
+            ====================================== */
+
+            $imagenes = DB::query("
+
+                SELECT
+
+                    product_image_id,
+
+                    img,
+
+                    orden,
+
+                    is_visible
+
+                FROM pos_product_image
+
+                WHERE product_id = %i
+
+                AND borrado_el IS NULL
+
+                ORDER BY orden ASC
+
+            ",
+                $det['product_id']
+            );
+
+            foreach($imagenes as &$img){
+
+                $img['product_image_id'] =
+                    intval(
+                        $img['product_image_id']
+                    );
+
+                $img['orden'] =
+                    intval(
+                        $img['orden']
+                    );
+
+                $img['is_visible'] =
+                    intval(
+                        $img['is_visible']
+                    );
+
+            }
+
+            $det['imagenes'] =
+                $imagenes;
+
+        }
+
+        $v['detalles'] = $detalles;
 
         /* ======================================
            POR PAGAR
@@ -4033,6 +4269,7 @@ Flight::route('POST /HOGO/listaVentas', function(){
 
             WHERE
                 product_order_id = %i
+
             AND borrado_el IS NULL
 
             ORDER BY
@@ -4041,6 +4278,40 @@ Flight::route('POST /HOGO/listaVentas', function(){
         ",
             $v['product_order_id']
         );
+
+        foreach($deudas as &$de){
+
+            $de['por_pagar_id'] =
+                intval(
+                    $de['por_pagar_id']
+                );
+
+            $de['product_order_id'] =
+                intval(
+                    $de['product_order_id']
+                );
+
+            $de['cliente_id'] =
+                intval(
+                    $de['cliente_id']
+                );
+
+            $de['monto_total_order'] =
+                floatval(
+                    $de['monto_total_order']
+                );
+
+            $de['monto_pagado'] =
+                floatval(
+                    $de['monto_pagado']
+                );
+
+            $de['monto_restante'] =
+                floatval(
+                    $de['monto_restante']
+                );
+
+        }
 
         if(!empty($deudas)){
 
@@ -4071,6 +4342,23 @@ Flight::route('POST /HOGO/listaVentas', function(){
 
             ];
 
+        } else {
+
+            $v['por_pagar'] = [
+
+                'tiene_deuda' =>
+                    false,
+
+                'monto_restante' =>
+                    0,
+
+                'monto_total_order' =>
+                    0,
+
+                'movimientos' => []
+
+            ];
+
         }
 
     }
@@ -4082,6 +4370,8 @@ Flight::route('POST /HOGO/listaVentas', function(){
     Flight::json([
 
         'status' => 'ok',
+
+        'negocio' => $negocio,
 
         'ventas' => $ventas
 
