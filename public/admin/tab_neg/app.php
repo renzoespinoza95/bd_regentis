@@ -281,3 +281,117 @@ Flight::route('POST /app/principal', function() {
     }
 
 });
+
+
+function veri_membresia($usu_id){
+
+    /* =====================================
+       LIMPIAR
+    ====================================== */
+
+    $usu_id = intval(
+        $usu_id
+    );
+
+    if($usu_id <= 0){
+
+        return null;
+
+    }
+
+    /* =====================================
+       BUSCAR NEGOCIO DEL USUARIO
+    ====================================== */
+
+    $negocio_usuario = DB::queryFirstRow("
+
+        SELECT
+
+            neg_id
+
+        FROM reg_negxusu
+
+        WHERE usu_id = %i
+
+        AND is_activo = 1
+
+        AND borrado_el IS NULL
+
+        ORDER BY negxusu_id DESC
+
+        LIMIT 1
+
+    ", $usu_id);
+
+    if(!$negocio_usuario){
+
+        return null;
+
+    }
+
+    $neg_id = intval(
+        $negocio_usuario['neg_id']
+    );
+
+    /* =====================================
+       BUSCAR MEMBRESIA
+    ====================================== */
+
+    $membresia = DB::queryFirstRow("
+
+        SELECT
+
+            motivo,
+
+            is_aprobado,
+
+            fecha_inicio_premium,
+
+            fecha_fin_premium
+
+        FROM reg_neg_pago
+
+        WHERE neg_id = %i
+
+        AND borrado_el IS NULL
+
+        ORDER BY fecha_fin_premium DESC,
+                 neg_pago_id DESC
+
+        LIMIT 1
+
+    ", $neg_id);
+
+    if(!$membresia){
+
+        return null;
+
+    }
+
+    /* =====================================
+       RESPONSE
+    ====================================== */
+
+    return [
+
+        'motivo' =>
+
+            $membresia['motivo'],
+
+        'is_aprobado' =>
+
+            intval(
+                $membresia['is_aprobado']
+            ),
+
+        'fecha_inicio_premium' =>
+
+            $membresia['fecha_inicio_premium'],
+
+        'fecha_fin_premium' =>
+
+            $membresia['fecha_fin_premium']
+
+    ];
+
+}

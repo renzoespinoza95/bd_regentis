@@ -38,6 +38,7 @@
       <thead>
         <tr>
           <th>ID</th>
+          <th>Foto</th>
           <th>Nombre</th>
           <th>Precio</th>
           <th>Stock</th>
@@ -282,6 +283,129 @@
         </div>
       </div>
 
+      <!-- ===========================
+      MODAL FOTO PRODUCTO
+=========================== -->
+<div id="modalFotoProduct" class="modal hide fade">
+
+  <div class="modal-header">
+
+    <h3>
+      Foto del Producto
+    </h3>
+
+  </div>
+
+  <div class="modal-body">
+
+    <!-- ACTUAL -->
+
+    <div style="margin-bottom:15px;">
+
+      <label>
+        Imagen actual
+      </label>
+
+      <div>
+
+        <img
+          :src="fotoProduct.preview || 'https://barsi-img.b-cdn.net/recursos/6qz5.png'"
+          style="
+            width:160px;
+            height:160px;
+            object-fit:cover;
+            border-radius:12px;
+            border:1px solid #ddd;
+          "
+        >
+
+      </div>
+
+    </div>
+
+    <!-- FILE -->
+
+    <div class="control-group">
+
+      <label>
+        Seleccionar imagen
+      </label>
+
+      <div class="controls">
+
+        <input
+          type="file"
+          accept="image/*"
+          @change="onSelectFotoProducto"
+        >
+
+      </div>
+
+    </div>
+
+    <!-- PREVIEW -->
+
+    <div
+      v-if="fotoProduct.previewNueva"
+      style="margin-top:15px;"
+    >
+
+      <label>
+        Previsualización
+      </label>
+
+      <div>
+
+        <img
+          :src="fotoProduct.previewNueva"
+          style="
+            width:160px;
+            height:160px;
+            object-fit:cover;
+            border-radius:12px;
+            border:1px solid #ddd;
+          "
+        >
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="modal-footer">
+
+    <button
+      class="btn btn-info pull-left"
+      @click="randomFotoProducto"
+    >
+
+      🎲 Random
+
+    </button>
+
+    <button
+      class="btn btn-primary"
+      @click="subirFotoProducto"
+    >
+
+      Subir
+
+    </button>
+
+    <button
+      class="btn"
+      data-dismiss="modal"
+    >
+
+      Cerrar
+
+    </button>
+
+  </div>
+
+</div>
+
 
       <div id="modalReporteCategoria" class="modal hide fade">
         <div class="modal-header">
@@ -337,6 +461,17 @@
       resultadosGlobal:[],
       reporteCategorias: [],
       detalle:{},
+      fotoProduct: {
+
+        product_id: 0,
+
+        preview: '',
+
+        file: null,
+
+        previewNueva: ''
+
+      },
       dt:null
     },
     methods:{
@@ -357,6 +492,17 @@
                 const p = self.productos.find(x => x.product_id == id);
                 self.abrirDetalle(p);
               })
+              .on('click','a.foto',function(e){
+
+                const id = $(this).data("id");
+
+                const p = self.productos.find(
+                  x => x.product_id == id
+                );
+
+                self.abrirFotoProducto(p);
+
+              })
               .on('click','a.editar',function(e){
                 const id = $(this).data("id");
                 const p = self.productos.find(x => x.product_id == id);
@@ -372,18 +518,93 @@
             this.dt.clear();
             this.productos.forEach(p=>{
               const actions = `
-               <div class="btn-group">
-                 <button class="btn btn-mini btn-primary dropdown-toggle" data-toggle="dropdown">Opciones <span class="caret"></span></button>
-                 <ul class="dropdown-menu">
-                   <li><a href="#" class="detalle" data-id="${p.product_id}">Detalle</a></li>
-                   <li><a href="#" class="editar"  data-id="${p.product_id}">Editar</a></li>
-                   <li><a href="#" class="eliminar" data-id="${p.product_id}">Eliminar</a></li>
-                 </ul>
-              </div>`;
-              this.dt.row.add([
-                p.product_id, p.name, p.price, p.stock,
-                p.categories_names, actions
-              ]);
+                  <div class="btn-group">
+
+                    <button
+                      class="btn btn-mini btn-primary dropdown-toggle"
+                      data-toggle="dropdown"
+                    >
+
+                      Opciones
+
+                      <span class="caret"></span>
+
+                    </button>
+
+                    <ul class="dropdown-menu">
+
+                      <li>
+                        <a href="#"
+                           class="detalle"
+                           data-id="${p.product_id}">
+                           Detalle
+                        </a>
+                      </li>
+
+                      <li>
+                        <a href="#"
+                           class="editar"
+                           data-id="${p.product_id}">
+                           Editar
+                        </a>
+                      </li>
+
+                      <li>
+                        <a href="#"
+                           class="eliminar"
+                           data-id="${p.product_id}">
+                           Eliminar
+                        </a>
+                      </li>
+
+                      <li>
+                        <a href="#"
+                           class="foto"
+                           data-id="${p.product_id}">
+                           Foto
+                        </a>
+                      </li>
+
+                    </ul>
+
+                  </div>
+                  `;
+              
+              const foto = `
+
+                <img
+                  src="${
+                    p.img ||
+                    'https://barsi-img.b-cdn.net/recursos/6qz5.png'
+                  }"
+                  style="
+                    width:55px;
+                    height:55px;
+                    object-fit:cover;
+                    border-radius:10px;
+                    border:1px solid #ddd;
+                  "
+                >
+
+                `;
+
+                this.dt.row.add([
+
+                  p.product_id,
+
+                  foto,
+
+                  p.name,
+
+                  p.price,
+
+                  p.stock,
+
+                  p.categories_names,
+
+                  actions
+
+                ]);
             });
             this.dt.draw(false);
 
@@ -488,6 +709,110 @@
         this.resultadosGlobal = [];
 
         $('#modalCrearProduct').modal('show');
+
+      },
+      abrirFotoProducto(p){
+
+        this.fotoProduct = {
+
+          product_id:
+            parseInt(
+              p.product_id,
+              10
+            ),
+
+          preview:
+            p.img || '',
+
+          file: null,
+
+          previewNueva: ''
+
+        };
+
+        $('#modalFotoProduct')
+          .modal('show');
+
+      },
+
+      onSelectFotoProducto(e){
+
+        const file =
+          e.target.files[0];
+
+        if(!file){
+          return;
+        }
+
+        this.fotoProduct.file =
+          file;
+
+        this.fotoProduct.previewNueva =
+          URL.createObjectURL(file);
+
+      },
+
+      subirFotoProducto(){
+
+        apprise(
+          'Todavía no implementado 😏'
+        );
+
+      },
+
+      randomFotoProducto(){
+
+        $.blockUI({
+
+          message:
+            'Generando foto random...'
+
+        });
+
+        axios.post(
+
+          `${this.apphost}/GcVL/producto/randomFoto`,
+
+          {
+
+            product_id:
+              this.fotoProduct.product_id
+
+          }
+
+        )
+        .then(r=>{
+
+          if(r.data.status=='ok'){
+
+            this.fotoProduct.preview =
+              r.data.img;
+
+            apprise(
+              'Foto random aplicada 🚀'
+            );
+
+            this.listar();
+
+          }
+
+        })
+        .catch(e=>{
+
+          apprise(
+
+            e.response?.data?.msg ||
+
+            'Error'
+
+          );
+
+        })
+        .finally(()=>{
+
+          $.unblockUI();
+
+        });
 
       },
       buscarProductoGlobal(){

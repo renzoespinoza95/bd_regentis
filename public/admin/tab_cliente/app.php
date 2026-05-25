@@ -562,6 +562,87 @@ function veri_publico_general($neg_id){
     }
 
     /* =====================================
+       VERIFICAR PLAN FREE
+    ====================================== */
+
+    $plan_free = DB::queryFirstRow("
+
+        SELECT
+
+            neg_pago_id
+
+        FROM reg_neg_pago
+
+        WHERE neg_id = %i
+
+        AND motivo = 'FREE'
+
+        AND borrado_el IS NULL
+
+        LIMIT 1
+
+    ", $neg_id);
+
+    /* =====================================
+       CREAR PLAN FREE
+    ====================================== */
+
+    if(!$plan_free){
+
+        $fecha_inicio =
+            date('Y-m-d H:i:s');
+
+        $fecha_fin =
+            date(
+
+                'Y-m-d H:i:s',
+
+                strtotime(
+                    '+15 days'
+                )
+
+            );
+
+        DB::insert(
+
+            'reg_neg_pago',
+
+            [
+
+                'neg_id' =>
+                    $neg_id,
+
+                'usu_id_yapeo' =>
+                    null,
+
+                'motivo' =>
+                    'FREE',
+
+                'monto' =>
+                    0.00,
+
+                'fecha_inicio_premium' =>
+                    $fecha_inicio,
+
+                'fecha_fin_premium' =>
+                    $fecha_fin,
+
+                'yaplin_id' =>
+                    null,
+
+                'is_aprobado' =>
+                    1,
+
+                'borrado_el' =>
+                    null
+
+            ]
+
+        );
+
+    }
+
+    /* =====================================
        VERIFICAR CLIENTE
     ====================================== */
 
@@ -671,15 +752,13 @@ function veri_publico_general($neg_id){
 
             COUNT(*)
 
-        FROM reg_rubroxneg
+        FROM reg_rubroxneg n
 
-        WHERE neg_id = %i
+        WHERE n.neg_id = %i
 
-        AND rubro_id IN (10,8,7,12)
+        AND n.rubro_id IN (10,8,7,12)
 
-        AND is_activo = 1
-
-        AND n.borrado_el IS NULL
+        AND n.is_activo = 1
 
     ", $neg_id);
 

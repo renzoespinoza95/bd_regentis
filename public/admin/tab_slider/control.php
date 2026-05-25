@@ -382,3 +382,93 @@ Flight::route('POST /slider/actualizarDescripcion', function () {
         ]);
     }
 });
+
+
+/* ==================================
+   🤖 CREAR SLIDER AUTOMÁTICO
+================================== */
+Flight::route('POST /GcVL/slider/automatico', function () {
+
+    include DEFINITION;
+
+    autentificar_administrador();
+
+    try {
+
+        $neg_id =
+            $administrador_actual['neg_id'];
+
+        DB::query("SET NAMES 'utf8mb4'");
+
+        $img =
+            'https://barsi-img.b-cdn.net/recursos/71ye.png';
+
+        // 🔥 obtener siguiente orden
+        $ultimoOrden = intval(
+            DB::queryFirstField("
+
+                SELECT
+                    IFNULL(MAX(orden),0)
+                FROM reg_slider
+                WHERE neg_id = %i
+
+            ", $neg_id)
+        );
+
+        DB::insert('reg_slider', [
+
+            'img' =>
+                $img,
+
+            'orden' =>
+                $ultimoOrden + 1,
+
+            'is_visible' =>
+                1,
+
+            'fecha_creacion' =>
+                date('Y-m-d H:i:s'),
+
+            'fecha_fin' =>
+                date(
+                    'Y-m-d H:i:s',
+                    strtotime('+30 days')
+                ),
+
+            'descripcion' =>
+                '',
+
+            'grupo' =>
+                'A',
+
+            'neg_id' =>
+                $neg_id
+
+        ]);
+
+        Flight::json([
+
+            'success' => true,
+
+            'slider_id' =>
+                DB::insertId(),
+
+            'img' =>
+                $img
+
+        ]);
+
+    } catch(Exception $e){
+
+        Flight::json([
+
+            'success' => false,
+
+            'error' =>
+                $e->getMessage()
+
+        ],500);
+
+    }
+
+});

@@ -38,6 +38,7 @@ Flight::route('GET /usuario/listar', function(){
             LEFT JOIN reg_negxusu nxu
                 ON nxu.usu_id = u.usu_id
                 AND nxu.is_activo = 1
+                AND nxu.borrado_el IS NULL
             LEFT JOIN reg_neg n
                 ON n.neg_id = nxu.neg_id
             WHERE u.borrado_el IS NULL    

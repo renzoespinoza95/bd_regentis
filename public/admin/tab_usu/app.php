@@ -213,7 +213,10 @@ Flight::route('POST /EUwe/registroBasico', function(){
     $xin  = $data['xin'] ?? '';
     $yuan = $data['yuan'] ?? '';
 
-    firma($xin, $yuan);
+    firma(
+        $xin,
+        $yuan
+    );
 
     /* ======================================
        PAYLOAD
@@ -235,10 +238,6 @@ Flight::route('POST /EUwe/registroBasico', function(){
         $data['nombres_apellidos'] ?? ''
     );
 
-    $img_perfil = trim(
-        $data['img_perfil'] ?? ''
-    );
-
     /* ======================================
        VALIDAR
     ====================================== */
@@ -246,8 +245,11 @@ Flight::route('POST /EUwe/registroBasico', function(){
     if(!$usu_id){
 
         Flight::json([
+
             'ok' => false,
+
             'msg' => 'usu_id requerido'
+
         ], 400);
 
         return;
@@ -256,8 +258,11 @@ Flight::route('POST /EUwe/registroBasico', function(){
     if($sobrenombre === ''){
 
         Flight::json([
+
             'ok' => false,
+
             'msg' => 'sobrenombre requerido'
+
         ], 400);
 
         return;
@@ -266,18 +271,11 @@ Flight::route('POST /EUwe/registroBasico', function(){
     if($nombres_apellidos === ''){
 
         Flight::json([
+
             'ok' => false,
+
             'msg' => 'nombres_apellidos requerido'
-        ], 400);
 
-        return;
-    }
-
-    if($img_perfil === ''){
-
-        Flight::json([
-            'ok' => false,
-            'msg' => 'img_perfil requerido'
         ], 400);
 
         return;
@@ -290,6 +288,7 @@ Flight::route('POST /EUwe/registroBasico', function(){
     $usuario = DB::queryFirstRow("
 
         SELECT 
+
             usu_id,
             sobrenombre,
             nombres_apellidos,
@@ -306,8 +305,11 @@ Flight::route('POST /EUwe/registroBasico', function(){
     if(!$usuario){
 
         Flight::json([
+
             'ok' => false,
+
             'msg' => 'Usuario no encontrado'
+
         ], 404);
 
         return;
@@ -324,20 +326,53 @@ Flight::route('POST /EUwe/registroBasico', function(){
         FROM reg_usu
 
         WHERE LOWER(sobrenombre) = LOWER(%s)
+
         AND usu_id <> %i
 
         LIMIT 1
 
-    ", $sobrenombre, $usu_id);
+    ",
+        $sobrenombre,
+        $usu_id
+    );
 
     if($existeNick){
 
         Flight::json([
+
             'ok' => false,
+
             'msg' => 'El sobrenombre ya existe'
+
         ], 409);
 
         return;
+    }
+
+    /* ======================================
+       IMAGEN RANDOM
+    ====================================== */
+
+    $img_perfil = DB::queryFirstField("
+
+        SELECT url
+
+        FROM tt_imagen
+
+        WHERE url IS NOT NULL
+        AND url != ''
+
+        ORDER BY RAND()
+
+        LIMIT 1
+
+    ");
+
+    if(!$img_perfil){
+
+        $img_perfil =
+            'https://barsi-img.b-cdn.net/recursos/ffc1.png';
+
     }
 
     /* ======================================
@@ -345,20 +380,37 @@ Flight::route('POST /EUwe/registroBasico', function(){
     ====================================== */
 
     DB::update(
+
         'reg_usu',
+
         [
-            'sobrenombre' => $sobrenombre,
-            'celular' => $celular,
-            'nombres_apellidos' => $nombres_apellidos,
-            'img_perfil' => $img_perfil
+
+            'sobrenombre' =>
+                $sobrenombre,
+
+            'celular' =>
+                $celular,
+
+            'nombres_apellidos' =>
+                $nombres_apellidos,
+
+            'img_perfil' =>
+                $img_perfil
+
         ],
+
         "usu_id=%i",
+
         $usu_id
+
     );
 
     enviar_auto_msg(
+
         $usu_id,
+
         'TXT_REGISTRO'
+
     );
 
     /* ======================================
@@ -373,20 +425,23 @@ Flight::route('POST /EUwe/registroBasico', function(){
 
         'usuario' => [
 
-            'usu_id' => $usu_id,
+            'usu_id' =>
+                $usu_id,
 
-            'sobrenombre' => $sobrenombre,
+            'sobrenombre' =>
+                $sobrenombre,
 
-            'nombres_apellidos' => $nombres_apellidos,
+            'nombres_apellidos' =>
+                $nombres_apellidos,
 
-            'img_perfil' => $img_perfil
+            'img_perfil' =>
+                $img_perfil
 
         ]
 
     ]);
 
 });
-
 
 Flight::route('POST /GbaX/buscarCodigo', function(){
 

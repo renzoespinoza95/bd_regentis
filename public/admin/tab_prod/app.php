@@ -208,6 +208,8 @@ Flight::route('POST /MylW/listar_categorias', function () {
 
             c.category_id,
 
+            c.is_activo,
+
             c.name AS descripcion
 
         FROM pos_category c
@@ -707,10 +709,6 @@ Flight::route('POST /ArWL/tienda', function () {
             'is_visible' => intval(
                 $p['is_visible']
             ),
-
-            'img' => $p['img']
-                ? $p['img']
-                : null,
 
             'imagenes' =>
                 $imagenes
@@ -2638,6 +2636,209 @@ Flight::route('POST /KgOS/ocultarCategoria', function(){
 
             'msg' =>
                 $e->getMessage()
+
+        ],500);
+
+    }
+
+});
+
+/* =========================================================
+   GUARDAR IMAGEN PRODUCTO
+========================================================= */
+
+Flight::route('POST /M4LT/guardarImagenProducto', function () {
+
+    try {
+
+        include DEFINITION;
+
+        DB::query("SET NAMES 'utf8mb4'");
+
+        $d = json_decode(
+            Flight::request()->getBody(),
+            true
+        ) ?: [];
+
+        /* =========================================
+           FIRMA
+        ========================================= */
+
+        $xin  = $d['xin'] ?? '';
+        $yuan = $d['yuan'] ?? '';
+
+        firma($xin, $yuan);
+
+        /* =========================================
+           PAYLOAD
+        ========================================= */
+
+        $product_id = intval(
+            $d['product_id'] ?? 0
+        );
+
+        $url_imagen = trim(
+            $d['url_imagen'] ?? ''
+        );
+
+        if(!$product_id){
+
+            Flight::json([
+
+                'status' => 'error',
+
+                'msg' => 'product_id requerido'
+
+            ],400);
+
+            return;
+
+        }
+
+        if(!$url_imagen){
+
+            Flight::json([
+
+                'status' => 'error',
+
+                'msg' => 'url_imagen requerida'
+
+            ],400);
+
+            return;
+
+        }
+
+        /* =========================================
+           VALIDAR PRODUCTO
+        ========================================= */
+
+        $producto = DB::queryFirstRow("
+
+            SELECT
+
+                product_id,
+                cod_producto
+
+            FROM pos_product
+
+            WHERE product_id = %i
+
+            AND borrado_el IS NULL
+
+            LIMIT 1
+
+        ", $product_id);
+
+        if(!$producto){
+
+            Flight::json([
+
+                'status' => 'error',
+
+                'msg' => 'Producto no encontrado'
+
+            ],404);
+
+            return;
+
+        }
+
+        /* =========================================
+           RESETEAR ORDENES
+        ========================================= */
+
+        DB::query("
+
+            UPDATE pos_product_image
+
+            SET orden = 0
+
+            WHERE product_id = %i
+
+            AND borrado_el IS NULL
+
+        ", $product_id);
+
+        /* =========================================
+           INSERTAR NUEVA PRINCIPAL
+        ========================================= */
+
+        DB::insert(
+
+            'pos_product_image',
+
+            [
+
+                'product_id' =>
+
+                    $product_id,
+
+                'cod_producto' =>
+
+                    $producto['cod_producto'],
+
+                'img' =>
+
+                    $url_imagen,
+
+                'orden' =>
+
+                    1,
+
+                'is_visible' =>
+
+                    1,
+
+                'fecha_creacion' =>
+
+                    date('Y-m-d H:i:s'),
+
+                'borrado_el' =>
+
+                    null
+
+            ]
+
+        );
+
+        /* =========================================
+           RESPONSE
+        ========================================= */
+
+        Flight::json([
+
+            'status' => 'ok',
+
+            'product_image_id' =>
+
+                DB::insertId(),
+
+            'product_id' =>
+
+                $product_id,
+
+            'img' =>
+
+                $url_imagen,
+
+            'orden' =>
+
+                1
+
+        ]);
+
+    } catch (Exception $e) {
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => $e->getMessage(),
+
+            'line' => $e->getLine(),
+
+            'file' => $e->getFile()
 
         ],500);
 

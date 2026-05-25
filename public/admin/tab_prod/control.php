@@ -22,17 +22,50 @@ Flight::route('GET /product/listar', function () {
     $neg_id = intval($administrador_actual['neg_id']);
 
     $rows = DB::query("
-        SELECT p.*,
-               GROUP_CONCAT(pc.category_id) AS categories_ids,
-               GROUP_CONCAT(c.name SEPARATOR ', ') AS categories_names,
-               IFNULL(MAX(i.stock_actual),0) AS stock
-        FROM pos_product p
-        LEFT JOIN pos_product_category pc ON pc.product_id = p.product_id
-        LEFT JOIN pos_category c ON c.category_id = pc.category_id
-        LEFT JOIN pos_inventario i ON i.product_id = p.product_id
-        WHERE p.neg_id=%i
-        GROUP BY p.product_id
-        ORDER BY p.product_id DESC
+        SELECT 
+                p.*,
+
+                GROUP_CONCAT(
+                    pc.category_id
+                ) AS categories_ids,
+
+                GROUP_CONCAT(
+                    c.name
+                    SEPARATOR ', '
+                ) AS categories_names,
+
+                IFNULL(
+                    MAX(i.stock_actual),
+                    0
+                ) AS stock,
+
+                (
+                    SELECT pi.img
+                    FROM pos_product_image pi
+                    WHERE pi.product_id = p.product_id
+                    AND pi.borrado_el IS NULL
+                    ORDER BY pi.orden ASC
+                    LIMIT 1
+                ) AS img
+
+            FROM pos_product p
+
+            LEFT JOIN pos_product_category pc
+                ON pc.product_id = p.product_id
+
+            LEFT JOIN pos_category c
+                ON c.category_id = pc.category_id
+
+            LEFT JOIN pos_inventario i
+                ON i.product_id = p.product_id
+
+            WHERE p.neg_id = %i
+
+            AND p.borrado_el IS NULL
+
+            GROUP BY p.product_id
+
+            ORDER BY p.product_id DESC
     ",$neg_id);
 
     foreach ($rows as &$r) {
@@ -598,5 +631,174 @@ Flight::route('POST /tito/producto/agregar', function(){
             'msg'=>$e->getMessage()
         ],500);
     }
+
+});
+
+/* ============================================================
+   RANDOM FOTO PRODUCTO
+============================================================ */
+Flight::route('POST /GcVL/producto/randomFoto', function () {
+
+    include DEFINITION;
+
+    autentificar_administrador();
+
+    global $administrador_actual;
+
+    $neg_id = intval(
+        $administrador_actual['neg_id']
+    );
+
+    $d = Flight::request()
+        ->data
+        ->getData();
+
+    $product_id = intval(
+        $d['product_id'] ?? 0
+    );
+
+    if(!$product_id){
+
+        Flight::json([
+
+            'status'=>'error',
+
+            'msg'=>'product_id requerido'
+
+        ],400);
+
+        return;
+    }
+
+    /* ======================================
+       VALIDAR PRODUCTO
+    ====================================== */
+
+    $producto = DB::queryFirstRow("
+
+        SELECT
+            product_id
+        FROM pos_product
+        WHERE product_id = %i
+        AND neg_id = %i
+        AND borrado_el IS NULL
+        LIMIT 1
+
+    ",
+        $product_id,
+        $neg_id
+    );
+
+    if(!$producto){
+
+        Flight::json([
+
+            'status'=>'error',
+
+            'msg'=>'Producto no encontrado'
+
+        ],404);
+
+        return;
+    }
+
+    /* ======================================
+       RANDOM IMAGE
+    ====================================== */
+
+    $randomImg = DB::queryFirstField("
+
+        SELECT url
+
+        FROM tt_imagen
+
+        ORDER BY RAND()
+
+        LIMIT 1
+
+    ");
+
+    if(!$randomImg){
+
+        Flight::json([
+
+            'status'=>'error',
+
+            'msg'=>'No existen imágenes'
+
+        ],404);
+
+        return;
+    }
+
+    /* ======================================
+       PRIMERA IMAGEN
+    ====================================== */
+
+    $img = DB::queryFirstRow("
+
+        SELECT
+            product_image_id
+        FROM pos_product_image
+        WHERE product_id = %i
+        AND borrado_el IS NULL
+        ORDER BY orden ASC
+        LIMIT 1
+
+    ", $product_id);
+
+    if($img){
+
+        DB::update(
+
+            'pos_product_image',
+
+            [
+
+                'img' =>
+                    $randomImg
+
+            ],
+
+            "product_image_id=%i",
+
+            $img['product_image_id']
+
+        );
+
+    }else{
+
+        DB::insert(
+
+            'pos_product_image',
+
+            [
+
+                'product_id' =>
+                    $product_id,
+
+                'img' =>
+                    $randomImg,
+
+                'orden' => 1,
+
+                'is_visible' => 1,
+
+                'fecha_creacion' =>
+                    date('Y-m-d H:i:s')
+
+            ]
+
+        );
+
+    }
+
+    Flight::json([
+
+        'status'=>'ok',
+
+        'img'=>$randomImg
+
+    ]);
 
 });

@@ -38,6 +38,7 @@
         <thead>
           <tr>
             <th>ID</th>
+            <th>Logo</th>            
             <th>Nombre</th>
             <th>Puesto</th>
             <th>Mercado</th>
@@ -187,81 +188,195 @@
       </div>
 
       <div class="modal-body">
-        <div class="control-group">
-          <label class="control-label">DNI</label>
-          <div class="controls" style="display:flex; gap:8px; align-items:center;">
-            <input v-model="propDni" class="input-medium" placeholder="DNI">
-            <button class="btn btn-primary" @click="buscarUsuPorDni">
-              <i class="icon-search icon-white"></i> Buscar
-            </button>
-          </div>
+
+  <!-- BUSCADOR -->
+
+  <div class="control-group">
+
+    <label class="control-label">
+      Código de usuario
+    </label>
+
+    <div
+      class="controls"
+      style="
+        display:flex;
+        gap:8px;
+        align-items:center;
+      "
+    >
+
+      <input
+        type="text"
+        class="span12"
+        v-model="propietario.cod_usu"
+        placeholder="Ejemplo: USR002"
+      />
+
+      <button
+        class="btn btn-primary"
+        @click="buscarUsuarioCodUsu"
+      >
+
+        <i class="icon-search icon-white"></i>
+
+        Buscar
+
+      </button>
+
+    </div>
+
+  </div>
+
+  <!-- USUARIO ENCONTRADO -->
+
+  <div
+    v-if="propietario.usuario"
+    class="well"
+    style="margin-top:15px;"
+  >
+
+    <div
+      style="
+        display:flex;
+        gap:12px;
+      "
+    >
+
+      <img
+        :src="propietario.usuario.img_perfil || 'https://barsi-img.b-cdn.net/recursos/sg3f.png'"
+        style="
+          width:70px;
+          height:70px;
+          border-radius:14px;
+          object-fit:cover;
+        "
+      >
+
+      <div style="flex:1;">
+
+        <div style="font-weight:bold;">
+          {{ propietario.usuario.nombres_apellidos }}
         </div>
 
-        <!-- Panel de usuario encontrado o asignado -->
-        <div v-if="panelUsu.visible" class="well" style="margin-top:12px;">
-
-            <h4 style="margin-top:0;">Usuario</h4>
-
-            <table class="table table-condensed">
-
-              <tr>
-                <td style="width:160px;"><b>DNI</b></td>
-                <td>{{ panelUsu.dni }}</td>
-              </tr>
-
-              <tr>
-                <td><b>Nombres</b></td>
-                <td>{{ panelUsu.nombres_apellidos }}</td>
-              </tr>
-
-              <tr>
-                <td><b>Activo</b></td>
-                <td>
-                  <span class="label" :class="panelUsu.is_activo ? 'label-success' : 'label-important'">
-                    {{ panelUsu.is_activo ? 'SI' : 'NO' }}
-                  </span>
-                </td>
-              </tr>
-
-              <tr v-if="panelUsu.negxusu_id">
-                <td><b>Asignado</b></td>
-                <td>
-                  <span class="label label-info">SI</span>
-                </td>
-              </tr>
-
-            </table>
-
-            <!-- BOTON ASIGNAR -->
-            <div v-if="!panelUsu.negxusu_id" style="margin-top:10px;">
-
-              <button class="btn btn-success" @click="asignarPropietario">
-
-                <i class="icon-user icon-white"></i>
-                Asignar propietario
-
-              </button>
-
-            </div>
-
-            <!-- BOTON ELIMINAR -->
-            <div v-if="panelUsu.negxusu_id" style="margin-top:10px;">
-
-              <button class="btn btn-danger" @click="eliminarNegxusu">
-
-                <i class="icon-trash icon-white"></i>
-                Eliminar asignación
-
-              </button>
-
-            </div>
-
-          </div>
-
-        <div v-else class="alert" style="margin-top:12px;">
-          Escribe un DNI y presiona <b>Buscar</b>.
+        <div>
+          @{{ propietario.usuario.sobrenombre }}
         </div>
+
+        <div>
+          {{ propietario.usuario.cod_usu }}
+        </div>
+
+        <div>
+          {{ propietario.usuario.celular }}
+        </div>
+
+        <div>
+          {{ propietario.usuario.email }}
+        </div>
+
       </div>
+
+      <div>
+
+        <button
+          class="btn btn-success"
+          @click="asignarPropietario"
+        >
+
+          Asignar
+
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- LISTA -->
+
+  <hr>
+
+  <h4>
+    Propietarios actuales
+  </h4>
+
+  <div
+    v-if="listaPropietarios.length <= 0"
+    class="alert"
+  >
+
+    No hay propietarios asignados
+
+  </div>
+
+  <div
+    v-for="p in listaPropietarios"
+    :key="p.negxusu_id"
+    class="well"
+    style="margin-top:10px;"
+  >
+
+    <div
+      style="
+        display:flex;
+        gap:12px;
+      "
+    >
+
+      <img
+        :src="p.img_perfil || 'https://barsi-img.b-cdn.net/recursos/sg3f.png'"
+        style="
+          width:60px;
+          height:60px;
+          border-radius:14px;
+          object-fit:cover;
+        "
+      >
+
+      <div style="flex:1;">
+
+        <div style="font-weight:bold;">
+          {{ p.nombres_apellidos }}
+        </div>
+
+        <div>
+          @{{ p.sobrenombre }}
+        </div>
+
+        <div>
+          {{ p.cod_usu }}
+        </div>
+
+        <div>
+          {{ p.celular }}
+        </div>
+
+        <div>
+          {{ p.email }}
+        </div>
+
+      </div>
+
+      <div>
+
+        <button
+          class="btn btn-danger btn-mini"
+          @click="eliminarAsignacion(p)"
+        >
+
+          Eliminar asignación
+
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
 
       <div class="modal-footer">
         <button class="btn" data-dismiss="modal">Cerrar</button>
@@ -547,6 +662,128 @@
   </div>
 </div>    
 
+
+<!-- =========================
+     MODAL SUBIR LOGO
+========================== -->
+
+<div id="modalLogoNeg" class="modal hide fade fullscreen" tabindex="-1">
+
+  <div class="modal-header">
+
+    <button type="button" class="close" data-dismiss="modal">
+      ×
+    </button>
+
+    <h3>
+      Logo del negocio
+    </h3>
+
+  </div>
+
+  <div class="modal-body">
+
+    <!-- PREVIEW ACTUAL -->
+
+    <div style="margin-bottom:20px;">
+
+      <div style="font-weight:bold; margin-bottom:8px;">
+        Logo actual
+      </div>
+
+      <img
+        :src="logoNeg.preview || 'https://barsi-img.b-cdn.net/recursos/sg3f.png'"
+        style="
+          width:160px;
+          height:160px;
+          object-fit:cover;
+          border-radius:18px;
+          border:1px solid #ddd;
+          background:#fff;
+        "
+      >
+
+    </div>
+
+    <!-- INPUT -->
+
+    <div class="control-group">
+
+      <label class="control-label">
+        Seleccionar imagen
+      </label>
+
+      <div class="controls">
+
+        <input
+          type="file"
+          accept="image/*"
+          @change="onSelectLogo"
+        >
+
+      </div>
+
+    </div>
+
+    <!-- PREVIEW NUEVA -->
+
+    <div v-if="logoNeg.nueva_preview">
+
+      <div style="font-weight:bold; margin-bottom:8px;">
+        Nueva imagen
+      </div>
+
+      <img
+        :src="logoNeg.nueva_preview"
+        style="
+          width:160px;
+          height:160px;
+          object-fit:cover;
+          border-radius:18px;
+          border:1px solid #ddd;
+          background:#fff;
+        "
+      >
+
+    </div>
+
+  </div>
+
+  <div class="modal-footer">
+
+    <button
+      class="btn btn-warning"
+      @click="logoDefecto"
+    >
+      Defecto
+    </button>
+
+    <button
+      class="btn btn-info"
+      @click="logoRandom"
+    >
+      Random
+    </button>
+
+    <button
+      class="btn btn-primary"
+      @click="subirLogo"
+    >
+      Subir
+    </button>
+
+    <button
+      class="btn"
+      data-dismiss="modal"
+    >
+      Cerrar
+    </button>
+
+  </div>
+
+</div>
+
+
   </div>
 </div>
 
@@ -564,6 +801,17 @@ const appNeg = new Vue({
 
     // data negocios
     negs: [],
+    logoNeg: {
+
+      neg_id: 0,
+
+      preview: '',
+
+      file: null,
+
+      nueva_preview: ''
+
+    },
     dtNeg: null,
     formCategoria: {
       nombre: '',
@@ -620,7 +868,22 @@ const appNeg = new Vue({
     },
 
     // propietario
-    negProp: { neg_id: 0, nombre: '' },
+    negProp: {
+
+      neg_id: 0,
+
+      nombre: ''
+
+    },
+    propietario: {
+
+      cod_usu: '',
+
+      usuario: null
+
+    },
+
+    listaPropietarios: [],
     propDni: '',
     panelUsu: {
       visible: false,
@@ -906,6 +1169,24 @@ const appNeg = new Vue({
 
               })
 
+              .on('click', 'a.logo-neg', function(e){
+
+                e.preventDefault();
+
+                const id = $(this).data('id');
+
+                const row = self.negs.find(
+                  x => parseInt(x.neg_id,10) === parseInt(id,10)
+                );
+
+                if (row) {
+
+                  self.abrirModalLogo(row);
+
+                }
+
+              })
+
               .on('click', 'a.propietario-neg', function(e){
 
                 e.preventDefault();
@@ -1029,29 +1310,57 @@ const appNeg = new Vue({
                     </a>
                   </li>
 
+                  <li>
+                    <a href="#"
+                      class="logo-neg"
+                      data-id="${n.neg_id}">
+                      Subir logo
+                    </a>
+                  </li>
+
                 </ul>
 
               </div>
 
-            `;
+            `
 
-            this.dtNeg.row.add([
+            const logo = `
 
-              n.neg_id,
+                <img
+                  src="${
+                    n.img_logo
+                    ||
+                    'https://barsi-img.b-cdn.net/recursos/sg3f.png'
+                  }"
+                  style="
+                    width:55px;
+                    height:55px;
+                    object-fit:cover;
+                    border-radius:14px;
+                    border:1px solid #ddd;
+                    background:#fff;
+                  "
+                >
 
-              n.nombre || '',
+              `;
 
-              n.puesto || '',
+              this.dtNeg.row.add([          
 
-              mercadoNombre || '',
+                n.neg_id,
+                logo,
+                n.nombre || '',
 
-              rubrosHtml,
+                n.puesto || '',
 
-              activo,
+                mercadoNombre || '',
 
-              actions
+                rubrosHtml,
 
-            ]);
+                activo,
+
+                actions
+
+              ]);
 
           });
 
@@ -1160,6 +1469,59 @@ const appNeg = new Vue({
           this.listarNeg()
 
         })
+
+    },
+
+    buscarUsuarioCodUsu(){
+
+      if(!this.propietario.cod_usu){
+
+        apprise(
+          'Ingrese código de usuario'
+        )
+
+        return
+
+      }
+
+      this.bloquear(
+        'Buscando usuario...'
+      )
+
+      axios.post(
+
+        `${this.apphost}/QQvN/buscarUsuarioCodUsu`,
+
+        {
+
+          cod_usu:
+            this.propietario.cod_usu
+
+        }
+
+      )
+      .then(r=>{
+
+        if(r.data.status=='ok'){
+
+          this.propietario.usuario =
+            r.data.usuario
+
+        }
+
+      })
+      .catch(()=>{
+
+        apprise(
+          'Usuario no encontrado'
+        )
+
+      })
+      .finally(()=>{
+
+        $.unblockUI()
+
+      })
 
     },
 
@@ -1301,129 +1663,308 @@ const appNeg = new Vue({
        PROPIETARIO (NEGXUSU)
     ========================== */
     abrirModalPropietario(n) {
-      this.negProp = { neg_id: parseInt(n.neg_id,10), nombre: (n.nombre || '') };
-      this.propDni = '';
-      this.panelUsu = { visible:false, usu_id:0, dni:'', nombres_apellidos:'', is_activo:0, negxusu_id:0 };
 
-      // al abrir, si ya hay propietario asignado lo mostramos (sin DNI)
-      this.bloquear('Cargando propietario…');
-      axios.get(`${this.apphost}/negxusu/obtener`, { params: { neg_id: this.negProp.neg_id } })
-        .then(r => {
-          // esperamos: {status:'ok', data: {negxusu_id, usu_id, dni, nombres_apellidos, is_activo} } o data null
-          const payload = r.data || {};
-          const data = payload.data || null;
+      this.negProp = {
 
-          if (data && data.usu_id) {
-            this.panelUsu = {
-              visible: true,
-              usu_id: parseInt(data.usu_id,10),
-              dni: (data.dni || ''),
-              nombres_apellidos: (data.nombres_apellidos || ''),
-              is_activo: (parseInt(data.is_activo,10) ? 1 : 0),
-              negxusu_id: parseInt(data.negxusu_id,10)
-            };
-          } else {
-            this.panelUsu.visible = false;
-          }
-        })
-        .finally(() => {
-          $.unblockUI();
-          $('#modalPropietario').modal('show');
-        });
+        neg_id: parseInt(
+          n.neg_id,
+          10
+        ),
+
+        nombre: (
+          n.nombre || ''
+        )
+
+      }
+
+      this.propietario = {
+
+        cod_usu: '',
+
+        usuario: null
+
+      }
+
+      this.listaPropietarios = []
+
+      this.listarPropietarios()
+
+      $('#modalPropietario').modal('show')
+
     },
 
-    buscarUsuPorDni() {
-      const dni = (this.propDni || '').trim();
-      if (!dni) return apprise('Escribe un DNI');
+    listarPropietarios(){
 
-      this.bloquear('Buscando usuario…');
-      axios.post(`${this.apphost}/usu/buscar-dni`, { dni: dni, neg_id: this.negProp.neg_id })
-        .then(r => {
-          // esperamos: {status:'ok', data:{usu_id,dni,nombres_apellidos,is_activo,negxusu_id?}}
-          const payload = r.data || {};
-          const u = payload.data || null;
+      this.bloquear(
+        'Cargando propietarios...'
+      )
 
-          if (!u || !u.usu_id) {
-            this.panelUsu = { visible:false, usu_id:0, dni:'', nombres_apellidos:'', is_activo:0, negxusu_id:0 };
-            apprise('No se encontró usuario con ese DNI');
-            return;
-          }
+      axios.post(
 
-          this.panelUsu = {
-            visible: true,
-            usu_id: parseInt(u.usu_id,10),
-            dni: (u.dni || dni),
-            nombres_apellidos: (u.nombres_apellidos || ''),
-            is_activo: (parseInt(u.is_activo,10) ? 1 : 0),
-            negxusu_id: (u.negxusu_id ? parseInt(u.negxusu_id,10) : 0)
-          };
+        `${this.apphost}/QQvN/neg/propietarios`,
 
-          // NOTA: aquí solo mostramos; si deseas asignar cuando no existe, me lo dices y lo agrego.
-        })
-        .finally(() => $.unblockUI());
+        {
+
+          neg_id:
+            this.negProp.neg_id
+
+        }
+
+      )
+      .then(r=>{
+
+        this.listaPropietarios =
+          r.data.rows || []
+
+      })
+      .finally(()=>{
+
+        $.unblockUI()
+
+      })
+
+    },
+
+    /* =========================
+       MODAL LOGO
+    ========================= */
+
+    abrirModalLogo(n){
+
+      this.logoNeg = {
+
+        neg_id: parseInt(
+          n.neg_id,
+          10
+        ),
+
+        preview: n.img_logo || '',
+
+        file: null,
+
+        nueva_preview: ''
+
+      }
+
+      $('#modalLogoNeg').modal('show')
+
+    },
+
+    onSelectLogo(e){
+
+      const file =
+        e.target.files[0]
+
+      if(!file){
+        return
+      }
+
+      this.logoNeg.file = file
+
+      this.logoNeg.nueva_preview =
+        URL.createObjectURL(file)
+
+    },
+
+    subirLogo(){
+
+      apprise(
+        'Todavía no implementado 😏'
+      )
+
+    },
+
+    logoDefecto(){
+
+      this.bloquear(
+        'Actualizando logo...'
+      )
+
+      axios.post(
+
+        `${this.apphost}/QQvN/neg/logo/defecto`,
+
+        {
+
+          neg_id:
+            this.logoNeg.neg_id
+
+        }
+
+      )
+      .then(r=>{
+
+        if(r.data.status=='ok'){
+
+          this.logoNeg.preview =
+            r.data.img_logo
+
+          apprise(
+            'Logo actualizado'
+          )
+
+        }
+
+      })
+      .finally(()=>{
+
+        $.unblockUI()
+
+        this.listarNeg()
+
+      })
+
+    },
+
+    logoRandom(){
+
+      this.bloquear(
+        'Generando logo random...'
+      )
+
+      axios.post(
+
+        `${this.apphost}/QQvN/neg/logo/random`,
+
+        {
+
+          neg_id:
+            this.logoNeg.neg_id
+
+        }
+
+      )
+      .then(r=>{
+
+        if(r.data.status=='ok'){
+
+          this.logoNeg.preview =
+            r.data.img_logo
+
+          apprise(
+            'Logo random aplicado'
+          )
+
+        }
+
+      })
+      .finally(()=>{
+
+        $.unblockUI()
+
+        this.listarNeg()
+
+      })
+
+    },
+
+    eliminarAsignacion(p){
+
+      if(!confirm(
+        '¿Eliminar asignación?'
+      )){
+        return
+      }
+
+      this.bloquear(
+        'Eliminando asignación...'
+      )
+
+      axios.post(
+
+        `${this.apphost}/QQvN/neg/propietario/eliminar`,
+
+        {
+
+          negxusu_id:
+            p.negxusu_id
+
+        }
+
+      )
+      .then(()=>{
+
+        apprise(
+          'Asignación eliminada'
+        )
+
+        this.listarPropietarios()
+
+      })
+      .finally(()=>{
+
+        $.unblockUI()
+
+      })
+
     },
 
     asignarPropietario(){
 
-        const neg_id = this.negProp.neg_id
-        const usu_id = this.panelUsu.usu_id
+      if(
+        !this.propietario.usuario
+      ){
+        return apprise(
+          'Busca un usuario'
+        )
+      }
 
-        if(!neg_id || !usu_id){
-          apprise('Datos inválidos')
-          return
+      this.bloquear(
+        'Asignando propietario...'
+      )
+
+      axios.post(
+
+        `${this.apphost}/negxusu/asignar`,
+
+        {
+
+          neg_id:
+            this.negProp.neg_id,
+
+          usu_id:
+            this.propietario.usuario.usu_id
+
         }
 
-        apprise(
-          `¿Asignar este usuario como propietario del negocio <b>#${neg_id}</b>?`,
-          {confirm:true},
-          ok=>{
+      )
+      .then(r=>{
 
-            if(!ok) return
+        if(r.data.status=='ok'){
 
-            $.blockUI({
-              message:'<h4>Asignando propietario...</h4>',
-              css:{border:'none',padding:'15px',background:'#000',opacity:.6,color:'#fff'}
-            })
+          apprise(
+            'Propietario asignado'
+          )
 
-            axios.post(`${this.apphost}/negxusu/asignar`,{
+          this.propietario = {
 
-              neg_id:neg_id,
-              usu_id:usu_id
+            cod_usu: '',
 
-            })
-            .then(r=>{
-
-              if(r.data.status=='ok'){
-
-                apprise('Propietario asignado correctamente')
-
-                this.panelUsu.negxusu_id = r.data.negxusu_id
-
-                this.listarNeg()
-
-              }
-              else{
-
-                apprise(r.data.msg)
-
-              }
-
-            })
-            .catch(e=>{
-
-              apprise('Error al asignar propietario')
-
-            })
-            .finally(()=>{
-
-              $.unblockUI()
-
-            })
+            usuario: null
 
           }
-        )
 
-      },
+          this.listarPropietarios()
+
+          this.listarNeg()
+
+        }
+        else{
+
+          apprise(
+            r.data.msg || 'Error'
+          )
+
+        }
+
+      })
+      .finally(()=>{
+
+        $.unblockUI()
+
+      })
+
+    },
 
     eliminarNegxusu() {
       if (!this.panelUsu.negxusu_id) return apprise('No hay asignación para eliminar');

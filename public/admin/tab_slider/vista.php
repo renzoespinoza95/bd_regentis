@@ -4,9 +4,29 @@
     <h2>Gestión de Sliders</h2>
 
     <div class="form-actions">
-      <button class="btn btn-success" @click="abrirModalCrear">
-        <i class="icon-plus icon-white"></i> Nuevo Slider
+
+      <button
+        class="btn btn-success"
+        @click="abrirModalCrear"
+      >
+
+        <i class="icon-plus icon-white"></i>
+
+        Nuevo Slider
+
       </button>
+
+      <button
+        class="btn btn-info"
+        @click="crearSliderAutomatico"
+      >
+
+        <i class="icon-magic icon-white"></i>
+
+        Automático
+
+      </button>
+
     </div>
 
     <table id="tablaSliders" class="table table-bordered table-striped">
@@ -447,6 +467,59 @@ new Vue({
         $('#snEditarDescripcion').summernote('code', s.descripcion || '');
       }, 200);
     },
+
+    crearSliderAutomatico(){
+
+        bloquearUI(
+          'Creando slider automático...'
+        )
+
+        axios.post(
+
+          this.apphost +
+          '/GcVL/slider/automatico'
+
+        )
+        .then(r=>{
+
+          desbloquearUI()
+
+          if(
+            r.data &&
+            r.data.success
+          ){
+
+            this.obtenerSliders()
+
+            apprise(
+
+              'Slider automático creado 😏'
+
+            )
+
+          }
+          else{
+
+            apprise(
+
+              'Error al crear slider'
+
+            )
+
+          }
+
+        })
+        .catch(()=>{
+
+          desbloquearUI()
+
+          apprise(
+            'Error de conexión'
+          )
+
+        })
+
+      },
     
     guardarEdicion() {
 

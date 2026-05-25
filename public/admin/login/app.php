@@ -224,11 +224,6 @@ Flight::route('POST /coral/loginById', function () {
                 u.sobrenombre,
                 u.cod_usu,
                 u.img_perfil,
-                u.rol_id,
-                u.fecha_inicio_premium,
-                u.fecha_fin_premium,
-                u.rol_id,
-
                 r.nombre AS rol_nombre,
                 r.submenu_inicio,
 
@@ -514,6 +509,7 @@ Flight::route('POST /coral/crearUsuarioFirebase', function () {
             'celular'           => null,
             'dni'               => null,
             'rol_id'            => 1,
+            'is_fantasma'       => 0,
             'is_activo'         => 1,
             'fecha_nacimiento'  => null,
             'provincia'         => null,
@@ -620,7 +616,9 @@ Flight::route('POST /WAsQ/usuario/screens', function () {
             return;
         }
 
-        $usu_id = intval($data['usu_id']);
+        $usu_id = intval(
+            $data['usu_id']
+        );
 
         if ($usu_id <= 0) {
 
@@ -649,6 +647,7 @@ Flight::route('POST /WAsQ/usuario/screens', function () {
             LEFT JOIN reg_negxusu nxu
                 ON u.usu_id = nxu.usu_id
                 AND nxu.is_activo = 1
+                AND nxu.borrado_el IS NULL
 
             WHERE u.usu_id = %i
 
@@ -698,6 +697,7 @@ Flight::route('POST /WAsQ/usuario/screens', function () {
                     ON rxn.rubro_id = sxr.rubro_id
                     AND rxn.neg_id = %i
                     AND rxn.is_activo = 1
+                    AND rxn.borrado_el IS NULL
 
                 WHERE s.tipoxusu_id = %i
                 AND s.is_visible = 1
@@ -730,6 +730,7 @@ Flight::route('POST /WAsQ/usuario/screens', function () {
 
                     WHERE sxr.screen_id = %i
                     AND r.is_activo = 1
+                    AND r.borrado_el IS NULL
 
                     ORDER BY r.nombre ASC
 
@@ -740,12 +741,22 @@ Flight::route('POST /WAsQ/usuario/screens', function () {
         }
 
         /* =========================================
+           MEMBRESIA
+        ========================================= */
+
+        $membresia = veri_membresia(
+            $usu_id
+        );
+
+        /* =========================================
            RESPONSE
         ========================================= */
 
         Flight::json([
 
             'status'  => 'ok',
+
+            'membresia' => $membresia,
 
             'screens' => $screens
 
@@ -767,8 +778,7 @@ Flight::route('POST /WAsQ/usuario/screens', function () {
 
     }
 
-});
-  
+});  
 
 function obtenerScreens($tipoxusu_id, $neg_id) {
 
