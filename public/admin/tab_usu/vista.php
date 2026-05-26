@@ -25,7 +25,7 @@
               <th>Nom. Ape.</th>
               <th>Celular</th>
               <th>DNI</th>
-              <th>Creación</th>
+              <th>Clavel</th>
               <th>Rol</th>
               <th>Tipo Usuario</th>
               <th>Negocio</th>
@@ -46,7 +46,7 @@
               <td>{{ u.nombres_apellidos }}</td>
               <td>{{ u.celular }}</td>
               <td>{{ u.dni }}</td>
-              <td>{{ u.fecha_creacion }}</td>
+              <td>{{ u.clavel }}</td>
               <td>{{ u.rol_nombre }}</td>
               <td>{{ getTipoDescripcion(u.tipoxusu_id) }}</td>
               <td>{{ u.negocio_nombre  }}</td>
@@ -83,6 +83,7 @@
                         BtnNegocio
                       </a>
                     </li> 
+
                     <li>
                       <a
                         href="#"
@@ -90,7 +91,18 @@
                       >
                         NegFantasma
                       </a>
-                    </li>                                       
+                    </li>
+
+                    <li>
+                      <a
+                        href="#"
+                        @click.prevent="iniciarSesionUsuario(u)"
+                      >
+                        Sesion
+                      </a>
+                    </li>
+
+
                   </ul>
                 </div>
               </td>
@@ -1451,6 +1463,82 @@ crearUsuarioAutomatico(){
 
       $('#modalEditarUsuario').modal('show');
     },
+
+
+    async iniciarSesionUsuario(u){
+
+      apprise(
+
+        '¿Iniciar sesión como este usuario?',
+
+        {
+          'verify': true
+        },
+
+        async (r) => {
+
+          if(!r){
+            return;
+          }
+
+          try {
+
+            bloquearUI(
+              'Iniciando sesión...'
+            );
+
+            const response = await axios.post(
+
+              this.apphost +
+              '/YfrW/loginNeg',
+
+              {
+
+                usu_id: u.usu_id
+
+              }
+
+            );
+
+            desbloquearUI();
+
+            if(
+              response.data.res === 'ok'
+            ){
+
+              window.location.href =
+                this.apphost +
+                '/admin/dash';
+
+            }else{
+
+              apprise(
+
+                response.data.msg ||
+
+                'No se pudo iniciar sesión'
+
+              );
+
+            }
+
+          } catch(e){
+
+            desbloquearUI();
+
+            console.error(e);
+
+            apprise(
+              'Error al iniciar sesión'
+            );
+
+          }
+
+        }
+
+      );
+
+    },    
     guardarEdicion() {
       // Extraemos el ID si negocioSeleccionado es un objeto, 
       // o lo usamos directamente si ya es un ID.

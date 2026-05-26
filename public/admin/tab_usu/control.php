@@ -22,6 +22,7 @@ Flight::route('GET /usuario/listar', function(){
                 u.nombres_apellidos,
                 u.fecha_nacimiento,
                 u.celular,
+                u.clavel,
                 u.provincia,
                 u.fecha_creacion,
                 u.tipoxusu_id,
