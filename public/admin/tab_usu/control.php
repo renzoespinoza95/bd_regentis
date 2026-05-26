@@ -1853,9 +1853,7 @@ Flight::route('POST /xico/usu/editar', function () {
             'fecha_nacimiento'   => $d['fecha_nacimiento'] ?? null,
             'tipoxusu_id'        => $d['tipoxusu_id'] ?? null,
             'nombres_apellidos' => $d['nombres_apellidos'] ?? null,
-            'is_activo'          => isset($d['is_activo']) ? (int)$d['is_activo'] : 1,
-            'is_premium'         => isset($d['is_premium']) ? (int)$d['is_premium'] : 0,
-            'fecha_fin_premium'  => $d['fecha_fin_premium'] ?? null
+            'is_activo'          => isset($d['is_activo']) ? (int)$d['is_activo'] : 1
         ], "usu_id=%i", $usu_id);
 
         // 2. 🔥 Lógica para reg_negxusu
