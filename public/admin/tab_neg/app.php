@@ -395,3 +395,474 @@ function veri_membresia($usu_id){
     ];
 
 }
+
+Flight::route('POST /XQzQ/detalleNeg', function(){
+
+    include DEFINITION;
+
+    $json = Flight::request()->getBody();
+
+    $data = json_decode($json);
+
+    /* ======================================
+       FIRMA
+    ====================================== */
+
+    $xin = $data->xin ?? null;
+
+    $yuan = $data->yuan ?? null;
+
+    firma($xin, $yuan);
+
+    /* ======================================
+       PAYLOAD
+    ====================================== */
+
+    $neg_id = intval(
+        $data->neg_id ?? 0
+    );
+
+    /* ======================================
+       VALIDAR
+    ====================================== */
+
+    if($neg_id <= 0){
+
+        echo json_encode([
+
+            "res" => "error",
+
+            "msg" => "neg_id inválido"
+
+        ]);
+
+        return;
+    }
+
+    /* ======================================
+       NEGOCIO
+    ====================================== */
+
+    $info_negocio = DB::queryFirstRow("
+
+        SELECT
+
+            n.neg_id,
+
+            n.cod_neg,
+
+            n.nombre,
+
+            n.celular_informes,
+
+            n.fecha_creacion,
+
+            n.is_activo,
+
+            n.ciudad,
+
+            n.provincia,
+
+            n.departamento,
+
+            n.map_lat,
+
+            n.map_lng,
+
+            n.place_id,
+
+            n.direccion,
+
+            n.is_validado,
+
+            n.img_logo,
+
+            n.fecha_ultimo_acceso,
+
+            n.puesto,
+
+            n.descripcion,
+
+            n.mercado_id,
+
+            n.lista_yape
+
+        FROM reg_neg n
+
+        WHERE n.neg_id = %i
+
+        AND n.borrado_el IS NULL
+
+        LIMIT 1
+
+    ", $neg_id);
+
+    /* ======================================
+       NO ENCONTRADO
+    ====================================== */
+
+    if(!$info_negocio){
+
+        echo json_encode([
+
+            "res" => "error",
+
+            "msg" => "Negocio no encontrado"
+
+        ]);
+
+        return;
+    }
+
+    /* ======================================
+       RESPONSE
+    ====================================== */
+
+    echo json_encode([
+
+        "res" => "ok",
+
+        "data" => $info_negocio
+
+    ]);
+
+});
+
+Flight::route('POST /Fw7L/editarMiNeg', function(){
+
+    include DEFINITION;
+
+    $json = Flight::request()->getBody();
+
+    $data = json_decode($json);
+
+    /* ======================================
+       FIRMA
+    ====================================== */
+
+    $xin = $data->xin ?? null;
+
+    $yuan = $data->yuan ?? null;
+
+    firma($xin, $yuan);
+
+    /* ======================================
+       PAYLOAD
+    ====================================== */
+
+    $neg_id = intval(
+        $data->neg_id ?? 0
+    );
+
+    $nombre = trim(
+        $data->nombre ?? ''
+    );
+
+    $celular_informes = trim(
+        $data->celular_informes ?? ''
+    );
+
+    $ciudad = trim(
+        $data->ciudad ?? ''
+    );
+
+    $provincia = trim(
+        $data->provincia ?? ''
+    );
+
+    $departamento = trim(
+        $data->departamento ?? ''
+    );
+
+    $map_lat = trim(
+        $data->map_lat ?? ''
+    );
+
+    $map_lng = trim(
+        $data->map_lng ?? ''
+    );
+
+    $place_id = trim(
+        $data->place_id ?? ''
+    );
+
+    $direccion = trim(
+        $data->direccion ?? ''
+    );
+
+    $img_logo = trim(
+        $data->img_logo ?? ''
+    );
+
+    $puesto = trim(
+        $data->puesto ?? ''
+    );
+
+    $descripcion = trim(
+        $data->descripcion ?? ''
+    );
+
+    $lista_yape = $data->lista_yape ?? null;
+
+    /* ======================================
+       VALIDAR
+    ====================================== */
+
+    if($neg_id <= 0){
+
+        echo json_encode([
+
+            "res" => "error",
+
+            "msg" => "neg_id inválido"
+
+        ]);
+
+        return;
+    }
+
+    /* ======================================
+       NEGOCIO
+    ====================================== */
+
+    $info_negocio = DB::queryFirstRow("
+
+        SELECT *
+
+        FROM reg_neg
+
+        WHERE neg_id = %i
+
+        AND borrado_el IS NULL
+
+        LIMIT 1
+
+    ", $neg_id);
+
+    if(!$info_negocio){
+
+        echo json_encode([
+
+            "res" => "error",
+
+            "msg" => "Negocio no encontrado"
+
+        ]);
+
+        return;
+    }
+
+    /* ======================================
+       UPDATE DINAMICO
+    ====================================== */
+
+    $update = [];
+
+    if(
+        $nombre !== ''
+        &&
+        $nombre != $info_negocio['nombre']
+    ){
+
+        $update['nombre'] = $nombre;
+
+    }
+
+    if(
+        $celular_informes !=
+        $info_negocio['celular_informes']
+    ){
+
+        $update['celular_informes']
+            = $celular_informes;
+
+    }
+
+    if(
+        $ciudad !=
+        $info_negocio['ciudad']
+    ){
+
+        $update['ciudad']
+            = $ciudad;
+
+    }
+
+    if(
+        $provincia !=
+        $info_negocio['provincia']
+    ){
+
+        $update['provincia']
+            = $provincia;
+
+    }
+
+    if(
+        $departamento !=
+        $info_negocio['departamento']
+    ){
+
+        $update['departamento']
+            = $departamento;
+
+    }
+
+    if(
+        $map_lat !=
+        $info_negocio['map_lat']
+    ){
+
+        $update['map_lat']
+            = $map_lat;
+
+    }
+
+    if(
+        $map_lng !=
+        $info_negocio['map_lng']
+    ){
+
+        $update['map_lng']
+            = $map_lng;
+
+    }
+
+    if(
+        $place_id !=
+        $info_negocio['place_id']
+    ){
+
+        $update['place_id']
+            = $place_id;
+
+    }
+
+    if(
+        $direccion !=
+        $info_negocio['direccion']
+    ){
+
+        $update['direccion']
+            = $direccion;
+
+    }
+
+    if(
+        $img_logo !== ''
+        &&
+        $img_logo !=
+        $info_negocio['img_logo']
+    ){
+
+        $update['img_logo']
+            = $img_logo;
+
+    }
+
+    if(
+        $puesto !=
+        $info_negocio['puesto']
+    ){
+
+        $update['puesto']
+            = $puesto;
+
+    }
+
+    if(
+        $descripcion !=
+        $info_negocio['descripcion']
+    ){
+
+        $update['descripcion']
+            = $descripcion;
+
+    }
+
+    /* ======================================
+       LISTA YAPE
+    ====================================== */
+
+    $lista_yape_json = null;
+
+    if(
+        is_array($lista_yape)
+    ){
+
+        $lista_yape_json =
+            json_encode(
+                $lista_yape,
+                JSON_UNESCAPED_UNICODE
+            );
+
+    }else{
+
+        $lista_yape_json =
+            trim(
+                strval($lista_yape)
+            );
+
+    }
+
+    if(
+        $lista_yape_json !=
+        $info_negocio['lista_yape']
+    ){
+
+        $update['lista_yape']
+            = $lista_yape_json;
+
+    }
+
+    /* ======================================
+       SIN CAMBIOS
+    ====================================== */
+
+    if(
+        empty($update)
+    ){
+
+        echo json_encode([
+
+            "res" => "ok",
+
+            "msg" => "Sin cambios"
+
+        ]);
+
+        return;
+    }
+
+    /* ======================================
+       UPDATE
+    ====================================== */
+
+    DB::update(
+
+        'reg_neg',
+
+        $update,
+
+        'neg_id=%i',
+
+        $neg_id
+
+    );
+
+    /* ======================================
+       RESPONSE
+    ====================================== */
+
+    echo json_encode([
+
+        "res" => "ok",
+
+        "msg" => "Negocio actualizado",
+
+        "campos_actualizados" =>
+            array_keys($update)
+
+    ]);
+
+});

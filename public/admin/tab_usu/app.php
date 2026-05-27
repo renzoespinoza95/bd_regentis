@@ -137,8 +137,6 @@ Flight::route('POST /ZYhL/detalleUsu', function(){
             u.google_uid,
             u.email,
             u.descripcion,
-            u.is_premium,
-            u.fecha_fin_premium,
             u.is_activo,
             u.is_fantasma,
             u.is_acepto_terminos,
@@ -854,5 +852,208 @@ Flight::route('POST /Ko3d/agregarTrabajador', function(){
         ], 500);
 
     }
+
+});
+
+
+Flight::route('POST /RhM4/editarCuentaUsu', function(){
+
+    include DEFINITION;
+
+    $json = Flight::request()->getBody();
+
+    $data = json_decode($json);
+
+    /* ======================================
+       FIRMA
+    ====================================== */
+
+    $xin = $data->xin ?? null;
+
+    $yuan = $data->yuan ?? null;
+
+    firma($xin, $yuan);
+
+    /* ======================================
+       PAYLOAD
+    ====================================== */
+
+    $usu_id = intval(
+        $data->usu_id ?? 0
+    );
+
+    $nombres_apellidos = trim(
+        $data->nombres_apellidos ?? ''
+    );
+
+    $email = trim(
+        $data->email ?? ''
+    );
+
+    $celular = trim(
+        $data->celular ?? ''
+    );
+
+    $fecha_nacimiento = trim(
+        $data->fecha_nacimiento ?? ''
+    );
+
+    $img_perfil = trim(
+        $data->img_perfil ?? ''
+    );
+
+    /* ======================================
+       VALIDAR
+    ====================================== */
+
+    if($usu_id <= 0){
+
+        echo json_encode([
+
+            "res" => "error",
+
+            "msg" => "usu_id inválido"
+
+        ]);
+
+        return;
+    }
+
+    /* ======================================
+       USUARIO
+    ====================================== */
+
+    $info_usuario = DB::queryFirstRow("
+
+        SELECT *
+
+        FROM reg_usu
+
+        WHERE usu_id = %i
+
+        AND borrado_el IS NULL
+
+        LIMIT 1
+
+    ", $usu_id);
+
+    if(!$info_usuario){
+
+        echo json_encode([
+
+            "res" => "error",
+
+            "msg" => "Usuario no encontrado"
+
+        ]);
+
+        return;
+    }
+
+    /* ======================================
+       ARMAR UPDATE DINAMICO
+    ====================================== */
+
+    $update = [];
+
+    if(
+        $nombres_apellidos !== ''
+        &&
+        $nombres_apellidos !=
+        $info_usuario['nombres_apellidos']
+    ){
+
+        $update['nombres_apellidos']
+            = $nombres_apellidos;
+
+    }
+
+    if(
+        $email !=
+        $info_usuario['email']
+    ){
+
+        $update['email']
+            = $email;
+
+    }
+
+    if(
+        $celular !=
+        $info_usuario['celular']
+    ){
+
+        $update['celular']
+            = $celular;
+
+    }
+
+    if(
+        $fecha_nacimiento !=
+        $info_usuario['fecha_nacimiento']
+    ){
+
+        $update['fecha_nacimiento']
+            = $fecha_nacimiento;
+    }
+
+    if(
+        $img_perfil !== ''
+        &&
+        $img_perfil !=
+        $info_usuario['img_perfil']
+    ){
+
+        $update['img_perfil']
+            = $img_perfil;
+
+    }
+
+    /* ======================================
+       SIN CAMBIOS
+    ====================================== */
+
+    if(
+        empty($update)
+    ){
+
+        echo json_encode([
+
+            "res" => "ok",
+
+            "msg" => "Sin cambios"
+
+        ]);
+
+        return;
+    }
+
+    /* ======================================
+       UPDATE
+    ====================================== */
+
+    DB::update(
+
+        'reg_usu',
+
+        $update,
+
+        'usu_id=%i',
+
+        $usu_id
+
+    );
+
+    /* ======================================
+       RESPONSE
+    ====================================== */
+
+    echo json_encode([
+
+        "res" => "ok",
+
+        "msg" => "Cuenta actualizada"
+
+    ]);
 
 });
