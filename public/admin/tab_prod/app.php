@@ -2745,14 +2745,15 @@ Flight::route('POST /M4LT/guardarImagenProducto', function () {
         }
 
         /* =========================================
-           RESETEAR ORDENES
+           MOVER ORDENES EXISTENTES
+           +1 A TODOS
         ========================================= */
 
         DB::query("
 
             UPDATE pos_product_image
 
-            SET orden = 0
+            SET orden = orden + 1
 
             WHERE product_id = %i
 
@@ -2761,7 +2762,8 @@ Flight::route('POST /M4LT/guardarImagenProducto', function () {
         ", $product_id);
 
         /* =========================================
-           INSERTAR NUEVA PRINCIPAL
+           INSERTAR NUEVA FOTO
+           COMO PRINCIPAL
         ========================================= */
 
         DB::insert(
@@ -2802,6 +2804,8 @@ Flight::route('POST /M4LT/guardarImagenProducto', function () {
 
         );
 
+        $product_image_id = DB::insertId();
+
         /* =========================================
            RESPONSE
         ========================================= */
@@ -2812,7 +2816,7 @@ Flight::route('POST /M4LT/guardarImagenProducto', function () {
 
             'product_image_id' =>
 
-                DB::insertId(),
+                $product_image_id,
 
             'product_id' =>
 
@@ -2843,5 +2847,221 @@ Flight::route('POST /M4LT/guardarImagenProducto', function () {
         ],500);
 
     }
+
+});
+
+
+Flight::route('POST /CK2f/eliminarFotoProducto', function(){
+
+    include DEFINITION;
+
+    $json = Flight::request()->getBody();
+
+    $data = json_decode($json);
+
+    /* ======================================
+       FIRMA
+    ====================================== */
+
+    $xin = $data->xin ?? null;
+
+    $yuan = $data->yuan ?? null;
+
+    firma($xin, $yuan);
+
+    /* ======================================
+       PAYLOAD
+    ====================================== */
+
+    $product_image_id = intval(
+        $data->product_image_id ?? 0
+    );
+
+    /* ======================================
+       VALIDAR
+    ====================================== */
+
+    if($product_image_id <= 0){
+
+        echo json_encode([
+
+            "res" => "error",
+
+            "msg" => "product_image_id inválido"
+
+        ]);
+
+        return;
+    }
+
+    /* ======================================
+       FOTO
+    ====================================== */
+
+    $info_foto = DB::queryFirstRow("
+
+        SELECT *
+
+        FROM pos_product_image
+
+        WHERE product_image_id = %i
+
+        AND borrado_el IS NULL
+
+        LIMIT 1
+
+    ", $product_image_id);
+
+    if(!$info_foto){
+
+        echo json_encode([
+
+            "res" => "error",
+
+            "msg" => "Foto no encontrada"
+
+        ]);
+
+        return;
+    }
+
+    /* ======================================
+       SOFT DELETE
+    ====================================== */
+
+    DB::update(
+
+        'pos_product_image',
+
+        [
+
+            'borrado_el' => date(
+                'Y-m-d H:i:s'
+            )
+
+        ],
+
+        'product_image_id=%i',
+
+        $product_image_id
+
+    );
+
+    /* ======================================
+       RESPONSE
+    ====================================== */
+
+    echo json_encode([
+
+        "res" => "ok",
+
+        "msg" => "Foto eliminada"
+
+    ]);
+
+});
+
+Flight::route('POST /QVhq/ordenarFotoProducto', function(){
+
+    include DEFINITION;
+
+    $json = Flight::request()->getBody();
+
+    $data = json_decode($json);
+
+    /* ======================================
+       FIRMA
+    ====================================== */
+
+    $xin = $data->xin ?? null;
+
+    $yuan = $data->yuan ?? null;
+
+    firma($xin, $yuan);
+
+    /* ======================================
+       PAYLOAD
+    ====================================== */
+
+    $lista = $data->lista ?? [];
+
+    /* ======================================
+       VALIDAR
+    ====================================== */
+
+    if(
+
+        !is_array($lista)
+
+        ||
+
+        empty($lista)
+
+    ){
+
+        echo json_encode([
+
+            "res" => "error",
+
+            "msg" => "Lista inválida"
+
+        ]);
+
+        return;
+    }
+
+    /* ======================================
+       RECORRER
+    ====================================== */
+
+    foreach($lista as $item){
+
+        $product_image_id = intval(
+            $item->product_image_id ?? 0
+        );
+
+        $orden = intval(
+            $item->orden ?? 0
+        );
+
+        if($product_image_id <= 0){
+            continue;
+        }
+
+        DB::update(
+
+            'pos_product_image',
+
+            [
+
+                'orden' => $orden
+
+            ],
+
+            '
+
+                product_image_id=%i
+
+                AND borrado_el IS NULL
+
+            ',
+
+            $product_image_id
+
+        );
+
+    }
+
+    /* ======================================
+       RESPONSE
+    ====================================== */
+
+    echo json_encode([
+
+        "res" => "ok",
+
+        "msg" => "Orden actualizado"
+
+    ]);
 
 });

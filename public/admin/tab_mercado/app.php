@@ -65,7 +65,7 @@ Flight::route('POST /NE5F/origen', function(){
 
             AND m.borrado_el IS NULL
 
-            ORDER BY m.nombre ASC
+            ORDER BY m.orden ASC
 
         ", $cat['cat_mercado_id']);
 

@@ -439,19 +439,11 @@ Flight::route('POST /reg/tk_cant_msg', function(){
 
                 ch.usu1_id,
                 u1.nombres_apellidos AS usuario1,
-                CONCAT(
-                    'https://picsum.photos/seed/',
-                    u1.usu_id,
-                    '/40/40'
-                ) AS img_usu1,
+                u1.img_perfil AS img_usu1,
 
                 ch.usu2_id,
                 u2.nombres_apellidos AS usuario2,
-                CONCAT(
-                    'https://picsum.photos/seed/',
-                    u2.usu_id,
-                    '/40/40'
-                ) AS img_usu2,
+                u2.img_perfil AS img_usu2,
 
                 ch.fecha_creacion,
                 ch.ultimo_mensaje,
