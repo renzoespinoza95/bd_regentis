@@ -24,6 +24,7 @@ Flight::route('GET /usuario/listar', function(){
                 u.celular,
                 u.clavel,
                 u.provincia,
+                u.is_fantasma,
                 u.fecha_creacion,
                 u.tipoxusu_id,
                 u.dni,
@@ -2801,3 +2802,106 @@ Flight::route('POST /NTol/usuarioAutomatico', function(){
     }
 
 });
+
+Flight::route('POST /IS54/toggleIsFantasma', function () {
+
+    include DEFINITION;
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    $json = Flight::request()->getBody();
+
+    $data = json_decode($json, true);
+
+    /* =========================================
+       PAYLOAD
+    ========================================= */
+
+    $usu_id = intval(
+        $data['usu_id'] ?? 0
+    );
+
+    if(!$usu_id){
+
+        Flight::json([
+
+            'res' => 'error',
+
+            'msg' => 'usu_id inválido'
+
+        ], 400);
+
+        return;
+    }
+
+    /* =========================================
+       USUARIO
+    ========================================= */
+
+    $usuario = DB::queryFirstRow("
+
+        SELECT
+
+            usu_id,
+            is_fantasma
+
+        FROM reg_usu
+
+        WHERE usu_id = %i
+        AND borrado_el IS NULL
+
+        LIMIT 1
+
+    ", $usu_id);
+
+    if(!$usuario){
+
+        Flight::json([
+
+            'res' => 'error',
+
+            'msg' => 'Usuario no encontrado'
+
+        ], 404);
+
+        return;
+    }
+
+    /* =========================================
+       TOGGLE
+    ========================================= */
+
+    $nuevo_estado = intval(
+        !$usuario['is_fantasma']
+    );
+
+    DB::update(
+
+        'reg_usu',
+
+        [
+
+            'is_fantasma' => $nuevo_estado
+
+        ],
+
+        'usu_id=%i',
+
+        $usu_id
+
+    );
+
+    Flight::json([
+
+        'res' => 'ok',
+
+        'msg' => $nuevo_estado
+            ? 'Usuario convertido a fantasma'
+            : 'Usuario restaurado',
+
+        'is_fantasma' => $nuevo_estado
+
+    ]);
+
+});
+

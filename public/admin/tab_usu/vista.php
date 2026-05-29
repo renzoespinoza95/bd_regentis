@@ -21,6 +21,9 @@
               <th>ID</th>
               <th>Código</th>
               <th>Google</th>
+              <th width="90">
+                  Fantasma
+              </th>
               <th>Sobrenombre</th>
               <th>Nom. Ape.</th>
               <th>Celular</th>
@@ -42,6 +45,15 @@
               <td>{{ u.usu_id }}</td>
               <td>{{ u.cod_usu }}</td>
               <td>{{ u.google_uid }}</td>
+              <td class="text-center">
+
+                  <input
+                      type="checkbox"
+                      :checked="parseInt(u.is_fantasma) === 1"
+                      @click.prevent="toggleFantasma(u)"
+                  >
+
+              </td>            
               <td>{{ u.sobrenombre }}</td>
               <td>{{ u.nombres_apellidos }}</td>
               <td>{{ u.celular }}</td>
@@ -1936,6 +1948,114 @@ crearUsuarioAutomatico(){
             console.error("Error cargando negocios:", err);
           }
     },
+
+    toggleFantasma(u) {
+
+    const accion =
+
+        parseInt(u.is_fantasma) === 1
+
+            ? 'desactivar modo fantasma'
+
+            : 'activar modo fantasma';
+
+    apprise(
+
+        '¿Deseas ' +
+
+        accion +
+
+        ' para este usuario?',
+
+        {
+
+            verify: true
+
+        },
+
+        (res) => {
+
+            if(!res){
+
+                return;
+            }
+
+            bloquearUI(
+
+                'Actualizando usuario...'
+
+            );
+
+            axios.post(
+
+                this.apphost +
+
+                '/IS54/toggleIsFantasma',
+
+                {
+
+                    usu_id: u.usu_id
+
+                }
+
+            )
+
+            .then((response) => {
+
+                desbloquearUI();
+
+                if(
+
+                    response.data.res !== 'ok'
+
+                ){
+
+                    apprise(
+
+                        response.data.msg ||
+
+                        'No se pudo actualizar'
+
+                    );
+
+                    return;
+                }
+
+                u.is_fantasma =
+
+                    parseInt(
+
+                        response.data.is_fantasma
+
+                    );
+
+                apprise(
+
+                    response.data.msg
+
+                );
+
+            })
+
+            .catch((error) => {
+
+                desbloquearUI();
+
+                console.error(error);
+
+                apprise(
+
+                    'No se pudo actualizar el usuario'
+
+                );
+
+            });
+
+        }
+
+    );
+
+},
 
     onFileChange(e) {
       this.errorUpload = '';
