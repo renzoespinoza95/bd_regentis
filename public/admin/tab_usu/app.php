@@ -516,8 +516,6 @@ Flight::route('POST /GbaX/buscarCodigo', function(){
             u.google_uid,
             u.email,
             u.descripcion,
-            u.is_premium,
-            u.fecha_fin_premium,
             u.is_activo,
             u.is_fantasma,
             u.is_acepto_terminos,
