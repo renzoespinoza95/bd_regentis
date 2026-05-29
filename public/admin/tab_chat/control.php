@@ -169,11 +169,11 @@ Flight::route('GET /msg/listar/@chat_id/@viewer_id', function ($chat_id, $viewer
     // Marcar como leído
     if ($viewer_id > 0) {
 
-        $maxId = DB::queryFirstField("
-            SELECT MAX(msg_id)
-            FROM reg_msg
-            WHERE chat_id=%i
-        ", $chat_id);
+            $maxId = DB::queryFirstField("
+                SELECT COALESCE(MAX(msg_id),0)
+                FROM reg_msg
+                WHERE chat_id=%i
+            ", $chat_id);
 
         $chat = DB::queryFirstRow("
             SELECT usu1_id, usu2_id

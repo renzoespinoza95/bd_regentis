@@ -365,18 +365,25 @@ Flight::route('GET /Z8gJ/msg/listar/@chat_id/@usu_id', function ($chat_id, $usu_
 
 });
 
-function insert_text_msg_app(int $chatId, int $rem, int $dest, string $texto, int $tipo=1): int {
+function insert_text_msg_app(int $chatId, int $rem, int $dest, string $texto, string $tipo='TEXTO'): int {
 
     $now = date('Y-m-d H:i:s');
 
     DB::insert('reg_msg', [
+
         'chat_id'        => $chatId,
         'rem_id'         => $rem,
         'dest_id'        => $dest,
+
         'contenido_rem'  => $texto,
+        'contenido_dest' => $texto,
+
         'fecha_creacion' => $now,
-        'tipoxmsg_id'    => $tipo,
+
+        'tipo_mensaje'   => 'TEXTO',
+
         'is_una_vista'   => 0
+
     ]);
 
     $msgId = (int)DB::insertId();
