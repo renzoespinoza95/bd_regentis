@@ -1672,763 +1672,6 @@ Flight::route('GET /QFeC/tipo_pago/listar', function(){
     Flight::json($rows);
 });
 
-Flight::route('POST /YCTK/registrarVenta', function(){
-
-    include DEFINITION;
-
-    DB::query("SET NAMES 'utf8mb4'");
-
-    $d = json_decode(
-        Flight::request()->getBody(),
-        true
-    ) ?: [];
-
-    /* ======================================
-       FIRMA
-    ====================================== */
-
-    $xin = trim(
-        $d['xin'] ?? ''
-    );
-
-    $yuan = trim(
-        $d['yuan'] ?? ''
-    );
-
-    firma(
-        $xin,
-        $yuan
-    );
-
-    /* ======================================
-       CAMPOS
-    ====================================== */
-
-    $carrito_id = intval(
-        $d['carrito_id'] ?? 0
-    );
-
-    $tipo_pago = trim(
-        strtoupper(
-            $d['tipo_pago'] ?? ''
-        )
-    );
-
-    $usu_id_vendedor = intval(
-        $d['usu_id_vendedor'] ?? 0
-    );
-
-    $modo_order = trim(
-        strtoupper(
-            $d['modo_order']
-            ?? 'PAGO_DIRECTO'
-        )
-    );
-
-    $fecha_inicio = !empty($d['fecha_inicio'])
-        ? $d['fecha_inicio']
-        : null;
-
-    $fecha_fin = !empty($d['fecha_fin'])
-        ? $d['fecha_fin']
-        : null;
-
-    $yaplin_id = isset($d['yaplin_id'])
-        ? intval($d['yaplin_id'])
-        : null;
-
-    if($yaplin_id <= 0){
-        $yaplin_id = null;
-    }
-
-    /* ======================================
-       VALIDAR
-    ====================================== */
-
-    if(!$carrito_id){
-
-        Flight::json([
-
-            'status' => 'error',
-
-            'msg' => 'carrito_id requerido'
-
-        ], 400);
-
-        return;
-    }
-
-    if(!$tipo_pago){
-
-        Flight::json([
-
-            'status' => 'error',
-
-            'msg' => 'tipo_pago requerido'
-
-        ], 400);
-
-        return;
-    }
-
-    if(!$usu_id_vendedor){
-
-        Flight::json([
-
-            'status' => 'error',
-
-            'msg' => 'usu_id_vendedor requerido'
-
-        ], 400);
-
-        return;
-    }
-
-    /* ======================================
-       VALIDAR ENUM TIPO PAGO
-    ====================================== */
-
-    $tipos_pago_validos = [
-
-        'EFECTIVO',
-        'YAPE',
-        'PLIN',
-        'TRANFERENCIA',
-        'POR PAGAR'
-
-    ];
-
-    if(
-        !in_array(
-            $tipo_pago,
-            $tipos_pago_validos
-        )
-    ){
-
-        Flight::json([
-
-            'status' => 'error',
-
-            'msg' => 'tipo_pago inválido'
-
-        ], 400);
-
-        return;
-    }
-
-    /* ======================================
-       VALIDAR ENUM MODO ORDER
-    ====================================== */
-
-    $modos_validos = [
-
-        'PAGO_DIRECTO',
-        'MESA_PEDIDO',
-        'MESA_PAGADO',
-        'ESTACIONAMIENTO_PEDIDO',
-        'ESTACIONAMIENTO_PAGADO'
-
-    ];
-
-    if(
-        !in_array(
-            $modo_order,
-            $modos_validos
-        )
-    ){
-
-        Flight::json([
-
-            'status' => 'error',
-
-            'msg' => 'modo_order inválido'
-
-        ], 400);
-
-        return;
-    }
-
-    DB::startTransaction();
-
-    try {
-
-        $now = date('Y-m-d H:i:s');
-
-        /* ======================================
-           VALIDAR VENDEDOR
-        ====================================== */
-
-        $vendedor = DB::queryFirstRow("
-
-            SELECT usu_id
-
-            FROM reg_usu
-
-            WHERE usu_id = %i
-
-            LIMIT 1
-
-        ", $usu_id_vendedor);
-
-        if(!$vendedor){
-
-            DB::rollback();
-
-            Flight::json([
-
-                'status' => 'error',
-
-                'msg' => 'Vendedor no encontrado'
-
-            ], 404);
-
-            return;
-        }
-
-        /* ======================================
-           CARRITO
-        ====================================== */
-
-        $carrito = DB::queryFirstRow("
-
-            SELECT
-
-                c.carrito_id,
-                c.usu_id,
-                c.neg_id,
-                c.estado,
-                c.fecha_entrega,
-                c.cliente_id,
-                c.tipo_pedido,
-                c.mesa_id,
-
-                u.nombres_apellidos,
-
-                n.nombre AS negocio
-
-            FROM reg_carrito c
-
-            INNER JOIN reg_usu u
-                ON u.usu_id = c.usu_id
-
-            INNER JOIN reg_neg n
-                ON n.neg_id = c.neg_id
-
-            WHERE c.carrito_id = %i
-
-            LIMIT 1
-
-        ", $carrito_id);
-
-        if(!$carrito){
-
-            DB::rollback();
-
-            Flight::json([
-
-                'status' => 'error',
-
-                'msg' => 'Carrito no encontrado'
-
-            ], 404);
-
-            return;
-        }
-
-        /* ======================================
-           VALIDAR ESTADO
-        ====================================== */
-
-        $estados_validos = [
-
-            'transito',
-            'enviado'
-
-        ];
-
-        if(
-            !in_array(
-                $carrito['estado'],
-                $estados_validos
-            )
-        ){
-
-            DB::rollback();
-
-            Flight::json([
-
-                'status' => 'error',
-
-                'msg' => 'El carrito ya fue procesado'
-
-            ], 400);
-
-            return;
-        }
-
-        /* ======================================
-           ITEMS
-        ====================================== */
-
-        $items = DB::query("
-
-            SELECT
-
-                cd.carrito_detalle_id,
-                cd.product_id,
-                cd.cantidad,
-                cd.precio_unitario,
-
-                p.name
-
-            FROM reg_carrito_detalle cd
-
-            INNER JOIN pos_product p
-                ON p.product_id = cd.product_id
-
-            WHERE cd.carrito_id = %i
-
-            ORDER BY cd.carrito_detalle_id ASC
-
-        ", $carrito_id);
-
-        if(empty($items)){
-
-            DB::rollback();
-
-            Flight::json([
-
-                'status' => 'error',
-
-                'msg' => 'El carrito no tiene productos'
-
-            ], 400);
-
-            return;
-        }
-
-        /* ======================================
-           TOTAL
-        ====================================== */
-
-        $total = 0;
-
-        foreach($items as $it){
-
-            $total += (
-                floatval(
-                    $it['precio_unitario']
-                )
-                *
-                intval(
-                    $it['cantidad']
-                )
-            );
-
-        }
-
-        /* ======================================
-           SERIAL
-        ====================================== */
-
-        $serial =
-            'VT-'
-            . date('YmdHis')
-            . '-'
-            . rand(100,999);
-
-        /* ======================================
-           ORDEN
-        ====================================== */
-
-        DB::insert(
-            'pos_product_order',
-            [
-
-                'usu_id_vendedor' =>
-                    $usu_id_vendedor,
-
-                'total_fees' =>
-                    $total,
-
-                'tax' => 0,
-
-                'serial' =>
-                    $serial,
-
-                'fecha_creacion' =>
-                    $now,
-
-                'fecha_modificacion' =>
-                    $now,
-
-                'cliente_id' =>
-                    $carrito['cliente_id'],
-
-                'tipo_pago' =>
-                    $tipo_pago,
-
-                'modo_order' =>
-                    $modo_order,
-
-                'fecha_inicio' =>
-                    $fecha_inicio,
-
-                'fecha_fin' =>
-                    $fecha_fin,
-
-                'neg_id' =>
-                    $carrito['neg_id'],
-
-                'borrado_el' => null
-
-            ]
-        );
-
-        $product_order_id =
-            DB::insertId();
-
-        /* ======================================
-           DETALLES
-        ====================================== */
-
-        foreach($items as $it){
-
-            $product_id = intval(
-                $it['product_id']
-            );
-
-            $cantidad = intval(
-                $it['cantidad']
-            );
-
-            $precio = floatval(
-                $it['precio_unitario']
-            );
-
-            DB::insert(
-                'pos_product_order_detail',
-                [
-
-                    'product_order_id' =>
-                        $product_order_id,
-
-                    'product_id' =>
-                        $product_id,
-
-                    'product_name' =>
-                        $it['name'],
-
-                    'amount' =>
-                        $cantidad,
-
-                    'price_item' =>
-                        $precio,
-
-                    'fecha_creacion' =>
-                        $now,
-
-                    'fecha_modificacion' =>
-                        $now,
-
-                    'borrado_el' => null
-
-                ]
-            );
-
-            $stock_actual =
-                intval(
-                    DB::queryFirstField("
-
-                        SELECT stock_actual
-
-                        FROM pos_inventario
-
-                        WHERE product_id = %i
-
-                        LIMIT 1
-
-                    ", $product_id)
-                );
-
-            $nuevo_stock =
-                $stock_actual
-                -
-                $cantidad;
-
-            DB::insert(
-                'pos_inventario_movimiento',
-                [
-
-                    'product_id' =>
-                        $product_id,
-
-                    'tipo' =>
-                        'SALIDA',
-
-                    'origen' =>
-                        'VENTA',
-
-                    'cantidad' =>
-                        $cantidad,
-
-                    'precio_unitario' =>
-                        $precio,
-
-                    'fecha' =>
-                        $now,
-
-                    'stock_resultante' =>
-                        $nuevo_stock,
-
-                    'neg_id' =>
-                        $carrito['neg_id']
-
-                ]
-            );
-
-            DB::query("
-
-                UPDATE pos_inventario
-
-                SET stock_actual =
-                    stock_actual - %i
-
-                WHERE product_id = %i
-
-            ",
-                $cantidad,
-                $product_id
-            );
-
-        }
-
-        /* ======================================
-           POR PAGAR
-        ====================================== */
-
-        if(
-            $tipo_pago == 'POR PAGAR'
-        ){
-
-            $resp_deuda = deuda_movimiento(
-
-                $product_order_id,
-
-                $carrito['cliente_id'],
-
-                $carrito['neg_id'],
-
-                'DEUDA_INICIAL',
-
-                0,
-
-                'POR PAGAR',
-
-                'Venta creada como deuda'
-
-            );
-
-            if(
-                empty($resp_deuda['ok'])
-            ){
-
-                DB::rollback();
-
-                Flight::json([
-
-                    'status' => 'error',
-
-                    'msg' =>
-                        'Error creando deuda: '
-                        .
-                        $resp_deuda['msg']
-
-                ],500);
-
-                return;
-
-            }
-
-        }
-
-        /* ======================================
-           CARRITO
-        ====================================== */
-
-        $nuevo_tipo_pedido =
-            $carrito['tipo_pedido'];
-
-        if(
-            strtoupper(
-                $carrito['tipo_pedido']
-            ) == 'MESA_PEDIDO'
-        ){
-
-            $nuevo_tipo_pedido =
-                'MESA_PAGADO';
-
-        }
-
-        DB::update(
-            'reg_carrito',
-            [
-
-                'estado' =>
-                    'comprado',
-
-                'tipo_pedido' =>
-                    $nuevo_tipo_pedido,
-
-                'fecha_modificacion' =>
-                    $now
-
-            ],
-            "carrito_id=%i",
-            $carrito_id
-        );
-
-        /* ======================================
-           LIBERAR MESA
-        ====================================== */
-
-        if(
-            strtoupper(
-                $carrito['tipo_pedido']
-            ) == 'MESA_PEDIDO'
-            &&
-            !empty(
-                $carrito['mesa_id']
-            )
-        ){
-
-            DB::update(
-
-                'resto_mesa',
-
-                [
-
-                    'estado' =>
-                        'DISPONIBLE'
-
-                ],
-
-                "mesa_id=%i",
-
-                $carrito['mesa_id']
-
-            );
-
-        }
-
-        /* ======================================
-           DELIVERY
-        ====================================== */
-
-        $delivery =
-            DB::queryFirstRow("
-
-                SELECT deli_entrega_id
-
-                FROM deli_entrega
-
-                WHERE carrito_id = %i
-
-                LIMIT 1
-
-            ", $carrito_id);
-
-        if($delivery){
-
-            DB::update(
-                'deli_entrega',
-                [
-
-                    'estado' =>
-                        'entregado',
-
-                    'fecha_entrega' =>
-                        $now
-
-                ],
-                "carrito_id=%i",
-                $carrito_id
-            );
-
-        }
-
-        /* ======================================
-           YAPLIN
-        ====================================== */
-
-        if($yaplin_id !== null){
-
-            DB::update(
-                'reg_yaplin',
-                [
-
-                    'neg_id' =>
-                        $carrito['neg_id'],
-
-                    'cliente_id' =>
-                        $carrito['cliente_id'],
-
-                    'usu_id' =>
-                        $usu_id_vendedor,
-
-                    'estado' =>
-                        'PROCESADO',
-
-                    'fecha_modificacion' =>
-                        $now
-
-                ],
-                "yaplin_id=%i",
-                $yaplin_id
-            );
-
-        }
-
-        DB::commit();
-
-        Flight::json([
-
-            'status' => 'ok',
-
-            'msg' =>
-                'Venta registrada correctamente',
-
-            'product_order_id' =>
-                $product_order_id,
-
-            'carrito_id' =>
-                $carrito_id,
-
-            'tipo_pago' =>
-                $tipo_pago,
-
-            'total' =>
-                $total
-
-        ]);
-
-    } catch(Exception $e){
-
-        DB::rollback();
-
-        Flight::json([
-
-            'status' => 'error',
-
-            'msg' =>
-                $e->getMessage()
-
-        ], 500);
-
-    }
-
-});
-
 Flight::route('POST /P22W/obtenerYaplin', function(){
 
     include DEFINITION;
@@ -5899,6 +5142,763 @@ Flight::route('POST /b3by/miMesita', function(){
                 $e->getMessage()
 
         ],500);
+
+    }
+
+});
+
+Flight::route('POST /YCTK/registrarVenta', function(){
+
+    include DEFINITION;
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    $d = json_decode(
+        Flight::request()->getBody(),
+        true
+    ) ?: [];
+
+    /* ======================================
+       FIRMA
+    ====================================== */
+
+    $xin = trim(
+        $d['xin'] ?? ''
+    );
+
+    $yuan = trim(
+        $d['yuan'] ?? ''
+    );
+
+    firma(
+        $xin,
+        $yuan
+    );
+
+    /* ======================================
+       CAMPOS
+    ====================================== */
+
+    $carrito_id = intval(
+        $d['carrito_id'] ?? 0
+    );
+
+    $tipo_pago = trim(
+        strtoupper(
+            $d['tipo_pago'] ?? ''
+        )
+    );
+
+    $usu_id_vendedor = intval(
+        $d['usu_id_vendedor'] ?? 0
+    );
+
+    $modo_order = trim(
+        strtoupper(
+            $d['modo_order']
+            ?? 'PAGO_DIRECTO'
+        )
+    );
+
+    $fecha_inicio = !empty($d['fecha_inicio'])
+        ? $d['fecha_inicio']
+        : null;
+
+    $fecha_fin = !empty($d['fecha_fin'])
+        ? $d['fecha_fin']
+        : null;
+
+    $yaplin_id = isset($d['yaplin_id'])
+        ? intval($d['yaplin_id'])
+        : null;
+
+    if($yaplin_id <= 0){
+        $yaplin_id = null;
+    }
+
+    /* ======================================
+       VALIDAR
+    ====================================== */
+
+    if(!$carrito_id){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => 'carrito_id requerido'
+
+        ], 400);
+
+        return;
+    }
+
+    if(!$tipo_pago){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => 'tipo_pago requerido'
+
+        ], 400);
+
+        return;
+    }
+
+    if(!$usu_id_vendedor){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => 'usu_id_vendedor requerido'
+
+        ], 400);
+
+        return;
+    }
+
+    /* ======================================
+       VALIDAR ENUM TIPO PAGO
+    ====================================== */
+
+    $tipos_pago_validos = [
+
+        'EFECTIVO',
+        'YAPE',
+        'PLIN',
+        'TRANFERENCIA',
+        'POR_PAGAR'
+
+    ];
+
+    if(
+        !in_array(
+            $tipo_pago,
+            $tipos_pago_validos
+        )
+    ){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => 'tipo_pago inválido'
+
+        ], 400);
+
+        return;
+    }
+
+    /* ======================================
+       VALIDAR ENUM MODO ORDER
+    ====================================== */
+
+    $modos_validos = [
+
+        'PAGO_DIRECTO',
+        'MESA_PEDIDO',
+        'MESA_PAGADO',
+        'ESTACIONAMIENTO_PEDIDO',
+        'ESTACIONAMIENTO_PAGADO'
+
+    ];
+
+    if(
+        !in_array(
+            $modo_order,
+            $modos_validos
+        )
+    ){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => 'modo_order inválido'
+
+        ], 400);
+
+        return;
+    }
+
+    DB::startTransaction();
+
+    try {
+
+        $now = date('Y-m-d H:i:s');
+
+        /* ======================================
+           VALIDAR VENDEDOR
+        ====================================== */
+
+        $vendedor = DB::queryFirstRow("
+
+            SELECT usu_id
+
+            FROM reg_usu
+
+            WHERE usu_id = %i
+
+            LIMIT 1
+
+        ", $usu_id_vendedor);
+
+        if(!$vendedor){
+
+            DB::rollback();
+
+            Flight::json([
+
+                'status' => 'error',
+
+                'msg' => 'Vendedor no encontrado'
+
+            ], 404);
+
+            return;
+        }
+
+        /* ======================================
+           CARRITO
+        ====================================== */
+
+        $carrito = DB::queryFirstRow("
+
+            SELECT
+
+                c.carrito_id,
+                c.usu_id,
+                c.neg_id,
+                c.estado,
+                c.fecha_entrega,
+                c.cliente_id,
+                c.tipo_pedido,
+                c.mesa_id,
+
+                u.nombres_apellidos,
+
+                n.nombre AS negocio
+
+            FROM reg_carrito c
+
+            INNER JOIN reg_usu u
+                ON u.usu_id = c.usu_id
+
+            INNER JOIN reg_neg n
+                ON n.neg_id = c.neg_id
+
+            WHERE c.carrito_id = %i
+
+            LIMIT 1
+
+        ", $carrito_id);
+
+        if(!$carrito){
+
+            DB::rollback();
+
+            Flight::json([
+
+                'status' => 'error',
+
+                'msg' => 'Carrito no encontrado'
+
+            ], 404);
+
+            return;
+        }
+
+        /* ======================================
+           VALIDAR ESTADO
+        ====================================== */
+
+        $estados_validos = [
+
+            'transito',
+            'enviado'
+
+        ];
+
+        if(
+            !in_array(
+                $carrito['estado'],
+                $estados_validos
+            )
+        ){
+
+            DB::rollback();
+
+            Flight::json([
+
+                'status' => 'error',
+
+                'msg' => 'El carrito ya fue procesado'
+
+            ], 400);
+
+            return;
+        }
+
+        /* ======================================
+           ITEMS
+        ====================================== */
+
+        $items = DB::query("
+
+            SELECT
+
+                cd.carrito_detalle_id,
+                cd.product_id,
+                cd.cantidad,
+                cd.precio_unitario,
+
+                p.name
+
+            FROM reg_carrito_detalle cd
+
+            INNER JOIN pos_product p
+                ON p.product_id = cd.product_id
+
+            WHERE cd.carrito_id = %i
+
+            ORDER BY cd.carrito_detalle_id ASC
+
+        ", $carrito_id);
+
+        if(empty($items)){
+
+            DB::rollback();
+
+            Flight::json([
+
+                'status' => 'error',
+
+                'msg' => 'El carrito no tiene productos'
+
+            ], 400);
+
+            return;
+        }
+
+        /* ======================================
+           TOTAL
+        ====================================== */
+
+        $total = 0;
+
+        foreach($items as $it){
+
+            $total += (
+                floatval(
+                    $it['precio_unitario']
+                )
+                *
+                intval(
+                    $it['cantidad']
+                )
+            );
+
+        }
+
+        /* ======================================
+           SERIAL
+        ====================================== */
+
+        $serial =
+            'VT-'
+            . date('YmdHis')
+            . '-'
+            . rand(100,999);
+
+        /* ======================================
+           ORDEN
+        ====================================== */
+
+        DB::insert(
+            'pos_product_order',
+            [
+
+                'usu_id_vendedor' =>
+                    $usu_id_vendedor,
+
+                'total_fees' =>
+                    $total,
+
+                'tax' => 0,
+
+                'serial' =>
+                    $serial,
+
+                'fecha_creacion' =>
+                    $now,
+
+                'fecha_modificacion' =>
+                    $now,
+
+                'cliente_id' =>
+                    $carrito['cliente_id'],
+
+                'tipo_pago' =>
+                    $tipo_pago,
+
+                'modo_order' =>
+                    $modo_order,
+
+                'fecha_inicio' =>
+                    $fecha_inicio,
+
+                'fecha_fin' =>
+                    $fecha_fin,
+
+                'neg_id' =>
+                    $carrito['neg_id'],
+
+                'borrado_el' => null
+
+            ]
+        );
+
+        $product_order_id =
+            DB::insertId();
+
+        /* ======================================
+           DETALLES
+        ====================================== */
+
+        foreach($items as $it){
+
+            $product_id = intval(
+                $it['product_id']
+            );
+
+            $cantidad = intval(
+                $it['cantidad']
+            );
+
+            $precio = floatval(
+                $it['precio_unitario']
+            );
+
+            DB::insert(
+                'pos_product_order_detail',
+                [
+
+                    'product_order_id' =>
+                        $product_order_id,
+
+                    'product_id' =>
+                        $product_id,
+
+                    'product_name' =>
+                        $it['name'],
+
+                    'amount' =>
+                        $cantidad,
+
+                    'price_item' =>
+                        $precio,
+
+                    'fecha_creacion' =>
+                        $now,
+
+                    'fecha_modificacion' =>
+                        $now,
+
+                    'borrado_el' => null
+
+                ]
+            );
+
+            $stock_actual =
+                intval(
+                    DB::queryFirstField("
+
+                        SELECT stock_actual
+
+                        FROM pos_inventario
+
+                        WHERE product_id = %i
+
+                        LIMIT 1
+
+                    ", $product_id)
+                );
+
+            $nuevo_stock =
+                $stock_actual
+                -
+                $cantidad;
+
+            DB::insert(
+                'pos_inventario_movimiento',
+                [
+
+                    'product_id' =>
+                        $product_id,
+
+                    'tipo' =>
+                        'SALIDA',
+
+                    'origen' =>
+                        'VENTA',
+
+                    'cantidad' =>
+                        $cantidad,
+
+                    'precio_unitario' =>
+                        $precio,
+
+                    'fecha' =>
+                        $now,
+
+                    'stock_resultante' =>
+                        $nuevo_stock,
+
+                    'neg_id' =>
+                        $carrito['neg_id']
+
+                ]
+            );
+
+            DB::query("
+
+                UPDATE pos_inventario
+
+                SET stock_actual =
+                    stock_actual - %i
+
+                WHERE product_id = %i
+
+            ",
+                $cantidad,
+                $product_id
+            );
+
+        }
+
+        /* ======================================
+           POR PAGAR
+        ====================================== */
+
+        if(
+            $tipo_pago == 'POR_PAGAR'
+        ){
+
+            $resp_deuda = deuda_movimiento(
+
+                $product_order_id,
+
+                $carrito['cliente_id'],
+
+                $carrito['neg_id'],
+
+                'DEUDA_INICIAL',
+
+                0,
+
+                'POR_PAGAR',
+
+                'Venta creada como deuda'
+
+            );
+
+            if(
+                empty($resp_deuda['ok'])
+            ){
+
+                DB::rollback();
+
+                Flight::json([
+
+                    'status' => 'error',
+
+                    'msg' =>
+                        'Error creando deuda: '
+                        .
+                        $resp_deuda['msg']
+
+                ],500);
+
+                return;
+
+            }
+
+        }
+
+        /* ======================================
+           CARRITO
+        ====================================== */
+
+        $nuevo_tipo_pedido =
+            $carrito['tipo_pedido'];
+
+        if(
+            strtoupper(
+                $carrito['tipo_pedido']
+            ) == 'MESA_PEDIDO'
+        ){
+
+            $nuevo_tipo_pedido =
+                'MESA_PAGADO';
+
+        }
+
+        DB::update(
+            'reg_carrito',
+            [
+
+                'estado' =>
+                    'comprado',
+
+                'tipo_pedido' =>
+                    $nuevo_tipo_pedido,
+
+                'fecha_modificacion' =>
+                    $now
+
+            ],
+            "carrito_id=%i",
+            $carrito_id
+        );
+
+        /* ======================================
+           LIBERAR MESA
+        ====================================== */
+
+        if(
+            strtoupper(
+                $carrito['tipo_pedido']
+            ) == 'MESA_PEDIDO'
+            &&
+            !empty(
+                $carrito['mesa_id']
+            )
+        ){
+
+            DB::update(
+
+                'resto_mesa',
+
+                [
+
+                    'estado' =>
+                        'DISPONIBLE'
+
+                ],
+
+                "mesa_id=%i",
+
+                $carrito['mesa_id']
+
+            );
+
+        }
+
+        /* ======================================
+           DELIVERY
+        ====================================== */
+
+        $delivery =
+            DB::queryFirstRow("
+
+                SELECT deli_entrega_id
+
+                FROM deli_entrega
+
+                WHERE carrito_id = %i
+
+                LIMIT 1
+
+            ", $carrito_id);
+
+        if($delivery){
+
+            DB::update(
+                'deli_entrega',
+                [
+
+                    'estado' =>
+                        'entregado',
+
+                    'fecha_entrega' =>
+                        $now
+
+                ],
+                "carrito_id=%i",
+                $carrito_id
+            );
+
+        }
+
+        /* ======================================
+           YAPLIN
+        ====================================== */
+
+        if($yaplin_id !== null){
+
+            DB::update(
+                'reg_yaplin',
+                [
+
+                    'neg_id' =>
+                        $carrito['neg_id'],
+
+                    'cliente_id' =>
+                        $carrito['cliente_id'],
+
+                    'usu_id' =>
+                        $usu_id_vendedor,
+
+                    'estado' =>
+                        'PROCESADO',
+
+                    'fecha_modificacion' =>
+                        $now
+
+                ],
+                "yaplin_id=%i",
+                $yaplin_id
+            );
+
+        }
+
+        DB::commit();
+
+        Flight::json([
+
+            'status' => 'ok',
+
+            'msg' =>
+                'Venta registrada correctamente',
+
+            'product_order_id' =>
+                $product_order_id,
+
+            'carrito_id' =>
+                $carrito_id,
+
+            'tipo_pago' =>
+                $tipo_pago,
+
+            'total' =>
+                $total
+
+        ]);
+
+    } catch(Exception $e){
+
+        DB::rollback();
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' =>
+                $e->getMessage()
+
+        ], 500);
 
     }
 
