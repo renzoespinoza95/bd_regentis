@@ -473,8 +473,14 @@ Flight::route('POST /coral/crearUsuarioFirebase', function () {
 
         // 🔥 ¿YA EXISTE?
         $existe = DB::queryFirstRow(
-            "SELECT * FROM reg_usu WHERE google_uid=%s",
+
+            "SELECT *
+             FROM reg_usu
+             WHERE google_uid = %s
+             AND borrado_el IS NULL",
+
             $google_uid
+
         );
 
         if ($existe) {
