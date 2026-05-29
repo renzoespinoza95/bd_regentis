@@ -1,10 +1,23 @@
 <?php
 Flight::route('GET /tt/tt', function () {
     include DEFINITION;
-    $usu_id = 5;    
-    dd(veri_membresia($usu_id));    
+    $usu_id = 69;    
+    dd(
+        enviar_auto_msg(
+            $usu_id,
+            'TXT_REGISTRO'
+        );
+    );    
     // echo poke();
 });
+
+
+// Flight::route('GET /tt/tt', function () {
+//     include DEFINITION;
+//     $usu_id = 5;    
+//     dd(veri_membresia($usu_id));    
+//     // echo poke();
+// });
 
 
 
