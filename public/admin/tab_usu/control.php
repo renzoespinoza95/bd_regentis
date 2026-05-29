@@ -1699,6 +1699,32 @@ function generarNombreUnico(int $usu_id, string $tmpPath): string {
     return "usu_{$usu_id}_{$tsIso}_" . sprintf('%03d', $ms) . "_{$hash}";
 }
 
+function generarUID(){
+
+    do {
+
+        $uid = 'UID' . str_pad(
+            mt_rand(0, 999999),
+            6,
+            '0',
+            STR_PAD_LEFT
+        );
+
+        $existe = DB::queryFirstField("
+
+            SELECT COUNT(*)
+
+            FROM reg_usu
+
+            WHERE google_uid = %s
+
+        ", $uid);
+
+    } while($existe > 0);
+
+    return $uid;
+}
+
 
 // GET /usu/fantasmas
 Flight::route('GET /usu/fantasmas', function () {
@@ -2321,6 +2347,9 @@ Flight::route('POST /usuario/reiniciar', function(){
 
                 'sobrenombre' =>
                     $nick,
+
+                'google_uid' =>
+                    generarUID(),    
 
                 'celular' =>
                     $celular,
