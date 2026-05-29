@@ -323,10 +323,6 @@ Flight::route('POST /usuario/liquidar', function () {
 
         'is_activo'          => 0,
 
-        'is_premium'         => 0,
-
-        'fecha_fin_premium'  =>  date('Y-m-d H:i:s'),
-
         'borrado_el'  =>  date('Y-m-d H:i:s'),
 
         'descripcion'        => $backup_json

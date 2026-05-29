@@ -1,0 +1,65 @@
+{
+    "packageId":  "com.regentis.unioncomercial",
+    "host":  "unioncomercial.lat",
+    "name":  "Union Comercial",
+    "launcherName":  "Union Comercial",
+    "display":  "standalone",
+    "themeColor":  "#FD7635",
+    "themeColorDark":  "#000000",
+    "navigationColor":  "#000000",
+    "navigationColorDark":  "#000000",
+    "navigationDividerColor":  "#000000",
+    "navigationDividerColorDark":  "#000000",
+    "backgroundColor":  "#FD7635",
+    "enableNotifications":  true,
+    "startUrl":  "/",
+    "iconUrl":  "https://unioncomercial.lat/unioncomercial.png",
+    "monochromeIconUrl":  "https://unioncomercial.lat/unioncomercial.png",
+    "splashScreenFadeOutDuration":  300,
+    "signingKey":  {
+                       "path":  "F:\\ion8\\play_keys\\mi-keystore.jks",
+                       "alias":  "mibarsi"
+                   },
+    "appVersionName":  "1.21",
+    "appVersionCode":  21,
+    "shortcuts":  [
+
+                  ],
+    "generatorApp":  "bubblewrap-cli",
+    "webManifestUrl":  "https://unioncomercial.lat/manifest.json",
+    "fallbackType":  "customtabs",
+    "features":  {
+                     "locationDelegation":  {
+                                                "enabled":  true
+                                            }
+                 },
+    "alphaDependencies":  {
+                              "enabled":  false
+                          },
+    "enableSiteSettingsShortcut":  true,
+    "isChromeOSOnly":  false,
+    "isMetaQuest":  false,
+    "fullScopeUrl":  "https://unioncomercial.lat/",
+    "minSdkVersion":  21,
+    "orientation":  "default",
+    "fingerprints":  [
+
+                     ],
+    "additionalTrustedOrigins":  [
+
+                                 ],
+    "retainedBundles":  [
+
+                        ],
+    "protocolHandlers":  [
+
+                         ],
+    "fileHandlers":  [
+
+                     ],
+    "launchHandlerClientMode":  "",
+    "displayOverride":  [
+
+                        ],
+    "appVersion":  "1.20"
+}

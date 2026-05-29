@@ -514,7 +514,6 @@ Flight::route('POST /coral/crearUsuarioFirebase', function () {
             'fecha_nacimiento'  => null,
             'provincia'         => null,
             'fecha_creacion'    => date('Y-m-d H:i:s'),
-            'is_premium'        => 0,
             'tipoxusu_id'       => 1,
             'clavel'            => $clavel,
             'fecha_ultimo_acceso'=> date('Y-m-d H:i:s')
