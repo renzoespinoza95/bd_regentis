@@ -1873,7 +1873,6 @@ Flight::route('POST /xico/usu/editar', function () {
             'sobrenombre'        => $d['sobrenombre'] ?? null,
             'celular'            => $d['celular'] ?? null,
             'provincia'          => $d['provincia'] ?? null,
-            'fecha_nacimiento'   => $d['fecha_nacimiento'] ?? null,
             'tipoxusu_id'        => $d['tipoxusu_id'] ?? null,
             'nombres_apellidos' => $d['nombres_apellidos'] ?? null,
             'is_activo'          => isset($d['is_activo']) ? (int)$d['is_activo'] : 1
