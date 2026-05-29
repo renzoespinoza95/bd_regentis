@@ -1056,6 +1056,126 @@ Flight::route('POST /xin_yuan', function(){
 });
 
 
+Flight::route('POST /YfrW/loginNeg', function() {
+
+    include DEFINITION;
+    autentificar_administrador();
+
+    $json = Flight::request()->getBody();
+
+    $data = json_decode($json);
+
+    $usu_id = intval(
+        $data->usu_id ?? 0
+    );
+
+    /* ======================================
+       VALIDAR PAYLOAD
+    ====================================== */
+
+    if($usu_id <= 0){
+
+        echo json_encode([
+
+            "res" => "error",
+
+            "msg" => "usu_id inválido"
+
+        ]);
+
+        return;
+    }
+
+    /* ======================================
+       VALIDAR USUARIO
+    ====================================== */
+
+    $info_admin = DB::queryFirstRow("
+
+        SELECT *
+
+        FROM reg_usu
+
+        WHERE usu_id = %i
+        AND is_activo = 1
+
+        LIMIT 1
+
+    ", $usu_id);
+
+    /* ======================================
+       LOGIN OK
+    ====================================== */
+
+    if($info_admin){
+
+        global $nombre_app;
+
+        $valor_key = $nombre_app . vari("KEY");
+
+        $sobrenombre = perso::preparar_para_encriptar(
+            $info_admin['sobrenombre']
+        );
+
+        $enc_sobrenombre = perso::encrypt(
+            $info_admin['sobrenombre'],
+            $valor_key
+        );
+
+        $info_admin['usu_id'] =
+            perso::preparar_para_encriptar(
+                $info_admin['usu_id']
+            );
+
+        $enc_info_admin_id = perso::encrypt(
+            $info_admin['usu_id'],
+            $valor_key
+        );
+
+        setcookie(
+            "ssa_sobrenombre_" . $nombre_app,
+            $enc_sobrenombre,
+            0,
+            "/"
+        );
+
+        setcookie(
+            "ssa_id_" . $nombre_app,
+            $enc_info_admin_id,
+            0,
+            "/"
+        );
+
+        echo json_encode([
+
+            "res"    => "ok",
+
+            "rol_id" => intval(
+                $info_admin['rol_id']
+            )
+
+        ]);
+
+    } else {
+
+        /* ======================================
+           ERROR
+        ====================================== */
+
+        echo json_encode([
+
+            "res" => "error",
+
+            "msg" => "Usuario no encontrado o inactivo"
+
+        ]);
+
+    }
+
+});
+
+
+
 Flight::route('POST /EiwA/tiendaAutomatico', function(){
 
     include DEFINITION;
@@ -1674,10 +1794,6 @@ Flight::route('POST /EiwA/tiendaAutomatico', function(){
                     $tipoxusu_id = 2;
                 }
 
-                /* ==============================
-                   FECHAS PREMIUM
-                ============================== */
-
                 $fecha_inicio_premium =
                     date('Y-m-d H:i:s');
 
@@ -1687,28 +1803,46 @@ Flight::route('POST /EiwA/tiendaAutomatico', function(){
                         strtotime('+15 days')
                     );
 
-                /* ==============================
-                   ACTUALIZAR USUARIO
-                ============================== */
-
                 DB::update(
                     'reg_usu',
                     [
 
                         'tipoxusu_id' =>
-                            $tipoxusu_id,
+                            $tipoxusu_id
 
-                        'is_premium' => 1,
+                    ],
+                    "usu_id=%i",
+                    $usu_id
+                );
+
+                DB::insert(
+
+                    'reg_neg_pago',
+
+                    [
+
+                        'neg_id' => $neg_id,
+
+                        'usu_id_yapeo' => null,
+
+                        'motivo' => 'FREE',
+
+                        'monto' => 0,
 
                         'fecha_inicio_premium' =>
                             $fecha_inicio_premium,
 
                         'fecha_fin_premium' =>
-                            $fecha_fin_premium
+                            $fecha_fin_premium,
 
-                    ],
-                    "usu_id=%i",
-                    $usu_id
+                        'yaplin_id' => null,
+
+                        'is_aprobado' => 1,
+
+                        'borrado_el' => null
+
+                    ]
+
                 );
 
                 /* ==============================
@@ -1787,124 +1921,6 @@ Flight::route('POST /EiwA/tiendaAutomatico', function(){
             'msg' => $e->getMessage()
 
         ], 500);
-
-    }
-
-});
-
-Flight::route('POST /YfrW/loginNeg', function() {
-
-    include DEFINITION;
-    autentificar_administrador();
-
-    $json = Flight::request()->getBody();
-
-    $data = json_decode($json);
-
-    $usu_id = intval(
-        $data->usu_id ?? 0
-    );
-
-    /* ======================================
-       VALIDAR PAYLOAD
-    ====================================== */
-
-    if($usu_id <= 0){
-
-        echo json_encode([
-
-            "res" => "error",
-
-            "msg" => "usu_id inválido"
-
-        ]);
-
-        return;
-    }
-
-    /* ======================================
-       VALIDAR USUARIO
-    ====================================== */
-
-    $info_admin = DB::queryFirstRow("
-
-        SELECT *
-
-        FROM reg_usu
-
-        WHERE usu_id = %i
-        AND is_activo = 1
-
-        LIMIT 1
-
-    ", $usu_id);
-
-    /* ======================================
-       LOGIN OK
-    ====================================== */
-
-    if($info_admin){
-
-        global $nombre_app;
-
-        $valor_key = $nombre_app . vari("KEY");
-
-        $sobrenombre = perso::preparar_para_encriptar(
-            $info_admin['sobrenombre']
-        );
-
-        $enc_sobrenombre = perso::encrypt(
-            $info_admin['sobrenombre'],
-            $valor_key
-        );
-
-        $info_admin['usu_id'] =
-            perso::preparar_para_encriptar(
-                $info_admin['usu_id']
-            );
-
-        $enc_info_admin_id = perso::encrypt(
-            $info_admin['usu_id'],
-            $valor_key
-        );
-
-        setcookie(
-            "ssa_sobrenombre_" . $nombre_app,
-            $enc_sobrenombre,
-            0,
-            "/"
-        );
-
-        setcookie(
-            "ssa_id_" . $nombre_app,
-            $enc_info_admin_id,
-            0,
-            "/"
-        );
-
-        echo json_encode([
-
-            "res"    => "ok",
-
-            "rol_id" => intval(
-                $info_admin['rol_id']
-            )
-
-        ]);
-
-    } else {
-
-        /* ======================================
-           ERROR
-        ====================================== */
-
-        echo json_encode([
-
-            "res" => "error",
-
-            "msg" => "Usuario no encontrado o inactivo"
-
-        ]);
 
     }
 
