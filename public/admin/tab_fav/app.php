@@ -116,7 +116,7 @@ Flight::route('POST /DzCy/misFavoritos', function () {
 
         $rows = DB::query("
 
-            SELECT 
+            SELECT
 
                 f.fav_id,
                 f.product_id,
@@ -137,57 +137,86 @@ Flight::route('POST /DzCy/misFavoritos', function () {
                 ====================================== */
 
                 IFNULL(
-                    MAX(i.stock_actual),
+
+                    MAX(
+                        i.stock_actual
+                    ),
+
                     0
+
                 ) AS stock,
 
                 /* ======================================
-                   IMAGEN
+                   IMAGEN PRINCIPAL
                 ====================================== */
 
                 img.img AS img
 
             FROM reg_fav f
 
-            JOIN pos_product p 
+            INNER JOIN pos_product p
+
                 ON p.product_id = f.product_id
+
+                AND p.borrado_el IS NULL
+
+                AND p.is_visible = 1
 
             /* ======================================
                NEGOCIO
             ====================================== */
 
             LEFT JOIN reg_neg n
+
                 ON n.neg_id = p.neg_id
 
             /* ======================================
                INVENTARIO
             ====================================== */
 
-            LEFT JOIN pos_inventario i 
+            LEFT JOIN pos_inventario i
+
                 ON i.product_id = p.product_id
 
             /* ======================================
-               IMAGEN
+               IMAGEN DE MENOR ORDEN
             ====================================== */
 
-            LEFT JOIN (
+            LEFT JOIN pos_product_image img
 
-                SELECT 
-                    product_id,
-                    img
+                ON img.product_image_id = (
 
-                FROM pos_product_image
+                    SELECT ppi.product_image_id
 
-                WHERE is_visible = 1
+                    FROM pos_product_image ppi
 
-                ORDER BY orden ASC
+                    WHERE ppi.product_id = p.product_id
 
-            ) img
-                ON img.product_id = p.product_id
+                    AND ppi.is_visible = 1
+
+                    AND ppi.borrado_el IS NULL
+
+                    ORDER BY ppi.orden ASC
+
+                    LIMIT 1
+
+                )
 
             WHERE f.usu_id = %i
 
-            GROUP BY f.fav_id
+            GROUP BY
+
+                f.fav_id,
+                f.product_id,
+                f.fecha_creacion,
+
+                p.name,
+                p.price,
+                p.neg_id,
+
+                n.nombre,
+
+                img.img
 
             ORDER BY f.fav_id DESC
 
