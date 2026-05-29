@@ -6,7 +6,7 @@ Flight::route('GET /tt/tt', function () {
         enviar_auto_msg(
             $usu_id,
             'TXT_REGISTRO'
-        );
+        )
     );    
     // echo poke();
 });
