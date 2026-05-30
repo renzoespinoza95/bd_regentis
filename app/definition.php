@@ -19,5 +19,7 @@
   global $secreto_jwt;
   global $version;
   global $fenix_key;
+  global $varhost_tmp;
+  global $varpath_tmp;
 
   

@@ -1,15 +1,29 @@
 <?php
+
 Flight::route('GET /tt/tt', function () {
     include DEFINITION;
     $usu_id = 69;    
+    $product_order_id= 37;
+
     dd(
-        enviar_auto_msg(
-            $usu_id,
-            'TXT_REGISTRO'
-        )
-    );    
+        imprimir_recibo_venta_directa($product_order_id)
+    );
+    
+
     // echo poke();
 });
+
+// Flight::route('GET /tt/tt', function () {
+//     include DEFINITION;
+//     $usu_id = 69;    
+//     dd(
+//         enviar_auto_msg(
+//             $usu_id,
+//             'TXT_REGISTRO'
+//         )
+//     );    
+//     // echo poke();
+// });
 
 
 // Flight::route('GET /tt/tt', function () {

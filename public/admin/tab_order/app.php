@@ -3087,6 +3087,16 @@ Flight::route('POST /BnyQ/ventaDirecta', function(){
         DB::commit();
 
         /* ======================================
+           PDF
+        ====================================== */
+
+        $url_pdf = imprimir_recibo_venta_directa(
+
+            $product_order_id
+
+        );
+
+        /* ======================================
            RESPONSE
         ====================================== */
 
@@ -3107,10 +3117,12 @@ Flight::route('POST /BnyQ/ventaDirecta', function(){
                 $yaplin_id,
 
             'total' =>
-                $total
+                $total,
+
+            'url_pdf' =>
+                $url_pdf
 
         ]);
-
     } catch(Exception $e){
 
         DB::rollback();
@@ -6257,3 +6269,182 @@ Flight::route('POST /W8LP/draftEliminar', function(){
 
 });
 
+function imprimir_recibo_venta_directa($product_order_id)
+{
+    include DEFINITION;
+    DB::query("SET NAMES 'utf8mb4'");
+
+    global $varhost;
+    global $wkh_pdf;
+
+    $venta = DB::queryFirstRow("
+
+        SELECT
+
+            o.product_order_id,
+            o.total_fees,
+            o.tipo_pago,
+            o.fecha_creacion,
+
+            c.nombres_apellidos cliente,
+            c.dni,
+            c.ruc cliente_ruc,
+            c.celular,
+
+            n.nombre negocio,
+            n.img_logo,
+            n.direccion,
+            n.celular_informes,
+
+            u.nombres_apellidos vendedor
+
+        FROM pos_product_order o
+
+        LEFT JOIN pos_cliente c
+            ON c.cliente_id = o.cliente_id
+
+        LEFT JOIN reg_neg n
+            ON n.neg_id = o.neg_id
+
+        LEFT JOIN reg_usu u
+            ON u.usu_id = o.usu_id_vendedor
+
+        WHERE o.product_order_id = %i
+
+        LIMIT 1
+
+    ", $product_order_id);
+
+    if(!$venta){
+
+        return null;
+
+    }
+
+    $detalles = DB::query("
+
+        SELECT
+
+            product_name producto,
+
+            amount cantidad,
+
+            price_item precio,
+
+            (amount * price_item) subtotal
+
+        FROM pos_product_order_detail
+
+        WHERE product_order_id = %i
+
+        AND borrado_el IS NULL
+
+        ORDER BY product_order_detail_id
+
+    ", $product_order_id);
+
+    $template_data = [
+
+        'informacion' => [[
+
+            'logo' => $venta['img_logo'],
+
+            'negocio' => $venta['negocio'],
+
+            'direccion' => $venta['direccion'],
+
+            'celular_negocio' => $venta['celular_informes'],
+
+            'cliente' => $venta['cliente'],
+
+            'dni' => $venta['dni'],
+
+            'ruc_cliente' => $venta['cliente_ruc'],
+
+            'celular' => $venta['celular'],
+
+            'vendedor' => $venta['vendedor'],
+
+            'tipo_pago' => str_replace(
+                '_',
+                ' ',
+                $venta['tipo_pago']
+            ),
+
+            'fecha' => date(
+
+                'd/m/Y H:i',
+
+                strtotime(
+                    $venta['fecha_creacion']
+                )
+
+            ),
+
+            'product_order_id' =>
+                $venta['product_order_id'],
+
+            'total' => number_format(
+
+                $venta['total_fees'],
+
+                2,
+
+                '.',
+
+                ''
+
+            )
+
+        ]],
+
+        'detalles' => $detalles
+
+    ];
+
+    $html = (new Mustache)->render(
+
+        file_get_contents(
+
+            VARPATH .
+
+            '/public/reportes/reporte_html/recibo_venta_directa.html'
+
+        ),
+
+        $template_data
+
+    );
+
+    $pdf =
+
+        $varpath_tmp .
+
+        'recibo_' .
+
+        $product_order_id .
+
+        '_' .
+
+        time() .
+
+        '.pdf';
+
+    $wkh_pdf->addPage($html);
+
+    exec(
+
+        $wkh_pdf->getCommand(
+
+            $pdf
+
+        )
+
+    );
+
+    return
+
+        $varhost_tmp .        
+
+        basename($pdf);
+}

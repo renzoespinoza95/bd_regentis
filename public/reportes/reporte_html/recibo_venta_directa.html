@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<meta charset="utf-8">
+
+<style>
+
+body{
+
+    font-family: monospace;
+
+    font-size:12px;
+
+    width:280px;
+
+    margin:0 auto;
+
+    padding:10px;
+
+    color:#000;
+
+}
+
+.center{
+
+    text-align:center;
+
+}
+
+.linea{
+
+    border-top:1px dashed #000;
+
+    margin:5px 0;
+
+}
+
+table{
+
+    width:100%;
+
+    border-collapse:collapse;
+
+}
+
+td{
+
+    padding:2px 0;
+
+    vertical-align:top;
+
+}
+
+.total{
+
+    font-size:22px;
+
+    font-weight:bold;
+
+    text-align:right;
+
+}
+
+.logo{
+
+    width:90px;
+
+    max-width:90px;
+
+    max-height:90px;
+
+}
+
+.titulo{
+
+    font-size:16px;
+
+    font-weight:bold;
+
+}
+
+.producto{
+
+    font-weight:bold;
+
+    margin-top:4px;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+{{#informacion}}
+
+<div class="center">
+
+    {{#logo}}
+
+    <img
+        src="{{ logo }}"
+        class="logo">
+
+    {{/logo}}
+
+</div>
+
+<div class="center">
+
+    <strong>
+
+        {{ negocio }}
+
+    </strong>
+
+    <br>
+
+    {{ direccion }}
+
+    <br>
+
+    {{ celular_negocio }}
+
+</div>
+
+<div class="linea"></div>
+
+<div class="center titulo">
+
+    RECIBO DE VENTA
+
+</div>
+
+<div class="center">
+
+    N° {{ product_order_id }}
+
+</div>
+
+<div class="linea"></div>
+
+<table>
+
+<tr>
+
+<td>
+
+Fecha
+
+</td>
+
+<td align="right">
+
+{{ fecha }}
+
+</td>
+
+</tr>
+
+<tr>
+
+<td>
+
+Cliente
+
+</td>
+
+<td align="right">
+
+{{ cliente }}
+
+</td>
+
+</tr>
+
+{{#dni}}
+
+<tr>
+
+<td>
+
+DNI
+
+</td>
+
+<td align="right">
+
+{{ dni }}
+
+</td>
+
+</tr>
+
+{{/dni}}
+
+{{#ruc_cliente}}
+
+<tr>
+
+<td>
+
+RUC
+
+</td>
+
+<td align="right">
+
+{{ ruc_cliente }}
+
+</td>
+
+</tr>
+
+{{/ruc_cliente}}
+
+{{#celular}}
+
+<tr>
+
+<td>
+
+Celular
+
+</td>
+
+<td align="right">
+
+{{ celular }}
+
+</td>
+
+</tr>
+
+{{/celular}}
+
+<tr>
+
+<td>
+
+Pago
+
+</td>
+
+<td align="right">
+
+{{ tipo_pago }}
+
+</td>
+
+</tr>
+
+<tr>
+
+<td>
+
+Vendedor
+
+</td>
+
+<td align="right">
+
+{{ vendedor }}
+
+</td>
+
+</tr>
+
+</table>
+
+<div class="linea"></div>
+
+{{/informacion}}
+
+{{#detalles}}
+
+<div class="producto">
+
+{{ producto }}
+
+</div>
+
+<table>
+
+<tr>
+
+<td>
+
+{{ cantidad }}
+
+x
+
+S/{{ precio }}
+
+</td>
+
+<td align="right">
+
+S/{{ subtotal }}
+
+</td>
+
+</tr>
+
+</table>
+
+{{/detalles}}
+
+<div class="linea"></div>
+
+{{#informacion}}
+
+<table>
+
+<tr>
+
+<td>
+
+TOTAL
+
+</td>
+
+<td align="right">
+
+S/{{ total }}
+
+</td>
+
+</tr>
+
+</table>
+
+<div class="linea"></div>
+
+<div class="total">
+
+S/ {{ total }}
+
+</div>
+
+<div class="linea"></div>
+
+<div class="center">
+
+Gracias por su compra
+
+<br>
+
+UnionComercial
+
+</div>
+
+{{/informacion}}
+
+</body>
+
+</html>

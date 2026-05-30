@@ -8,10 +8,27 @@ define('VARPATH', dirname(__FILE__));
 define ('DEFINITION', VARPATH . "/app/definition.php");
 
 require_once VARPATH."/classes/Meekrodb2.class.php";
+require_once VARPATH."/classes/WkHtmlToPdf.php";    
+require_once VARPATH."/classes/Mustache.class.php";
 require_once VARPATH."/classes/perso.class.php";
 require_once VARPATH."/inc/config.inc.php";
 require 'flight/Flight.php';
 $version = 1;
+
+if (class_exists('WkHtmlToPdf')) {
+
+    //=== WKHTML ===
+
+    if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+        //echo 'This is a server using Windows!';
+        $options['bin'] = 'C:\wkhtmltopdf\bin\wkhtmltopdf.exe';
+    } else {
+        //echo 'This is a server not using Windows!';
+        $options['bin'] = '/usr/bin/wkhtmltopdf';
+    }
+
+    $wkh_pdf = new WkHtmlToPdf($options);
+}
 
 if (perso::_es_apache()) {
     // Headers CORS (una sola vez)
@@ -133,23 +150,6 @@ if (!empty($ssa_id) && is_string($ssa_id)) {
 require_once VARPATH."/public/admin/login/login_admin.control.php";
 
 require_once VARPATH."/app/gatti.control.php";
-
-if (class_exists('WkHtmlToPdf')) {
-
-    //=== WKHTML ===
-
-    if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-        //echo 'This is a server using Windows!';
-        $options['bin'] = 'C:\wkhtmltopdf\bin\wkhtmltopdf.exe';
-    } else {
-        //echo 'This is a server not using Windows!';
-        $options['bin'] = '/usr/bin/wkhtmltopdf';
-    }
-
-    $wkh_pdf = new WkHtmlToPdf($options);
-}
-
-
 
 // var_dump($administrador_actual);
 // exit;

@@ -2,12 +2,14 @@
 if (!empty($ssa_id) && is_string($ssa_id)) {
 	$tipo_admin = $administrador_actual['rol_nombre'];
 
+	require_once VARPATH."/classes/WkHtmlToPdf.php"; 	
+	require_once VARPATH."/classes/Mustache.class.php";
+
 	switch ($tipo_admin) {
 
 	    case 'GLOBAL':	   
 	    	require_once VARPATH."/classes/JWT.class.php";
 			require_once VARPATH."/classes/Mustache.class.php";
-			require_once VARPATH."/classes/WkHtmlToPdf.php"; 	
 	        require_once VARPATH."/public/admin/tab_vari/control.php";
 			require_once VARPATH."/public/admin/mod_bot/bot.php";
 			require_once VARPATH."/public/admin/tab_prod/control.php";
@@ -48,9 +50,7 @@ if (!empty($ssa_id) && is_string($ssa_id)) {
 			require_once VARPATH."/public/admin/tab_usu/control.php";
 			require_once VARPATH."/public/admin/tab_auto_msg/control.php";
 			require_once VARPATH."/public/admin/tab_master/control.php";
-
 			require_once VARPATH."/classes/JWT.class.php";
-			require_once VARPATH."/classes/Mustache.class.php";
 			require_once VARPATH. "/classes/SimpleImage.class.php";
 			require_once VARPATH."/classes/WkHtmlToPdf.php";
 	        break;
@@ -73,7 +73,6 @@ if (!empty($ssa_id) && is_string($ssa_id)) {
 	        break;
 	}
 }	
-
 
 require_once VARPATH."/public/admin/tab_usu/app.php";
 require_once VARPATH."/public/admin/tab_neg/app.php";
