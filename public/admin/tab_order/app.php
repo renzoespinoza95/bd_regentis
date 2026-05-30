@@ -2424,24 +2424,12 @@ Flight::route('POST /BnyQ/ventaDirecta', function(){
         )
     );
 
-    $mesa_id = isset($d['mesa_id'])
-        ? intval($d['mesa_id'])
-        : null;
-
-    $caja_id = isset($d['caja_id'])
-        ? intval($d['caja_id'])
-        : null;
-
     $fecha_inicio = !empty($d['fecha_inicio'])
         ? trim($d['fecha_inicio'])
         : null;
 
     $fecha_fin = !empty($d['fecha_fin'])
         ? trim($d['fecha_fin'])
-        : null;
-
-    $credi_credito_id = isset($d['credi_credito_id'])
-        ? intval($d['credi_credito_id'])
         : null;
 
     $yaplin_id = isset($d['yaplin_id'])
@@ -2525,7 +2513,7 @@ Flight::route('POST /BnyQ/ventaDirecta', function(){
         'PLIN',
         'TRANFERENCIA',
         'CREDITO',
-        'POR PAGAR'
+        'POR_PAGAR'
 
     ];
 
@@ -2774,26 +2762,17 @@ Flight::route('POST /BnyQ/ventaDirecta', function(){
                 'tipo_pago' =>
                     $tipo_pago,
 
-                'mesa_id' =>
-                    $mesa_id,
-
                 'modo_order' =>
                     $modo_order,
 
                  'usu_id_vendedor' =>
                     $usu_id_vendedor,
 
-                'caja_id' =>
-                    $caja_id,
-
                 'fecha_inicio' =>
                     $fecha_inicio,
 
                 'fecha_fin' =>
                     $fecha_fin,
-
-                'credi_credito_id' =>
-                    $credi_credito_id,
 
                 'total_fees' =>
                     0,
@@ -3022,7 +3001,7 @@ Flight::route('POST /BnyQ/ventaDirecta', function(){
         if(
             $tipo_pago
             ==
-            'POR PAGAR'
+            'POR_PAGAR'
         ){
 
             $resp_deuda = deuda_movimiento(
@@ -3037,7 +3016,7 @@ Flight::route('POST /BnyQ/ventaDirecta', function(){
 
                 0,
 
-                'POR PAGAR',
+                'POR_PAGAR',
 
                 'Venta creada como deuda'
 
@@ -5903,3 +5882,378 @@ Flight::route('POST /YCTK/registrarVenta', function(){
     }
 
 });
+
+
+Flight::route('POST /P7DX/draftGuardar', function(){
+
+    include DEFINITION;
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    $d = json_decode(
+        Flight::request()->getBody(),
+        true
+    ) ?: [];
+
+    $xin  = trim($d['xin'] ?? '');
+    $yuan = trim($d['yuan'] ?? '');
+
+    firma($xin,$yuan);
+
+    $venta_borrador_id = intval(
+        $d['venta_borrador_id'] ?? 0
+    );
+
+    $neg_id = intval(
+        $d['neg_id'] ?? 0
+    );
+
+    $usu_id_vendedor = intval(
+        $d['usu_id_vendedor'] ?? 0
+    );
+
+    $cliente_id = intval(
+        $d['cliente_id'] ?? 1
+    );
+
+    $cliente_nombre = trim(
+        $d['cliente_nombre']
+        ?? 'PUBLICO GENERAL'
+    );
+
+    $fecha = trim(
+        $d['fecha'] ?? ''
+    );
+
+    $tipo_pago = trim(
+        $d['tipo_pago']
+        ?? 'EFECTIVO'
+    );
+
+    $contenido_json = json_encode(
+
+        $d,
+
+        JSON_UNESCAPED_UNICODE
+
+    );
+
+    $now = date('Y-m-d H:i:s');
+
+    if($venta_borrador_id){
+
+        DB::update(
+
+            'pos_venta_borrador',
+
+            [
+
+                'cliente_id' =>
+                    $cliente_id,
+
+                'cliente_nombre' =>
+                    $cliente_nombre,
+
+                'fecha' =>
+                    $fecha,
+
+                'tipo_pago' =>
+                    $tipo_pago,
+
+                'contenido_json' =>
+                    $contenido_json,
+
+                'fecha_modificacion' =>
+                    $now
+
+            ],
+
+            "venta_borrador_id=%i",
+
+            $venta_borrador_id
+
+        );
+
+    } else {
+
+        DB::insert(
+
+            'pos_venta_borrador',
+
+            [
+
+                'neg_id' =>
+                    $neg_id,
+
+                'usu_id_vendedor' =>
+                    $usu_id_vendedor,
+
+                'cliente_id' =>
+                    $cliente_id,
+
+                'cliente_nombre' =>
+                    $cliente_nombre,
+                'fecha' =>
+                    $fecha,
+
+                'tipo_pago' =>
+                    $tipo_pago,
+
+                'contenido_json' =>
+                    $contenido_json,
+
+                'fecha_creacion' =>
+                    $now,
+
+                'fecha_modificacion' =>
+                    $now,
+
+                'borrado_el' =>
+                    null
+
+            ]
+
+        );
+
+        $venta_borrador_id =
+            DB::insertId();
+
+    }
+
+    Flight::json([
+
+        'status' => 'ok',
+
+        'venta_borrador_id' =>
+            $venta_borrador_id
+
+    ]);
+
+});
+
+Flight::route('POST /H9KD/draftListar', function(){
+
+    include DEFINITION;
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    $d = json_decode(
+        Flight::request()->getBody(),
+        true
+    ) ?: [];
+
+    $xin  = trim($d['xin'] ?? '');
+    $yuan = trim($d['yuan'] ?? '');
+
+    firma($xin,$yuan);
+
+    $neg_id = intval(
+        $d['neg_id'] ?? 0
+    );
+
+    $usu_id_vendedor = intval(
+        $d['usu_id_vendedor'] ?? 0
+    );
+
+    $rows = DB::query("
+
+        SELECT
+
+            venta_borrador_id,
+
+            cliente_id,
+
+            cliente_nombre,
+
+            fecha,
+
+            tipo_pago,
+
+            fecha_modificacion
+
+        FROM pos_venta_borrador
+
+        WHERE
+
+            neg_id = %i
+
+            AND usu_id_vendedor = %i
+
+            AND borrado_el IS NULL
+
+        ORDER BY
+
+            fecha_modificacion DESC
+
+    ",
+
+        $neg_id,
+
+        $usu_id_vendedor
+
+    );
+
+    Flight::json([
+
+        'status' => 'ok',
+
+        'data' =>
+            $rows
+
+    ]);
+
+});
+
+Flight::route('POST /Q2ZA/draftDetalle', function(){
+
+    include DEFINITION;
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    $d = json_decode(
+        Flight::request()->getBody(),
+        true
+    ) ?: [];
+
+    $xin  = trim($d['xin'] ?? '');
+    $yuan = trim($d['yuan'] ?? '');
+
+    firma($xin,$yuan);
+
+    $venta_borrador_id = intval(
+
+        $d['venta_borrador_id']
+        ?? 0
+
+    );
+
+    $row = DB::queryFirstRow("
+
+        SELECT *
+
+        FROM pos_venta_borrador
+
+        WHERE
+
+            venta_borrador_id = %i
+
+            AND borrado_el IS NULL
+
+        LIMIT 1
+
+    ",
+
+        $venta_borrador_id
+
+    );
+
+    if(!$row){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => 'Borrador no encontrado'
+
+        ],404);
+
+        return;
+
+    }
+
+    $contenido = [];
+
+    if(
+
+        !empty(
+            $row['contenido_json']
+        )
+
+    ){
+
+        $contenido = json_decode(
+
+            $row['contenido_json'],
+
+            true
+
+        ) ?: [];
+
+    }
+
+    Flight::json([
+
+        'status' => 'ok',
+
+        'data' =>
+
+            $contenido
+
+    ]);
+
+});
+
+Flight::route('POST /W8LP/draftEliminar', function(){
+
+    include DEFINITION;
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    $d = json_decode(
+        Flight::request()->getBody(),
+        true
+    ) ?: [];
+
+    $xin  = trim($d['xin'] ?? '');
+    $yuan = trim($d['yuan'] ?? '');
+
+    firma($xin,$yuan);
+
+    $venta_borrador_id = intval(
+
+        $d['venta_borrador_id']
+        ?? 0
+
+    );
+
+    if(!$venta_borrador_id){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => 'venta_borrador_id requerido'
+
+        ],400);
+
+        return;
+
+    }
+
+    DB::update(
+
+        'pos_venta_borrador',
+
+        [
+
+            'borrado_el' =>
+                date('Y-m-d H:i:s')
+
+        ],
+
+        "venta_borrador_id=%i",
+
+        $venta_borrador_id
+
+    );
+
+    Flight::json([
+
+        'status' => 'ok',
+
+        'msg' => 'Borrador eliminado'
+
+    ]);
+
+});
+

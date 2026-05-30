@@ -54,40 +54,13 @@ Flight::route('POST /app/principal', function() {
            RESOLVER DESDE NEGOCIO
         ========================== */
 
+        /* =========================
+           MERCADO DEFAULT
+        ========================== */
+
         if($mercado_id === 0){
 
-            if(!$neg_id){
-
-                Flight::json([
-                    'status'=>'error',
-                    'msg'=>'neg_id requerido cuando mercado_id = 0'
-                ],400);
-
-                return;
-            }
-
-            $mercado_id = DB::queryFirstField("
-
-                SELECT mercado_id
-
-                FROM reg_neg
-
-                WHERE neg_id = %i
-                AND is_activo = 1
-
-                LIMIT 1
-
-            ", $neg_id);
-
-            if(!$mercado_id){
-
-                Flight::json([
-                    'status'=>'error',
-                    'msg'=>'No se encontró mercado para ese negocio'
-                ],404);
-
-                return;
-            }
+            $mercado_id = 2;
 
         }
 

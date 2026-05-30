@@ -700,3 +700,287 @@ Flight::route('POST /MBr4/clientesFantasmasSinUsuId', function(){
     }
 
 });
+
+Flight::route(
+
+'POST /Hc6Y/reiniciarCliente',
+
+function(){
+
+    include DEFINITION;
+
+    autentificar_administrador();
+
+    global $administrador_actual;
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    $d = json_decode(
+
+        Flight::request()->getBody(),
+
+        true
+
+    ) ?: [];
+
+    $cliente_id = intval(
+
+        $d['cliente_id'] ?? 0
+
+    );
+
+    $neg_id = intval(
+
+        $administrador_actual['neg_id']
+
+    );
+
+    if($cliente_id <= 0){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => 'cliente_id requerido'
+
+        ],400);
+
+        return;
+    }
+
+    $cliente = DB::queryFirstRow("
+
+        SELECT
+
+            cliente_id
+
+        FROM pos_cliente
+
+        WHERE cliente_id = %i
+
+        AND neg_id = %i
+
+        AND borrado_el IS NULL
+
+        LIMIT 1
+
+    ",
+
+        $cliente_id,
+
+        $neg_id
+
+    );
+
+    if(!$cliente){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => 'Cliente no encontrado'
+
+        ],404);
+
+        return;
+    }
+
+    DB::startTransaction();
+
+    try{
+
+        $nombre = DB::queryFirstField("
+
+            SELECT nombre
+
+            FROM tt_nombre
+
+            ORDER BY RAND()
+
+            LIMIT 1
+
+        ");
+
+        $apellido = DB::queryFirstField("
+
+            SELECT apellido
+
+            FROM tt_apellido
+
+            ORDER BY RAND()
+
+            LIMIT 1
+
+        ");
+
+        $nombres_apellidos = trim(
+
+            $nombre
+
+            . ' '
+
+            . $apellido
+
+        );
+
+        do{
+
+            $dni = strval(
+
+                rand(
+
+                    10000000,
+
+                    99999999
+
+                )
+
+            );
+
+            $existe_dni = DB::queryFirstField("
+
+                SELECT cliente_id
+
+                FROM pos_cliente
+
+                WHERE dni = %s
+
+                AND cliente_id <> %i
+
+                LIMIT 1
+
+            ",
+
+                $dni,
+
+                $cliente_id
+
+            );
+
+        }while($existe_dni);
+
+        $celular =
+
+            '9'
+
+            . rand(
+
+                10000000,
+
+                99999999
+
+            );
+
+        $email_base = strtolower(
+
+            preg_replace(
+
+                '/[^a-z0-9]/',
+
+                '',
+
+                str_replace(
+
+                    ' ',
+
+                    '',
+
+                    $nombres_apellidos
+
+                )
+
+            )
+
+        );
+
+        $email =
+
+            $email_base
+
+            . rand(
+
+                10,
+
+                999
+
+            )
+
+            . '@gmail.com';
+
+        DB::update(
+
+            'pos_cliente',
+
+            [
+
+                'nombres_apellidos' =>
+
+                    $nombres_apellidos,
+
+                'dni' =>
+
+                    $dni,
+
+                'celular' =>
+
+                    $celular,
+
+                'email' =>
+
+                    $email,
+
+                'direccion' =>
+
+                    'Dirección referencial',
+
+                'cod_usu' => null,
+
+                'ruc' => null,
+
+                'usu_id' => null,
+
+                'puesto' => 'Cliente',
+
+                'distrito' => 'Lima',
+
+                'map_lat' => null,
+
+                'map_lng' => null
+
+            ],
+
+            "cliente_id=%i",
+
+            $cliente_id
+
+        );
+
+        DB::commit();
+
+        Flight::json([
+
+            'status' => 'ok',
+
+            'msg' =>
+
+                'Cliente reiniciado correctamente'
+
+        ]);
+
+    }catch(Exception $e){
+
+        DB::rollback();
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' =>
+
+                $e->getMessage()
+
+        ],500);
+
+    }
+
+});

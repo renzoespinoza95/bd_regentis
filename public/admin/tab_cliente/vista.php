@@ -492,6 +492,40 @@ const appClientes = new Vue({
             )
 
             .on(
+  'click',
+  'a.reiniciar-cli',
+  function(e){
+
+    e.preventDefault()
+
+    const id =
+
+      $(this).data('id')
+
+    const row =
+
+      self.clientes.find(
+
+        x =>
+
+        parseInt(x.cliente_id)
+
+        ===
+
+        parseInt(id)
+
+      )
+
+    if(row){
+
+      self.reiniciarCliente(row)
+
+    }
+
+  }
+)
+
+            .on(
               'click',
               'a.yaplin-cli',
               function(e){
@@ -559,6 +593,15 @@ const appClientes = new Vue({
                       Yaplin
                     </a>
                   </li>
+              <li>
+    <a
+      href="#"
+      class="reiniciar-cli"
+      data-id="${c.cliente_id}"
+    >
+      Reiniciar
+    </a>
+</li>
 
                 </ul>
 
@@ -817,6 +860,101 @@ crear5Fantasmas(){
       })
 
     },
+
+    reiniciarCliente(c){
+
+  apprise(
+
+    '¿Deseas reiniciar este cliente con datos aleatorios?',
+
+    {
+
+      verify:true
+
+    },
+
+    (r)=>{
+
+      if(!r){
+
+        return;
+
+      }
+
+      this.bloquear(
+
+        'Reiniciando cliente...'
+
+      );
+
+      axios
+
+      .post(
+
+        `${this.apphost}/Hc6Y/reiniciarCliente`,
+
+        {
+
+          cliente_id:
+
+            c.cliente_id
+
+        }
+
+      )
+
+      .then(res=>{
+
+        if(
+
+          res.data.status == 'ok'
+
+        ){
+
+          apprise(
+
+            'Cliente reiniciado correctamente'
+
+          );
+
+          this.listarClientes();
+
+        }
+        else{
+
+          apprise(
+
+            res.data.msg
+
+          );
+
+        }
+
+      })
+
+      .catch(e=>{
+
+        apprise(
+
+          e.response?.data?.msg ||
+
+          'Error al reiniciar cliente'
+
+        );
+
+      })
+
+      .finally(()=>{
+
+        $.unblockUI();
+
+      });
+
+    }
+
+  );
+
+},
 
     /* =====================================
        ELIMINAR
