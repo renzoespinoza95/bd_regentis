@@ -2,9 +2,6 @@
 if (!empty($ssa_id) && is_string($ssa_id)) {
 	$tipo_admin = $administrador_actual['rol_nombre'];
 
-	require_once VARPATH."/classes/WkHtmlToPdf.php"; 	
-	require_once VARPATH."/classes/Mustache.class.php";
-
 	switch ($tipo_admin) {
 
 	    case 'GLOBAL':	   

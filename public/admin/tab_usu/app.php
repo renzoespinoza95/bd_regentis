@@ -1055,3 +1055,232 @@ Flight::route('POST /RhM4/editarCuentaUsu', function(){
     ]);
 
 });
+
+function crear_pin_code($usu_id)
+{
+
+    $usu_id = intval($usu_id);
+
+    if($usu_id <= 0){
+
+        return [
+
+            'ok' => false,
+
+            'msg' => 'usu_id inválido'
+
+        ];
+
+    }
+
+    do{
+
+        $pin_code = str_pad(
+
+            mt_rand(0, 999999),
+
+            6,
+
+            '0',
+
+            STR_PAD_LEFT
+
+        );
+
+        $existe = DB::queryFirstField("
+
+            SELECT COUNT(*)
+
+            FROM reg_usu
+
+            WHERE pin_code = %s
+
+            AND pin_code_fecha_fin >= NOW()
+
+            AND borrado_el IS NULL
+
+        ", $pin_code);
+
+    }
+    while($existe > 0);
+
+    $pin_code_fecha_fin = date(
+
+        'Y-m-d H:i:s',
+
+        strtotime('+4 minutes')
+
+    );
+
+    DB::update(
+
+        'reg_usu',
+
+        [
+
+            'pin_code' => $pin_code,
+
+            'pin_code_fecha_fin' => $pin_code_fecha_fin
+
+        ],
+
+        'usu_id=%i',
+
+        $usu_id
+
+    );
+
+    return [
+
+        'ok' => true,
+
+        'pin_code' => $pin_code,
+
+        'pin_code_fecha_fin' => $pin_code_fecha_fin
+
+    ];
+
+}
+
+function veri_pin_code($pin_code)
+{
+
+    $pin_code = trim($pin_code);
+
+    if($pin_code === ''){
+
+        return [
+
+            'ok' => false,
+
+            'msg' => 'pin_code requerido'
+
+        ];
+
+    }
+
+    $usuario = DB::queryFirstRow("
+
+            SELECT *
+
+            FROM reg_usu
+
+            WHERE pin_code = %s
+
+            AND pin_code_fecha_fin >= NOW()
+
+            AND borrado_el IS NULL
+
+            LIMIT 1
+
+        ", $pin_code);
+
+        if(!$usuario){
+
+            return [
+
+                'ok' => false,
+
+                'msg' => 'PIN inválido o expirado'
+
+            ];
+
+        }
+
+        /* =====================================
+           INVALIDAR PIN
+        ===================================== */
+
+        DB::update(
+
+            'reg_usu',
+
+            [
+
+                'pin_code' => null,
+
+                'pin_code_fecha_fin' => null
+
+            ],
+
+            'usu_id=%i',
+
+            $usuario['usu_id']
+
+        );
+
+        /* =====================================
+           RESPONSE
+        ===================================== */
+
+        return [
+
+            'ok' => true,
+
+            'usuario' => $usuario
+
+        ];
+
+}
+
+Flight::route('POST /K5jX/ingresarConPinCode', function(){
+
+    include DEFINITION;
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    $d = json_decode(
+
+        Flight::request()->getBody(),
+
+        true
+
+    ) ?: [];
+
+    $pin_code = trim(
+
+        $d['pin_code'] ?? ''
+
+    );
+
+    if($pin_code === ''){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => 'pin_code requerido'
+
+        ], 400);
+
+        return;
+
+    }
+
+    $r = veri_pin_code(
+        $pin_code
+    );
+
+    if(!$r['ok']){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => $r['msg']
+
+        ], 401);
+
+        return;
+
+    }
+
+    Flight::json([
+
+        'status' => 'ok',
+
+        'usuario' => $r['usuario']
+
+    ]);
+
+});

@@ -3176,6 +3176,14 @@ Flight::route('POST /HOGO/listaVentas', function(){
         $d['neg_id'] ?? 0
     );
 
+    $fecha_inicio = trim(
+        $d['fecha_inicio'] ?? ''
+    );
+
+    $fecha_termino = trim(
+        $d['fecha_termino'] ?? ''
+    );
+
     if($neg_id <= 0){
 
         Flight::json([
@@ -3227,64 +3235,94 @@ Flight::route('POST /HOGO/listaVentas', function(){
        ORDENES
     ====================================== */
 
-    $ventas = DB::query("
+    $where_fecha = '';
 
-        SELECT
+    $params = [
+        $neg_id
+    ];
 
-            o.product_order_id,
+    if(
+        $fecha_inicio !== ''
+        &&
+        $fecha_termino !== ''
+    ){
 
-            o.usu_id_vendedor,
+        $where_fecha = "
 
-            o.total_fees,
+            AND DATE(o.fecha_creacion)
+            BETWEEN %s AND %s
 
-            o.tax,
+        ";
 
-            o.serial,
+        $params[] = $fecha_inicio;
+        $params[] = $fecha_termino;
+    }
 
-            o.fecha_creacion,
+    $sql = "
 
-            o.fecha_modificacion,
+            SELECT
 
-            o.cliente_id,
+                o.product_order_id,
 
-            o.tipo_pago,
+                o.usu_id_vendedor,
 
-            o.modo_order,
+                o.total_fees,
 
-            o.fecha_inicio,
+                o.tax,
 
-            o.fecha_fin,
+                o.serial,
 
-            o.neg_id,
+                o.fecha_creacion,
 
-            c.nombres_apellidos
-                AS cliente_nombre,
+                o.fecha_modificacion,
 
-            c.dni
-                AS cliente_dni,
+                o.cliente_id,
 
-            c.celular
-                AS cliente_celular,
+                o.tipo_pago,
 
-            u.nombres_apellidos
-                AS usuario_nombre
+                o.modo_order,
 
-        FROM pos_product_order o
+                o.fecha_inicio,
 
-        LEFT JOIN pos_cliente c
-               ON c.cliente_id = o.cliente_id
+                o.fecha_fin,
 
-        LEFT JOIN reg_usu u
-               ON u.usu_id = o.usu_id_vendedor
+                o.neg_id,
 
-        WHERE o.neg_id = %i
+                c.nombres_apellidos
+                    AS cliente_nombre,
 
-        AND o.borrado_el IS NULL
+                c.dni
+                    AS cliente_dni,
 
-        ORDER BY
-            o.product_order_id DESC
+                c.celular
+                    AS cliente_celular,
 
-    ", $neg_id);
+                u.nombres_apellidos
+                    AS usuario_nombre
+
+            FROM pos_product_order o
+
+            LEFT JOIN pos_cliente c
+                   ON c.cliente_id = o.cliente_id
+
+            LEFT JOIN reg_usu u
+                   ON u.usu_id = o.usu_id_vendedor
+
+            WHERE o.neg_id = %i
+
+            AND o.borrado_el IS NULL
+
+            {$where_fecha}
+
+            ORDER BY
+                o.product_order_id DESC
+
+        ";
+
+        $ventas = DB::query(
+            $sql,
+            ...$params
+        );
 
     /* ======================================
        DETALLES
@@ -6448,3 +6486,239 @@ function imprimir_recibo_venta_directa($product_order_id)
 
         basename($pdf);
 }
+
+Flight::route('POST /GHDk/graficoVentas', function(){
+
+    include DEFINITION;
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    $d = json_decode(
+        Flight::request()->getBody(),
+        true
+    ) ?: [];
+
+    /* ======================================
+       FIRMA
+    ====================================== */
+
+    $xin = trim(
+        $d['xin'] ?? ''
+    );
+
+    $yuan = trim(
+        $d['yuan'] ?? ''
+    );
+
+    firma(
+        $xin,
+        $yuan
+    );
+
+    /* ======================================
+       NEGOCIO
+    ====================================== */
+
+    $neg_id = intval(
+        $d['neg_id'] ?? 0
+    );
+
+    if($neg_id <= 0){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => 'neg_id requerido'
+
+        ], 400);
+
+        return;
+    }
+
+    /* ======================================
+       FECHAS
+    ====================================== */
+
+    $fecha_inicio = trim(
+        $d['fecha_inicio'] ?? ''
+    );
+
+    $fecha_fin = trim(
+        $d['fecha_fin'] ?? ''
+    );
+
+    if(
+        $fecha_inicio === ''
+        ||
+        $fecha_fin === ''
+    ){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => 'fecha_inicio y fecha_fin requeridos'
+
+        ], 400);
+
+        return;
+    }
+
+    /* ======================================
+       NEGOCIO EXISTE
+    ====================================== */
+
+    $negocio = DB::queryFirstRow("
+
+        SELECT
+
+            neg_id,
+            nombre
+
+        FROM reg_neg
+
+        WHERE neg_id = %i
+
+        AND borrado_el IS NULL
+
+        LIMIT 1
+
+    ", $neg_id);
+
+    if(!$negocio){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => 'Negocio no encontrado'
+
+        ], 404);
+
+        return;
+    }
+
+    /* ======================================
+       VENTAS POR DIA
+    ====================================== */
+
+    $ventas = DB::query("
+
+        SELECT
+
+            DATE(fecha_creacion)
+                AS fecha,
+
+            SUM(total_fees)
+                AS total_ventas
+
+        FROM pos_product_order
+
+        WHERE neg_id = %i
+
+        AND borrado_el IS NULL
+
+        AND DATE(fecha_creacion)
+            BETWEEN %s AND %s
+
+        GROUP BY
+            DATE(fecha_creacion)
+
+        ORDER BY
+            DATE(fecha_creacion) ASC
+
+    ",
+        $neg_id,
+        $fecha_inicio,
+        $fecha_fin
+    );
+
+    /* ======================================
+       GENERAR TODOS LOS DIAS
+    ====================================== */
+
+    $mapa = [];
+
+    foreach($ventas as $v){
+
+        $mapa[
+            $v['fecha']
+        ] = floatval(
+            $v['total_ventas']
+        );
+
+    }
+
+    $categorias = [];
+
+    $serie = [];
+
+    $inicio = new DateTime(
+        $fecha_inicio
+    );
+
+    $fin = new DateTime(
+        $fecha_fin
+    );
+
+    while(
+        $inicio <= $fin
+    ){
+
+        $fecha = $inicio->format(
+            'Y-m-d'
+        );
+
+        $categorias[] = $fecha;
+
+        $serie[] =
+            isset($mapa[$fecha])
+            ?
+            floatval(
+                $mapa[$fecha]
+            )
+            :
+            0;
+
+        $inicio->modify(
+            '+1 day'
+        );
+
+    }
+
+    /* ======================================
+       RESPONSE
+    ====================================== */
+
+    Flight::json([
+
+        'status' => 'ok',
+
+        'negocio' => $negocio,
+
+        'apexcharts' => [
+
+            'categories' =>
+                $categorias,
+
+            'series' => [
+
+                [
+
+                    'name' =>
+                        'Ventas',
+
+                    'data' =>
+                        $serie
+
+                ]
+
+            ]
+
+        ]
+
+    ]);
+
+});
+
