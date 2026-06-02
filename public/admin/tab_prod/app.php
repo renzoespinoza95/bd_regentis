@@ -241,6 +241,10 @@ Flight::route('POST /MylW/listar_categorias', function () {
             p.description,
 
             p.is_visible,
+            p.compra_total,
+            p.cantidad_comprada,
+
+            p.precio_volumen_json,
 
             pc.category_id,
 
@@ -329,6 +333,31 @@ Flight::route('POST /MylW/listar_categorias', function () {
 
         }
 
+        $precio_volumen = [];
+
+        if(
+            !empty(
+                $p['precio_volumen_json']
+            )
+        ){
+
+            $precio_volumen = json_decode(
+
+                $p['precio_volumen_json'],
+
+                true
+
+            );
+
+            if(
+                !is_array(
+                    $precio_volumen
+                )
+            ){
+                $precio_volumen = [];
+            }
+        }
+
         $map[$cid][] = [
 
             'product_id' => intval(
@@ -351,6 +380,17 @@ Flight::route('POST /MylW/listar_categorias', function () {
             'price' => floatval(
                 $p['price']
             ),
+
+            'compra_total' => floatval(
+                $p['compra_total']
+            ),
+
+            'cantidad_comprada' => intval(
+                $p['cantidad_comprada']
+            ),
+
+            'precio_volumen' =>
+                $precio_volumen,
 
             'stock' => intval(
                 $p['stock']
@@ -3065,3 +3105,527 @@ Flight::route('POST /QVhq/ordenarFotoProducto', function(){
     ]);
 
 });
+
+
+Flight::route('POST /W4ta/calculadoraPrecio', function(){
+
+    try{
+
+        include DEFINITION;
+
+        DB::query("SET NAMES 'utf8mb4'");
+
+        $d = json_decode(
+
+            Flight::request()->getBody(),
+
+            true
+
+        ) ?: [];
+
+        /* =====================================
+           FIRMA
+        ====================================== */
+
+        $xin = trim(
+            $d['xin'] ?? ''
+        );
+
+        $yuan = trim(
+            $d['yuan'] ?? ''
+        );
+
+        firma(
+            $xin,
+            $yuan
+        );
+
+        /* =====================================
+           PARAMETROS
+        ====================================== */
+
+        $product_id = intval(
+            $d['product_id'] ?? 0
+        );
+
+        $neg_id = intval(
+            $d['neg_id'] ?? 0
+        );
+
+        $compra_total = floatval(
+            $d['compra_total'] ?? 0
+        );
+
+        $cantidad_comprada = intval(
+            $d['cantidad_comprada'] ?? 0
+        );
+
+        $rangos = $d['rangos'] ?? [];
+
+        if(
+            $product_id <= 0
+            ||
+            $neg_id <= 0
+        ){
+
+            Flight::json([
+
+                'status' => 'error',
+
+                'msg' => 'Parámetros inválidos'
+
+            ], 400);
+
+            return;
+
+        }
+
+        /* =====================================
+           PRODUCTO
+        ====================================== */
+
+        $producto = DB::queryFirstRow("
+
+            SELECT
+
+                product_id,
+                neg_id
+
+            FROM pos_product
+
+            WHERE product_id = %i
+
+            AND neg_id = %i
+
+            AND borrado_el IS NULL
+
+            LIMIT 1
+
+        ",
+            $product_id,
+            $neg_id
+        );
+
+        if(!$producto){
+
+            Flight::json([
+
+                'status' => 'error',
+
+                'msg' => 'Producto no encontrado'
+
+            ], 404);
+
+            return;
+
+        }
+
+        /* =====================================
+           COSTO BASE
+        ====================================== */
+
+        $costo_unitario_base = 0;
+
+        if(
+            $cantidad_comprada > 0
+        ){
+
+            $costo_unitario_base = round(
+
+                $compra_total
+                /
+                $cantidad_comprada,
+
+                2
+
+            );
+
+        }
+
+        $precio_unidad = 0;
+
+        $rangos_final = [];
+
+        /* =====================================
+           CALCULAR
+        ====================================== */
+
+        foreach($rangos as $r){
+
+            $cantidad_desde = intval(
+                $r['cantidad_desde']
+            );
+
+            $nombre_rango = trim(
+                $r['nombre_rango']
+            );
+
+            $ganancia = floatval(
+                $r['ganancia_porcentaje']
+            );
+
+            $precio_unitario = round(
+
+                $costo_unitario_base
+
+                +
+
+                (
+                    $costo_unitario_base
+                    *
+                    $ganancia
+                    /
+                    100
+                ),
+
+                2
+
+            );
+
+            if(
+                $cantidad_desde == 1
+            ){
+
+                $precio_unidad =
+                    $precio_unitario;
+
+            }
+
+            $rangos_final[] = [
+
+                'cantidad_desde' =>
+                    $cantidad_desde,
+
+                'nombre_rango' =>
+                    $nombre_rango,
+
+                'ganancia_porcentaje' =>
+                    $ganancia,
+
+                'precio_unitario_calculado' =>
+                    $precio_unitario
+
+            ];
+
+        }
+
+        /* =====================================
+           GUARDAR EN PRODUCTO
+        ====================================== */
+
+        DB::update(
+
+            'pos_product',
+
+            [
+
+                'price' =>
+                    $precio_unidad,
+
+                'compra_total' =>
+                    $compra_total,
+
+                'cantidad_comprada' =>
+                    $cantidad_comprada,
+
+                'precio_volumen_json' =>
+                    json_encode(
+
+                        $rangos_final,
+
+                        JSON_UNESCAPED_UNICODE
+
+                    ),
+
+                'fecha_modificacion' =>
+                    date('Y-m-d H:i:s')
+
+            ],
+
+            '
+
+                product_id=%i
+
+            ',
+
+            $product_id
+
+        );
+
+        /* =====================================
+           RESPONSE
+        ====================================== */
+
+        Flight::json([
+
+            'status' => 'ok',
+
+            'product_id' =>
+                $product_id,
+
+            'neg_id' =>
+                $neg_id,
+
+            'compra_total' =>
+                $compra_total,
+
+            'cantidad_comprada' =>
+                $cantidad_comprada,
+
+            'costo_unitario_base' =>
+                $costo_unitario_base,
+
+            'precio_unidad_actualizado' =>
+                $precio_unidad,
+
+            'rangos' =>
+                $rangos_final
+
+        ]);
+
+    }
+    catch(Throwable $e){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => $e->getMessage(),
+
+            'line' => $e->getLine(),
+
+            'file' => $e->getFile()
+
+        ], 500);
+
+    }
+
+});
+
+
+Flight::route('POST /V8ke/calculadoraPrecioDetalle', function(){
+
+    try{
+
+        include DEFINITION;
+
+        DB::query("SET NAMES 'utf8mb4'");
+
+        $d = json_decode(
+
+            Flight::request()->getBody(),
+
+            true
+
+        ) ?: [];
+
+        /* =====================================
+           FIRMA
+        ====================================== */
+
+        $xin = trim(
+            $d['xin'] ?? ''
+        );
+
+        $yuan = trim(
+            $d['yuan'] ?? ''
+        );
+
+        firma(
+            $xin,
+            $yuan
+        );
+
+        /* =====================================
+           PARAMETROS
+        ====================================== */
+
+        $product_id = intval(
+            $d['product_id'] ?? 0
+        );
+
+        $neg_id = intval(
+            $d['neg_id'] ?? 0
+        );
+
+        if(
+            $product_id <= 0
+            ||
+            $neg_id <= 0
+        ){
+
+            Flight::json([
+
+                'status' => 'error',
+
+                'msg' => 'Parámetros inválidos'
+
+            ], 400);
+
+            return;
+
+        }
+
+        /* =====================================
+           PRODUCTO
+        ====================================== */
+
+        $producto = DB::queryFirstRow("
+
+            SELECT
+
+                product_id,
+                neg_id,
+                name,
+                price,
+
+                compra_total,
+                cantidad_comprada,
+                precio_volumen_json
+
+            FROM pos_product
+
+            WHERE product_id = %i
+
+            AND neg_id = %i
+
+            AND borrado_el IS NULL
+
+            LIMIT 1
+
+        ",
+            $product_id,
+            $neg_id
+        );
+
+        if(!$producto){
+
+            Flight::json([
+
+                'status' => 'error',
+
+                'msg' => 'Producto no encontrado'
+
+            ], 404);
+
+            return;
+
+        }
+
+        /* =====================================
+           COSTO BASE
+        ====================================== */
+
+        $compra_total = floatval(
+            $producto['compra_total'] ?? 0
+        );
+
+        $cantidad_comprada = intval(
+            $producto['cantidad_comprada'] ?? 0
+        );
+
+        $costo_unitario_base = 0;
+
+        if(
+            $cantidad_comprada > 0
+        ){
+
+            $costo_unitario_base = round(
+
+                $compra_total
+                /
+                $cantidad_comprada,
+
+                2
+
+            );
+
+        }
+
+        /* =====================================
+           RANGOS
+        ====================================== */
+
+        $rangos = [];
+
+        if(
+            !empty(
+                $producto['precio_volumen_json']
+            )
+        ){
+
+            $rangos = json_decode(
+
+                $producto['precio_volumen_json'],
+
+                true
+
+            );
+
+            if(!is_array($rangos)){
+
+                $rangos = [];
+
+            }
+
+        }
+
+        /* =====================================
+           RESPONSE
+        ====================================== */
+
+        Flight::json([
+
+            'status' => 'ok',
+
+            'product_id' =>
+                intval(
+                    $producto['product_id']
+                ),
+
+            'neg_id' =>
+                intval(
+                    $producto['neg_id']
+                ),
+
+            'producto_nombre' =>
+                $producto['name'],
+
+            'compra_total' =>
+                $compra_total,
+
+            'cantidad_comprada' =>
+                $cantidad_comprada,
+
+            'costo_unitario_base' =>
+                $costo_unitario_base,
+
+            'precio_unidad_actualizado' =>
+                floatval(
+                    $producto['price']
+                ),
+
+            'rangos' =>
+                $rangos
+
+        ]);
+
+    }
+    catch(Throwable $e){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => $e->getMessage(),
+
+            'line' => $e->getLine(),
+
+            'file' => $e->getFile()
+
+        ], 500);
+
+    }
+
+});
+

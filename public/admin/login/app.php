@@ -151,6 +151,275 @@ Flight::route('POST /coral/login', function () {
     }
 });
 
+function login_by_id($usu_id)
+{
+
+    $usu_id = intval($usu_id);
+
+    if($usu_id <= 0){
+
+        return [
+
+            'ok' => false,
+
+            'msg' => 'Usuario inválido'
+
+        ];
+
+    }
+
+    /* =========================================
+       VALIDAR EXISTENCIA
+    ========================================= */
+
+    $usuario = DB::queryFirstRow("
+
+        SELECT usu_id
+
+        FROM reg_usu
+
+        WHERE usu_id = %i
+        AND (is_activo = 1 OR is_activo IS NULL)
+
+        LIMIT 1
+
+    ", $usu_id);
+
+    if(!$usuario){
+
+        return [
+
+            'ok' => false,
+
+            'msg' => 'Usuario no existe'
+
+        ];
+
+    }
+
+    /* =========================================
+       TRAER DATA COMPLETA
+    ========================================= */
+
+    $row = DB::queryFirstRow("
+
+        SELECT
+
+            u.usu_id,
+            u.nombres_apellidos,
+            u.email,
+            u.sobrenombre,
+            u.cod_usu,
+            u.img_perfil,
+            r.nombre AS rol_nombre,
+            r.submenu_inicio,
+
+            tu.tipoxusu_id,
+            tu.clave_txt AS tipoxusu_clave,
+            tu.descripcion AS tipoxusu_descripcion,
+
+            nxu.negxusu_id,
+            nxu.neg_id,
+            nxu.is_activo AS negxusu_activo,
+            nxu.fecha_creacion AS negxusu_fecha_creacion,
+
+            n.cod_neg,
+            n.nombre AS negocio_nombre,
+            n.puesto,
+            n.direccion AS negocio_direccion,
+            n.ciudad AS negocio_ciudad,
+            n.provincia AS negocio_provincia,
+            n.departamento AS negocio_departamento,
+            n.map_lat AS negocio_lat,
+            n.map_lng AS negocio_lng,
+            n.img_logo,
+            n.is_validado,
+            n.descripcion AS negocio_descripcion,
+
+            m.mercado_id,
+            m.nombre AS mercado_nombre,
+            m.direccion AS mercado_direccion,
+            m.ciudad AS mercado_ciudad,
+            m.provincia AS mercado_provincia,
+            m.departamento AS mercado_departamento,
+            m.map_lat AS mercado_lat,
+            m.map_lng AS mercado_lng,
+            m.logo AS mercado_logo,
+            m.topnavbar_color,
+            m.patron_fondo
+
+        FROM reg_usu u
+
+        LEFT JOIN reg_rol r
+            ON u.rol_id = r.rol_id
+
+        LEFT JOIN reg_tipoxusu tu
+            ON u.tipoxusu_id = tu.tipoxusu_id
+
+        LEFT JOIN reg_negxusu nxu
+            ON u.usu_id = nxu.usu_id
+            AND nxu.is_activo = 1
+
+        LEFT JOIN reg_neg n
+            ON nxu.neg_id = n.neg_id
+
+        LEFT JOIN reg_mercado m
+            ON n.mercado_id = m.mercado_id
+
+        WHERE u.usu_id = %i
+        AND (u.is_activo = 1 OR u.is_activo IS NULL)
+
+        LIMIT 1
+
+    ", $usu_id);
+
+    /* =========================================
+       RUBROS
+    ========================================= */
+
+    $rubros = [];
+
+    if(!empty($row['neg_id'])){
+
+        $rubros = DB::query("
+
+            SELECT
+
+                rxn.rubroxneg_id,
+                rxn.neg_id,
+                rxn.rubro_id,
+                rxn.is_activo,
+
+                rr.nombre,
+                rr.icono
+
+            FROM reg_rubroxneg rxn
+
+            INNER JOIN reg_rubro rr
+                ON rr.rubro_id = rxn.rubro_id
+
+            WHERE rxn.neg_id = %i
+            AND rxn.is_activo = 1
+            AND rr.is_activo = 1
+
+            ORDER BY rr.nombre ASC
+
+        ", $row['neg_id']);
+
+    }
+
+    /* =========================================
+       SCREENS
+    ========================================= */
+
+    $screens = [];
+
+    if(
+        !empty($row['tipoxusu_id'])
+        &&
+        !empty($row['neg_id'])
+    ){
+
+        $screens = DB::query("
+
+            SELECT DISTINCT
+
+                s.screen_id,
+                s.nombre,
+                s.titulo,
+                s.explicacion,
+                s.vue_route,
+                s.tipoxusu_id
+
+            FROM deux_screen s
+
+            INNER JOIN deux_screenxrubro sxr
+                ON sxr.screen_id = s.screen_id
+
+            INNER JOIN reg_rubroxneg rxn
+                ON rxn.rubro_id = sxr.rubro_id
+                AND rxn.neg_id = %i
+                AND rxn.is_activo = 1
+
+            WHERE s.tipoxusu_id = %i
+
+            ORDER BY s.screen_id ASC
+
+        ",
+            $row['neg_id'],
+            $row['tipoxusu_id']
+        );
+
+        foreach($screens as &$s){
+
+            $s['rubros'] = DB::query("
+
+                SELECT
+
+                    r.rubro_id,
+                    r.nombre,
+                    r.icono
+
+                FROM deux_screenxrubro sxr
+
+                INNER JOIN reg_rubro r
+                    ON r.rubro_id = sxr.rubro_id
+
+                WHERE sxr.screen_id = %i
+                AND r.is_activo = 1
+
+                ORDER BY r.nombre ASC
+
+            ", $s['screen_id']);
+
+        }
+
+    }
+
+    enviar_auto_msg(
+        $usu_id,
+        'TXT_REGISTRO'
+    );
+
+    /* =========================================
+       ULTIMO ACCESO
+    ========================================= */
+
+    DB::update(
+
+        'reg_usu',
+
+        [
+
+            'fecha_ultimo_acceso' =>
+                date('Y-m-d H:i:s')
+
+        ],
+
+        'usu_id=%i',
+
+        $usu_id
+
+    );
+
+    /* =========================================
+       RESPONSE
+    ========================================= */
+
+    return [
+
+        'ok' => true,
+
+        'data' => $row,
+
+        'rubros' => $rubros,
+
+        'screens' => $screens
+
+    ];
+
+}
+
 Flight::route('POST /coral/loginById', function () {
 
     try {
@@ -159,257 +428,64 @@ Flight::route('POST /coral/loginById', function () {
 
         DB::query("SET NAMES 'utf8mb4'");
 
-        $data = Flight::request()->data->getData();
+        $data = Flight::request()
+            ->data
+            ->getData();
+
+        /* =========================================
+           VALIDAR PAYLOAD
+        ========================================= */
 
         if (!isset($data['usu_id'])) {
 
             Flight::json([
+
                 'status' => 'error',
-                'msg'    => 'Payload incompleto'
+
+                'msg' => 'Payload incompleto'
+
             ], 400);
 
             return;
         }
 
-        $usu_id = intval($data['usu_id']);
+        $usu_id = intval(
+            $data['usu_id']
+        );
 
         if ($usu_id <= 0) {
 
             Flight::json([
+
                 'status' => 'error',
-                'msg'    => 'Usuario inválido'
+
+                'msg' => 'Usuario inválido'
+
             ], 400);
 
             return;
         }
 
         /* =========================================
-           VALIDAR EXISTENCIA
+           LOGIN
         ========================================= */
 
-        $usuario = DB::queryFirstRow("
+        $r = login_by_id(
+            $usu_id
+        );
 
-            SELECT usu_id
-
-            FROM reg_usu
-
-            WHERE usu_id = %i
-            AND (is_activo = 1 OR is_activo IS NULL)
-
-            LIMIT 1
-
-        ", $usu_id);
-
-        if (!$usuario) {
+        if(!$r['ok']){
 
             Flight::json([
+
                 'status' => 'error',
-                'msg'    => 'Usuario no existe'
+
+                'msg' => $r['msg']
+
             ], 401);
 
             return;
         }
-
-        /* =========================================
-           TRAER DATA COMPLETA
-        ========================================= */
-
-        $row = DB::queryFirstRow("
-
-            SELECT
-
-                u.usu_id,
-                u.nombres_apellidos,
-                u.email,
-                u.sobrenombre,
-                u.cod_usu,
-                u.img_perfil,
-                r.nombre AS rol_nombre,
-                r.submenu_inicio,
-
-                tu.tipoxusu_id,
-                tu.clave_txt AS tipoxusu_clave,
-                tu.descripcion AS tipoxusu_descripcion,
-
-                nxu.negxusu_id,
-                nxu.neg_id,
-                nxu.is_activo AS negxusu_activo,
-                nxu.fecha_creacion AS negxusu_fecha_creacion,
-
-                n.cod_neg,
-                n.nombre AS negocio_nombre,
-                n.puesto,
-                n.direccion AS negocio_direccion,
-                n.ciudad AS negocio_ciudad,
-                n.provincia AS negocio_provincia,
-                n.departamento AS negocio_departamento,
-                n.map_lat AS negocio_lat,
-                n.map_lng AS negocio_lng,
-                n.img_logo,
-                n.is_validado,
-                n.descripcion AS negocio_descripcion,
-
-                m.mercado_id,
-                m.nombre AS mercado_nombre,
-                m.direccion AS mercado_direccion,
-                m.ciudad AS mercado_ciudad,
-                m.provincia AS mercado_provincia,
-                m.departamento AS mercado_departamento,
-                m.map_lat AS mercado_lat,
-                m.map_lng AS mercado_lng,
-                m.logo AS mercado_logo,
-                m.topnavbar_color,
-                m.patron_fondo
-
-            FROM reg_usu u
-
-            LEFT JOIN reg_rol r
-                ON u.rol_id = r.rol_id
-
-            LEFT JOIN reg_tipoxusu tu
-                ON u.tipoxusu_id = tu.tipoxusu_id
-
-            LEFT JOIN reg_negxusu nxu
-                ON u.usu_id = nxu.usu_id
-                AND nxu.is_activo = 1
-
-            LEFT JOIN reg_neg n
-                ON nxu.neg_id = n.neg_id
-
-            LEFT JOIN reg_mercado m
-                ON n.mercado_id = m.mercado_id
-
-            WHERE u.usu_id = %i
-            AND (u.is_activo = 1 OR u.is_activo IS NULL)
-
-            LIMIT 1
-
-        ", $usu_id);
-
-        /* =========================================
-           RUBROS DEL NEGOCIO
-        ========================================= */
-
-        $rubros = [];
-
-        if (!empty($row['neg_id'])) {
-
-            $rubros = DB::query("
-
-                SELECT
-
-                    rxn.rubroxneg_id,
-                    rxn.neg_id,
-                    rxn.rubro_id,
-                    rxn.is_activo,
-
-                    rr.nombre,
-                    rr.icono
-
-                FROM reg_rubroxneg rxn
-
-                INNER JOIN reg_rubro rr
-                    ON rr.rubro_id = rxn.rubro_id
-
-                WHERE rxn.neg_id = %i
-                AND rxn.is_activo = 1
-                AND rr.is_activo = 1
-
-                ORDER BY rr.nombre ASC
-
-            ", $row['neg_id']);
-
-        }
-
-        /* =========================================
-           SCREENS
-        ========================================= */
-
-        $screens = [];
-
-        if(
-            !empty($row['tipoxusu_id'])
-            &&
-            !empty($row['neg_id'])
-        ){
-
-            $screens = DB::query("
-
-                SELECT DISTINCT
-
-                    s.screen_id,
-                    s.nombre,
-                    s.titulo,
-                    s.explicacion,
-                    s.vue_route,
-                    s.tipoxusu_id
-
-                FROM deux_screen s
-
-                INNER JOIN deux_screenxrubro sxr
-                    ON sxr.screen_id = s.screen_id
-
-                INNER JOIN reg_rubroxneg rxn
-                    ON rxn.rubro_id = sxr.rubro_id
-                    AND rxn.neg_id = %i
-                    AND rxn.is_activo = 1
-
-                WHERE s.tipoxusu_id = %i
-
-                ORDER BY s.screen_id ASC
-
-            ",
-                $row['neg_id'],
-                $row['tipoxusu_id']
-            );
-
-            /* =========================================
-               RUBROS DE CADA SCREEN
-            ========================================= */
-
-            foreach($screens as &$s){
-
-                $s['rubros'] = DB::query("
-
-                    SELECT
-
-                        r.rubro_id,
-                        r.nombre,
-                        r.icono
-
-                    FROM deux_screenxrubro sxr
-
-                    INNER JOIN reg_rubro r
-                        ON r.rubro_id = sxr.rubro_id
-
-                    WHERE sxr.screen_id = %i
-                    AND r.is_activo = 1
-
-                    ORDER BY r.nombre ASC
-
-                ", $s['screen_id']);
-
-            }
-
-        }
-
-        enviar_auto_msg(
-            $usu_id,
-            'TXT_REGISTRO'
-        );
-
-        /* =========================================
-           ÚLTIMO ACCESO
-        ========================================= */
-
-        DB::update(
-            'reg_usu',
-            [
-                'fecha_ultimo_acceso' => date('Y-m-d H:i:s')
-            ],
-            'usu_id=%i',
-            $usu_id
-        );
 
         /* =========================================
            RESPONSE
@@ -419,15 +495,16 @@ Flight::route('POST /coral/loginById', function () {
 
             'status'  => 'ok',
 
-            'data'    => $row,
+            'data'    => $r['data'],
 
-            'rubros'  => $rubros,
+            'rubros'  => $r['rubros'],
 
-            'screens' => $screens
+            'screens' => $r['screens']
 
         ], 200, JSON_UNESCAPED_UNICODE);
 
-    } catch (Throwable $e) {
+    }
+    catch (Throwable $e) {
 
         Flight::json([
 
@@ -440,7 +517,9 @@ Flight::route('POST /coral/loginById', function () {
             'file'   => $e->getFile()
 
         ], 500);
+
     }
+
 });
 
 Flight::route('POST /coral/crearUsuarioFirebase', function () {
