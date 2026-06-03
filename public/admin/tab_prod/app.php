@@ -601,6 +601,11 @@ Flight::route('POST /ArWL/tienda', function () {
             p.tipo_producto,
             p.marca_des,
             p.is_visible,
+            p.compra_total,
+
+            p.cantidad_comprada,
+
+            p.precio_volumen_json,
 
             pc.category_id,
 
@@ -714,6 +719,31 @@ Flight::route('POST /ArWL/tienda', function () {
 
         }
 
+        $precio_volumen = [];
+
+        if(
+            !empty(
+                $p['precio_volumen_json']
+            )
+        ){
+
+            $precio_volumen = json_decode(
+
+                $p['precio_volumen_json'],
+
+                true
+
+            );
+
+            if(
+                !is_array(
+                    $precio_volumen
+                )
+            ){
+                $precio_volumen = [];
+            }
+        }
+
         $map[$cid][] = [
 
             'product_id' => intval(
@@ -725,6 +755,17 @@ Flight::route('POST /ArWL/tienda', function () {
             'price' => floatval(
                 $p['price']
             ),
+
+            'compra_total' => floatval(
+                $p['compra_total']
+            ),
+
+            'cantidad_comprada' => intval(
+                $p['cantidad_comprada']
+            ),
+
+            'precio_volumen' =>
+                $precio_volumen,
 
             'stock' => intval(
                 $p['stock']
