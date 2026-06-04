@@ -1667,7 +1667,7 @@ Flight::route('POST /RvKx/nuevoProducto', function(){
                         'AJUSTE',
 
                     'origen' =>
-                        'EDICION',
+                        'AJUSTE',
 
                     'cantidad' =>
                         $stock,
