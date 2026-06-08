@@ -137,13 +137,14 @@ Flight::route('POST /app/principal', function() {
 
                 rubro_id,
                 nombre,
-                icono
+                icono,
+                orden
 
             FROM reg_rubro
 
             WHERE is_activo = 1
 
-            ORDER BY nombre ASC
+            ORDER BY orden ASC
 
         ");
 
