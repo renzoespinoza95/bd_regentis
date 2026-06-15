@@ -29,6 +29,15 @@
               <i class="fa fa-arrow-circle-right"></i> Mercados
             </a>
           </li>
+          <li>
+            <a
+              href="#"
+              @click.prevent="abrirModalCategoriasMercado"
+            >
+              <i class="fa fa-tags"></i>
+              Categorías Mercado
+            </a>
+          </li>
         </ul>
       </div>
     </div>
@@ -398,6 +407,7 @@
             <tr>
               <th>ID</th>
               <th>Nombre</th>
+              <th>Categoría</th>
               <th>Dirección</th>
               <th>Activo</th>
               <th>Acciones</th>
@@ -548,6 +558,32 @@
       </div>
     </div>
 
+    <div class="control-group">
+
+    <label class="control-label">
+      Categoría
+    </label>
+
+    <div class="controls">
+
+      <v-select
+
+        :options="catMercadoOptions"
+
+        label="nombre"
+
+        v-model="formMercado.cat_mercado"
+
+        placeholder="Seleccione categoría"
+
+        style="width:420px;"
+
+      ></v-select>
+
+    </div>
+
+  </div>
+
     <!-- ACTIVO -->
     <div class="control-group">
       <label class="control-label">Activo</label>
@@ -661,6 +697,223 @@
     </button>
   </div>
 </div>    
+
+
+<div
+  id="modalCategoriasMercado"
+  class="modal hide fade fullscreen"
+  tabindex="-1"
+>
+
+  <div class="modal-header">
+
+    <button
+      type="button"
+      class="close"
+      data-dismiss="modal"
+    >
+      ×
+    </button>
+
+    <h3>
+      Categorías de Mercado
+    </h3>
+
+  </div>
+
+  <div class="modal-body">
+
+    <table
+      id="tablaCategoriasMercado"
+      class="table table-bordered table-condensed"
+    >
+
+      <thead>
+
+        <tr>
+
+          <th>ID</th>
+
+          <th>Nombre</th>
+
+          <th>Visible</th>
+
+          <th>Activo</th>
+
+          <th>Acciones</th>
+
+        </tr>
+
+      </thead>
+
+      <tbody></tbody>
+
+    </table>
+
+  </div>
+
+  <div class="modal-footer">
+
+    <button
+      class="btn btn-success"
+      @click="abrirModalCrearCategoriaMercado"
+    >
+
+      <i class="icon-plus icon-white"></i>
+
+      Agregar
+
+    </button>
+
+    <button
+      class="btn"
+      data-dismiss="modal"
+    >
+
+      Cerrar
+
+    </button>
+
+  </div>
+
+</div>
+
+<div
+    id="modalEditarCategoriaMercado"
+    class="modal hide fade"
+    tabindex="-1"
+>
+
+    <div class="modal-header">
+
+        <button
+            type="button"
+            class="close"
+            data-dismiss="modal"
+        >
+            ×
+        </button>
+
+        <h3>
+            Editar Categoría
+        </h3>
+
+    </div>
+
+    <div class="modal-body">
+
+        <label>
+            Nombre
+        </label>
+
+        <input
+
+            v-model="formCatMercado.nombre"
+
+            type="text"
+
+            class="input-xxlarge"
+
+        >
+
+    </div>
+
+    <div class="modal-footer">
+
+        <button
+
+            class="btn btn-primary"
+
+            @click="guardarCategoriaMercado"
+
+        >
+
+            Guardar
+
+        </button>
+
+        <button
+
+            class="btn"
+
+            data-dismiss="modal"
+
+        >
+
+            Cancelar
+
+        </button>
+
+    </div>
+
+</div>
+
+<div
+  id="modalCrearCategoriaMercado"
+  class="modal hide fade fullscreen"
+>
+
+  <div class="modal-header">
+
+    <button
+      class="close"
+      data-dismiss="modal"
+    >
+      ×
+    </button>
+
+    <h3>
+      Nueva Categoría Mercado
+    </h3>
+
+  </div>
+
+  <div class="modal-body">
+
+    <div class="control-group">
+
+      <label class="control-label">
+
+        Nombre
+
+      </label>
+
+      <div class="controls">
+
+        <input
+          v-model="nuevoCatMercado.nombre"
+          class="input-xxlarge"
+        >
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="modal-footer">
+
+    <button
+      class="btn btn-primary"
+      @click="crearCategoriaMercado"
+    >
+
+      Guardar
+
+    </button>
+
+    <button
+      class="btn"
+      data-dismiss="modal"
+    >
+
+      Cancelar
+
+    </button>
+
+  </div>
+
+</div>
 
 
 <!-- =========================
@@ -812,6 +1065,7 @@ const appNeg = new Vue({
       nueva_preview: ''
 
     },
+    catMercadoOptions: [],
     dtNeg: null,
     formCategoria: {
       nombre: '',
@@ -859,12 +1113,25 @@ const appNeg = new Vue({
     nuevoMercado: { nombre: '', direccion: '', is_activo: 1 },
     formMercado: {
       mercado_id: 0,
+      cat_mercado: null,
       nombre: '',
       direccion: '',
       is_activo: 1,
       logo: '',
       topnavbar_color: '',
       patron_fondo: ''
+    },
+
+    formCatMercado: {
+
+        cat_mercado_id: 0,
+
+        nombre: '',
+
+        is_visible: 1,
+
+        is_activo: 1
+
     },
 
     // propietario
@@ -880,6 +1147,20 @@ const appNeg = new Vue({
       cod_usu: '',
 
       usuario: null
+
+    },
+
+    categoriasMercado: [],
+
+    dtCatMercado: null,
+
+    nuevoCatMercado: {
+
+      nombre: '',
+
+      is_visible: 1,
+
+      is_activo: 1
 
     },
 
@@ -1646,6 +1927,21 @@ const appNeg = new Vue({
 
     },
 
+    cargarCategoriasMercado(){
+
+        return axios
+            .get(
+                `${this.apphost}/WEwr/catmercado/listar`
+            )
+            .then(r=>{
+
+                this.catMercadoOptions =
+                    r.data.data || []
+
+            })
+
+    },
+
     eliminarNeg(n) {
       apprise(`¿Eliminar negocio <b>#${n.neg_id}</b>?`, { confirm:true }, ok => {
         if (!ok) return;
@@ -1813,6 +2109,736 @@ const appNeg = new Vue({
         this.listarNeg()
 
       })
+
+    },
+
+    abrirModalCrearCategoriaMercado(){
+
+        this.nuevoCatMercado = {
+
+            nombre: '',
+
+            is_visible: 1,
+
+            is_activo: 1
+
+        };
+
+        $('#modalCategoriasMercado').modal('hide');
+
+        $('#modalCrearCategoriaMercado').modal('show');
+
+    },
+
+    crearCategoriaMercado(){
+
+        if(
+            !this.nuevoCatMercado.nombre
+            ||
+            !this.nuevoCatMercado.nombre.trim()
+        ){
+
+            return apprise(
+                'Escribe el nombre'
+            );
+
+        }
+
+        this.bloquear(
+            'Creando categoría...'
+        );
+
+        axios.post(
+
+            `${this.apphost}/WEwr/catmercado/crear`,
+
+            {
+
+                nombre:
+                    this.nuevoCatMercado.nombre.trim(),
+
+                is_visible:
+                    parseInt(
+                        this.nuevoCatMercado.is_visible
+                    ),
+
+                is_activo:
+                    parseInt(
+                        this.nuevoCatMercado.is_activo
+                    )
+
+            }
+
+        )
+        .then(r=>{
+
+            if(
+                r.data.status == 'ok'
+            ){
+
+                apprise(
+                    'Categoría creada'
+                );
+
+                $('#modalCrearCategoriaMercado')
+                    .modal('hide');
+
+                this.nuevoCatMercado = {
+
+                    nombre: '',
+
+                    is_visible: 1,
+
+                    is_activo: 1
+
+                };
+
+            }else{
+
+                apprise(
+                    r.data.msg || 'Error'
+                );
+
+            }
+
+        })
+        .catch(err=>{
+
+            console.error(err);
+
+            apprise(
+                'Error al crear categoría'
+            );
+
+        })
+        .finally(()=>{
+
+            $.unblockUI();
+
+            this.listarCategoriasMercado()
+                .then(()=>{
+
+                    $('#modalCategoriasMercado')
+                        .modal('show');
+
+                });
+
+        });
+
+    },
+
+      listarCategoriasMercado(){
+
+      console.log('========================================');
+      console.log('INICIO listarCategoriasMercado()');
+      console.log('apphost:', this.apphost);
+      console.log('========================================');
+
+      this.bloquear(
+          'Cargando categorías...'
+      );
+
+      return axios.get(
+
+          `${this.apphost}/WEwr/catmercado/listar`
+
+      )
+      .then(r=>{
+
+          console.log('========================================');
+          console.log('RESPUESTA AXIOS');
+          console.log(r);
+          console.log('========================================');
+
+          console.log('status:',
+              r.data.status
+          );
+
+          console.log('data:',
+              r.data.data
+          );
+
+          this.categoriasMercado =
+              r.data.data || [];
+
+          console.log('========================================');
+          console.log('this.categoriasMercado');
+          console.log(this.categoriasMercado);
+          console.log(
+              'Cantidad:',
+              this.categoriasMercado.length
+          );
+          console.log('========================================');
+
+          this.$nextTick(()=>{
+
+              console.log('========================================');
+              console.log('$nextTick ejecutado');
+              console.log('========================================');
+
+              console.log(
+                  '#tablaCategoriasMercado existe:',
+                  $('#tablaCategoriasMercado').length
+              );
+
+              console.log(
+                  'dtCatMercado actual:'
+              );
+
+              console.log(
+                  this.dtCatMercado
+              );
+
+              if(
+                  !this.dtCatMercado
+              ){
+
+                  console.log(
+                      'Creando DataTable...'
+                  );
+
+                  this.dtCatMercado =
+                      $('#tablaCategoriasMercado')
+                      .DataTable({
+
+                          language:
+                              (
+                                  typeof dt_language
+                                  !== 'undefined'
+                              )
+                              ? dt_language
+                              : undefined,
+
+                          scrollX:true,
+
+                          destroy:true
+
+                      });
+
+                  console.log(
+                      'DataTable creado'
+                  );
+
+                  console.log(
+                      this.dtCatMercado
+                  );
+
+                  const self = this;
+
+                  $('#tablaCategoriasMercado tbody')
+                  
+                  .on(
+                      'click',
+                      '.editar-catmercado',
+                      function(e){
+
+                          e.preventDefault();
+
+                          console.log(
+                              '================================'
+                          );
+
+                          console.log(
+                              'CLICK EDITAR'
+                          );
+
+                          console.log(
+                              '================================'
+                          );
+
+                          const id =
+                              $(this).data('id');
+
+                          console.log(
+                              'ID:',
+                              id
+                          );
+
+                          const row =
+                              self.categoriasMercado.find(
+                                  x =>
+                                      parseInt(
+                                          x.cat_mercado_id
+                                      )
+                                      ===
+                                      parseInt(
+                                          id
+                                      )
+                              );
+
+                          console.log(
+                              'ROW:'
+                          );
+
+                          console.log(
+                              row
+                          );
+
+                          if(!row){
+
+                              console.error(
+                                  'NO SE ENCONTRO LA CATEGORIA'
+                              );
+
+                              apprise(
+                                  'No se encontró la categoría'
+                              );
+
+                              return;
+
+                          }
+
+                          self.formCatMercado = {
+
+                              cat_mercado_id:
+
+                                  parseInt(
+                                      row.cat_mercado_id
+                                  ),
+
+                              nombre:
+
+                                  row.nombre || '',
+
+                              is_visible:
+
+                                  parseInt(
+                                      row.is_visible
+                                  ) || 0,
+
+                              is_activo:
+
+                                  parseInt(
+                                      row.is_activo
+                                  ) || 0
+
+                          };
+
+                          console.log(
+                              'formCatMercado:'
+                          );
+
+                          console.log(
+                              self.formCatMercado
+                          );
+
+                          console.log(
+                              'CERRANDO modalCategoriasMercado'
+                          );
+
+                          $('#modalCategoriasMercado')
+                              .modal('hide');
+
+                          setTimeout(function(){
+
+                              console.log(
+                                  'ABRIENDO modalEditarCategoriaMercado'
+                              );
+
+                              $('#modalEditarCategoriaMercado')
+                                  .modal('show');
+
+                          },300);
+
+                      }
+                  )
+
+                  .on(
+                    'change',
+                    '.toggle-activo-catmercado',
+                    function(){
+
+                        const cat_mercado_id =
+                            $(this).data('id');
+
+                        const is_activo =
+                            $(this).is(':checked')
+                                ? 1
+                                : 0;
+
+                        axios.post(
+
+                            `${self.apphost}/WEwr/catmercado/activo`,
+
+                            {
+
+                                cat_mercado_id,
+
+                                is_activo
+
+                            }
+
+                        );
+
+                    }
+                )
+
+                  .on(
+                      'change',
+                      '.toggle-visible-catmercado',
+                      function(){
+
+                          const cat_mercado_id =
+                              $(this).data('id');
+
+                          const is_visible =
+                              $(this).is(':checked')
+                                  ? 1
+                                  : 0;
+
+                          axios.post(
+
+                              `${self.apphost}/WEwr/catmercado/visible`,
+
+                              {
+
+                                  cat_mercado_id,
+
+                                  is_visible
+
+                              }
+
+                          );
+
+                      }
+                  )
+
+                  .on(
+                    'click',
+                    '.eliminar-catmercado',
+                    function(e){
+
+                        e.preventDefault();
+
+                        const id =
+                            $(this).data('id');
+
+                        apprise(
+
+                            '¿Eliminar categoría?',
+
+                            {
+
+                                confirm:true
+
+                            },
+
+                            function(ok){
+
+                                if(!ok){
+                                    return;
+                                }
+
+                                self.bloquear(
+                                    'Eliminando...'
+                                );
+
+                                axios.post(
+
+                                    `${self.apphost}/WEwr/catmercado/eliminar`,
+
+                                    {
+
+                                        cat_mercado_id:id
+
+                                    }
+
+                                )
+                                .then(()=>{
+
+                                    apprise(
+                                        'Eliminado'
+                                    );
+
+                                    self.listarCategoriasMercado();
+
+                                })
+                                .finally(()=>{
+
+                                    $.unblockUI();
+
+                                });
+
+                            }
+
+                        );
+
+                    }
+                );
+
+              }
+
+              console.log(
+                  'Limpiando DataTable...'
+              );
+
+              this.dtCatMercado.clear();
+
+              console.log(
+                  'Filas después clear:',
+                  this.dtCatMercado.rows().count()
+              );
+
+              this.categoriasMercado
+              .forEach(c=>{
+
+                  console.log(
+                      'Procesando categoría:'
+                  );
+
+                  console.log(c);
+
+                  const visible = `
+
+                  <label class="switch-mini">
+
+                      <input
+                          type="checkbox"
+                          class="toggle-visible-catmercado"
+                          data-id="${c.cat_mercado_id}"
+                          ${parseInt(c.is_visible) ? 'checked' : ''}
+                      >
+
+                      <span></span>
+
+                  </label>
+
+                  `;
+
+                  const activo = `
+
+                    <label class="switch-mini">
+
+                        <input
+                            type="checkbox"
+                            class="toggle-activo-catmercado"
+                            data-id="${c.cat_mercado_id}"
+                            ${parseInt(c.is_activo) ? 'checked' : ''}
+                        >
+
+                        <span></span>
+
+                    </label>
+
+                    `;
+
+                  const acciones = `
+
+                    <div class="btn-group">
+
+                        <button
+                            class="btn btn-mini dropdown-toggle"
+                            data-toggle="dropdown"
+                        >
+
+                            Opciones
+
+                            <span class="caret"></span>
+
+                        </button>
+
+                        <ul class="dropdown-menu">
+
+                            <li>
+
+                                <a
+                                    href="#"
+                                    class="editar-catmercado"
+                                    data-id="${c.cat_mercado_id}"
+                                >
+
+                                    Editar
+
+                                </a>
+
+                            </li>
+
+                            <li>
+
+                                <a
+                                    href="#"
+                                    class="eliminar-catmercado"
+                                    data-id="${c.cat_mercado_id}"
+                                >
+
+                                    Eliminar
+
+                                </a>
+
+                            </li>
+
+                        </ul>
+
+                    </div>
+
+                    `;
+
+                  console.log(
+                      'Agregando fila:',
+                      c.cat_mercado_id
+                  );
+
+                  this.dtCatMercado.row.add([
+
+                      c.cat_mercado_id,
+
+                      c.nombre || '',
+
+                      visible,
+
+                      activo,
+
+                      acciones
+
+                  ]);
+
+              });
+
+              console.log(
+                  'Filas antes draw:',
+                  this.dtCatMercado.rows().count()
+              );
+
+              this.dtCatMercado.draw(false);
+
+              console.log(
+                  'draw(false) ejecutado'
+              );
+
+              console.log(
+                  'Filas después draw:',
+                  this.dtCatMercado.rows().count()
+              );
+
+              console.log('========================================');
+              console.log('FIN listarCategoriasMercado()');
+              console.log('========================================');
+
+          });
+
+      })
+      .catch(err=>{
+
+          console.error('========================================');
+          console.error('ERROR AXIOS');
+          console.error(err);
+          console.error('========================================');
+
+      })
+      .finally(()=>{
+
+          console.log(
+              'UNBLOCK UI'
+          );
+
+          $.unblockUI();
+
+      });
+
+  },
+
+    guardarCategoriaMercado(){
+
+        if(
+            !this.formCatMercado.nombre
+            ||
+            !this.formCatMercado.nombre.trim()
+        ){
+
+            return apprise(
+                'Escribe el nombre'
+            );
+
+        }
+
+        this.bloquear(
+            'Actualizando categoría...'
+        );
+
+        axios.post(
+
+            `${this.apphost}/WEwr/catmercado/editar`,
+
+            {
+
+                cat_mercado_id:
+                    parseInt(
+                        this.formCatMercado.cat_mercado_id
+                    ),
+
+                nombre:
+                    this.formCatMercado.nombre.trim(),
+
+                is_visible:
+                    parseInt(
+                        this.formCatMercado.is_visible
+                    ),
+
+                is_activo:
+                    parseInt(
+                        this.formCatMercado.is_activo
+                    )
+
+            }
+
+        )
+        .then(r=>{
+
+            if(
+                r.data.status == 'ok'
+            ){
+
+                apprise(
+                    'Categoría actualizada'
+                );
+
+                $('#modalEditarCategoriaMercado')
+                    .modal('hide');
+
+            }else{
+
+                apprise(
+                    r.data.msg || 'Error'
+                );
+
+            }
+
+        })
+        .catch(err=>{
+
+            console.error(err);
+
+            apprise(
+                'Error al actualizar'
+            );
+
+        })
+        .finally(()=>{
+
+            $.unblockUI();
+
+            this.listarCategoriasMercado()
+                .then(()=>{
+
+                    $('#modalCategoriasMercado')
+                        .modal('show');
+
+                });
+
+        });
+
+    },
+
+    abrirModalCategoriasMercado(){
+
+        this.listarCategoriasMercado()
+
+            .then(()=>{
+
+                $('#modalCategoriasMercado')
+                    .modal('show');
+
+            });
 
     },
 
@@ -2002,10 +3028,19 @@ const appNeg = new Vue({
           this.mercados = r.data.data || [];
 
           this.mercadosOptions = this.mercados.map(m => ({
+
             mercado_id: parseInt(m.mercado_id),
+
+            cat_mercado_id: m.cat_mercado_id
+              ? parseInt(m.cat_mercado_id)
+              : null,
+
             nombre: m.nombre,
+
             direccion: m.direccion,
+
             is_activo: parseInt(m.is_activo)
+
           }));
 
           this.$nextTick(() => {
@@ -2025,6 +3060,48 @@ const appNeg = new Vue({
                   const row = self.mercados.find(x => parseInt(x.mercado_id,10) === parseInt(id,10));
                   if (row) self.abrirModalEditarMercadoDesdeLista(row);
                 })
+                .on(
+                    'change',
+                    '.toggle-activo-mercado',
+                    function(){
+
+                        const mercado_id =
+                            $(this).data('id')
+
+                        const is_activo =
+                            $(this).is(':checked')
+                                ? 1
+                                : 0
+
+                        axios.post(
+
+                            `${self.apphost}/WEwr/mercado/activo`,
+
+                            {
+
+                                mercado_id,
+                                is_activo
+
+                            }
+
+                        )
+                        .then(()=>{
+
+                            apprise(
+                                'Estado actualizado'
+                            )
+
+                        })
+                        .catch(()=>{
+
+                            apprise(
+                                'Error al actualizar'
+                            )
+
+                        })
+
+                    }
+                )
                 .on('click', 'a.eliminar-merc', function(e){
                   e.preventDefault();
                   const id = $(this).data('id');
@@ -2036,7 +3113,22 @@ const appNeg = new Vue({
             this.dtMerc.clear();
 
             this.mercados.forEach(m => {
-              const activo = (parseInt(m.is_activo,10) ? 'SI' : 'NO');
+              const activo = `
+
+                <label class="switch-mini">
+
+                    <input
+                        type="checkbox"
+                        class="toggle-activo-mercado"
+                        data-id="${m.mercado_id}"
+                        ${parseInt(m.is_activo,10) ? 'checked' : ''}
+                    >
+
+                    <span></span>
+
+                </label>
+
+                `;
 
               const actions = `
                 <div class="btn-group">
@@ -2051,11 +3143,12 @@ const appNeg = new Vue({
               `;
 
               this.dtMerc.row.add([
-                m.mercado_id,
-                (m.nombre || ''),
-                (m.direccion || ''),
-                activo,
-                actions
+                  m.mercado_id,
+                  (m.nombre || ''),
+                  (m.categoria || ''),
+                  (m.direccion || ''),
+                  activo,
+                  actions
               ]);
             });
 
@@ -2093,36 +3186,180 @@ const appNeg = new Vue({
 
     abrirModalEditarMercadoDesdeLista(m) {
 
-      this.formMercado = {
-        mercado_id: parseInt(m.mercado_id,10),
-        nombre: (m.nombre || ''),
-        direccion: (m.direccion || ''),
-        is_activo: (parseInt(m.is_activo,10) ? 1 : 0),
+      console.log('====================================');
+      console.log('INICIO abrirModalEditarMercadoDesdeLista');
+      console.log('m recibido:');
+      console.log(m);
+      console.log('mercado_id:', m.mercado_id);
+      console.log('cat_mercado_id:', m.cat_mercado_id);
+      console.log('====================================');
 
-        logo: (m.logo || ''),
-        topnavbar_color: (m.topnavbar_color || ''),
-        patron_fondo: (m.patron_fondo || '')
-      };
+      this.cargarCategoriasMercado()
 
-      $('#modalMercados').modal('hide');
-      $('#modalEditarMercado').modal('show');
+        .then(() => {
+
+          console.log('====================================');
+          console.log('cargarCategoriasMercado() FINALIZÓ');
+          console.log('catMercadoOptions completos:');
+          console.log(this.catMercadoOptions);
+          console.log('Cantidad categorías:', this.catMercadoOptions.length);
+          console.log('====================================');
+
+          this.catMercadoOptions.forEach((x, i) => {
+
+            console.log(
+              'Categoria',
+              i,
+              'cat_mercado_id:',
+              x.cat_mercado_id,
+              'nombre:',
+              x.nombre
+            );
+
+          });
+
+          const categoriaEncontrada = this.catMercadoOptions.find(
+            x =>
+              parseInt(x.cat_mercado_id) ===
+              parseInt(m.cat_mercado_id)
+          );
+
+          console.log('====================================');
+          console.log('Resultado FIND:');
+          console.log(categoriaEncontrada);
+          console.log('====================================');
+
+          this.formMercado = {
+
+            mercado_id: parseInt(
+              m.mercado_id,
+              10
+            ),
+
+            cat_mercado:
+
+              categoriaEncontrada || null,
+
+            nombre:
+              (m.nombre || ''),
+
+            direccion:
+              (m.direccion || ''),
+
+            is_activo:
+              (
+                parseInt(
+                  m.is_activo,
+                  10
+                )
+                  ? 1
+                  : 0
+              ),
+
+            logo:
+              (m.logo || ''),
+
+            topnavbar_color:
+              (
+                m.topnavbar_color
+                || ''
+              ),
+
+            patron_fondo:
+              (
+                m.patron_fondo
+                || ''
+              )
+
+          };
+
+          console.log('====================================');
+          console.log('formMercado generado:');
+          console.log(this.formMercado);
+          console.log('formMercado.cat_mercado:');
+          console.log(this.formMercado.cat_mercado);
+          console.log('====================================');
+
+          $('#modalMercados').modal('hide');
+
+          $('#modalEditarMercado').modal('show');
+
+          setTimeout(() => {
+
+            console.log('====================================');
+            console.log('POST APERTURA MODAL');
+            console.log('formMercado actual:');
+            console.log(this.formMercado);
+            console.log('cat_mercado actual:');
+            console.log(this.formMercado.cat_mercado);
+            console.log('====================================');
+
+          }, 500);
+
+        })
+
+        .catch(err => {
+
+          console.error('====================================');
+          console.error('ERROR cargarCategoriasMercado');
+          console.error(err);
+          console.error('====================================');
+
+        });
+
     },
 
     guardarMercado() {
-      if (!this.formMercado.nombre || !this.formMercado.nombre.trim()) return apprise('Escribe el nombre');
+
+      if (!this.formMercado.nombre || !this.formMercado.nombre.trim()) {
+        return apprise('Escribe el nombre');
+      }
+
+      const payload = {
+
+        ...this.formMercado,
+
+        cat_mercado_id:
+
+          this.formMercado.cat_mercado
+
+            ? parseInt(
+                this.formMercado
+                  .cat_mercado
+                  .cat_mercado_id
+              )
+
+            : null
+
+      };
 
       this.bloquear('Actualizando mercado…');
-      axios.post(`${this.apphost}/mercado/editar`, this.formMercado)
-        .then(() => {
-          apprise('¡Mercado actualizado!');
-          $('#modalEditarMercado').modal('hide');
-        })
-        .finally(() => {
-          $.unblockUI();
-          this.listarMercados().then(() => $('#modalMercados').modal('show'));
-          // refrescar tabla principal de neg también (por nombre mercado)
-          this.listarNeg();
-        });
+
+      axios.post(
+
+        `${this.apphost}/mercado/editar`,
+
+        payload
+
+      )
+      .then(() => {
+
+        apprise('¡Mercado actualizado!');
+
+        $('#modalEditarMercado').modal('hide');
+
+      })
+      .finally(() => {
+
+        $.unblockUI();
+
+        this.listarMercados()
+          .then(() => $('#modalMercados').modal('show'));
+
+        this.listarNeg();
+
+      });
+
     },
 
     eliminarMercado(m) {

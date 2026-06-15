@@ -509,16 +509,25 @@ Flight::route('GET /mercado/listar', function() {
         DB::query("SET NAMES 'utf8mb4'");
 
         $rows = DB::query("
-            SELECT 
-                mercado_id,
-                nombre,
-                direccion,
-                is_activo,
-                logo,
-                topnavbar_color,
-                patron_fondo
-            FROM reg_mercado
-            ORDER BY mercado_id DESC
+            SELECT
+
+                m.mercado_id,
+                m.cat_mercado_id,
+                m.nombre,
+                m.direccion,
+                m.is_activo,
+                m.logo,
+                m.topnavbar_color,
+                m.patron_fondo,
+
+                cm.nombre AS categoria
+
+            FROM reg_mercado m
+
+            LEFT JOIN reg_cat_mercado cm
+            ON cm.cat_mercado_id = m.cat_mercado_id
+
+            ORDER BY m.mercado_id DESC
         ");
 
         Flight::json(['status'=>'ok','data'=>$rows]);
@@ -571,6 +580,10 @@ Flight::route('POST /mercado/editar', function() {
         $direccion = isset($data['direccion']) ? trim($data['direccion']) : '';
         $is_activo = isset($data['is_activo']) ? intval($data['is_activo']) : 1;
 
+        $cat_mercado_id = intval(
+            $data['cat_mercado_id'] ?? 0
+        );
+
 
 
         if ($mercado_id <= 0) {
@@ -596,6 +609,10 @@ Flight::route('POST /mercado/editar', function() {
             'is_activo'=>$is_activo,
             'logo'=>($data['logo'] ?: null),
             'topnavbar_color'=>($data['topnavbar_color'] ?: null),
+            'cat_mercado_id' =>
+                $cat_mercado_id > 0
+                    ? $cat_mercado_id
+                    : null,
             'patron_fondo'=>($data['patron_fondo'] ?: null)
         ],"mercado_id=%i",$mercado_id);
 
@@ -2772,5 +2789,554 @@ Flight::route('POST /QQvN/neg/propietario/eliminar', function(){
     ]);
 
 });
+
+
+Flight::route('POST /WEwr/mercado/activo', function(){
+
+    autentificar_administrador();
+
+    try{
+
+        DB::query("SET NAMES 'utf8mb4'");
+
+        $data = Flight::request()->data->getData();
+
+        $mercado_id = intval(
+            $data['mercado_id'] ?? 0
+        );
+
+        $is_activo = intval(
+            $data['is_activo'] ?? -1
+        );
+
+        if($mercado_id <= 0){
+
+            Flight::json([
+                'status'=>'error',
+                'msg'=>'mercado_id inválido'
+            ],400);
+
+            return;
+        }
+
+        if(
+            $is_activo !== 0
+            &&
+            $is_activo !== 1
+        ){
+
+            Flight::json([
+                'status'=>'error',
+                'msg'=>'is_activo inválido'
+            ],400);
+
+            return;
+        }
+
+        DB::update(
+
+            'reg_mercado',
+
+            [
+                'is_activo'=>$is_activo
+            ],
+
+            "mercado_id=%i",
+
+            $mercado_id
+
+        );
+
+        Flight::json([
+            'status'=>'ok'
+        ]);
+
+    }catch(Exception $e){
+
+        Flight::json([
+            'status'=>'error',
+            'msg'=>$e->getMessage()
+        ],500);
+
+    }
+
+});
+
+Flight::route('GET /WEwr/catmercado/listar', function(){
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    $rows = DB::query("
+
+        SELECT
+
+            cat_mercado_id,
+            nombre,
+            is_visible,
+            is_activo
+        FROM reg_cat_mercado
+
+        WHERE borrado_el IS NULL
+
+        ORDER BY nombre ASC
+
+    ");
+
+    Flight::json([
+
+        'status'=>'ok',
+
+        'data'=>$rows
+
+    ]);
+
+});
+
+Flight::route('GET /WEwr/catmercado/listar', function(){
+
+    try{
+
+        DB::query("SET NAMES 'utf8mb4'");
+
+        $rows = DB::query("
+
+            SELECT
+
+                cat_mercado_id,
+                nombre,
+                is_visible,
+                is_activo
+
+            FROM reg_cat_mercado
+
+            WHERE borrado_el IS NULL
+
+            ORDER BY cat_mercado_id DESC
+
+        ");
+
+        Flight::json([
+
+            'status'=>'ok',
+
+            'data'=>$rows
+
+        ]);
+
+    }catch(Exception $e){
+
+        Flight::json([
+
+            'status'=>'error',
+
+            'msg'=>$e->getMessage()
+
+        ],500);
+
+    }
+
+});
+
+Flight::route('POST /WEwr/catmercado/crear', function(){
+
+    try{
+
+        DB::query("SET NAMES 'utf8mb4'");
+
+        $data = Flight::request()
+            ->data
+            ->getData();
+
+        $nombre = trim(
+            $data['nombre'] ?? ''
+        );
+
+        $is_visible = intval(
+            $data['is_visible'] ?? 1
+        );
+
+        $is_activo = intval(
+            $data['is_activo'] ?? 1
+        );
+
+        if($nombre === ''){
+
+            Flight::json([
+
+                'status'=>'error',
+
+                'msg'=>'Nombre requerido'
+
+            ],400);
+
+            return;
+        }
+
+        DB::insert(
+
+            'reg_cat_mercado',
+
+            [
+
+                'nombre'=>$nombre,
+
+                'is_visible'=>$is_visible,
+
+                'is_activo'=>$is_activo
+
+            ]
+
+        );
+
+        Flight::json([
+
+            'status'=>'ok',
+
+            'cat_mercado_id'=>
+                DB::insertId()
+
+        ]);
+
+    }catch(Exception $e){
+
+        Flight::json([
+
+            'status'=>'error',
+
+            'msg'=>$e->getMessage()
+
+        ],500);
+
+    }
+
+});
+
+Flight::route('POST /WEwr/catmercado/editar', function(){
+
+    try{
+
+        DB::query("SET NAMES 'utf8mb4'");
+
+        $data = Flight::request()
+            ->data
+            ->getData();
+
+        $cat_mercado_id = intval(
+            $data['cat_mercado_id'] ?? 0
+        );
+
+        $nombre = trim(
+            $data['nombre'] ?? ''
+        );
+
+        $is_visible = intval(
+            $data['is_visible'] ?? 1
+        );
+
+        $is_activo = intval(
+            $data['is_activo'] ?? 1
+        );
+
+        if($cat_mercado_id <= 0){
+
+            Flight::json([
+
+                'status'=>'error',
+
+                'msg'=>'cat_mercado_id inválido'
+
+            ],400);
+
+            return;
+        }
+
+        if($nombre === ''){
+
+            Flight::json([
+
+                'status'=>'error',
+
+                'msg'=>'Nombre requerido'
+
+            ],400);
+
+            return;
+        }
+
+        DB::update(
+
+            'reg_cat_mercado',
+
+            [
+
+                'nombre'=>$nombre,
+
+                'is_visible'=>$is_visible,
+
+                'is_activo'=>$is_activo
+
+            ],
+
+            "cat_mercado_id=%i",
+
+            $cat_mercado_id
+
+        );
+
+        Flight::json([
+
+            'status'=>'ok'
+
+        ]);
+
+    }catch(Exception $e){
+
+        Flight::json([
+
+            'status'=>'error',
+
+            'msg'=>$e->getMessage()
+
+        ],500);
+
+    }
+
+});
+
+Flight::route('POST /WEwr/catmercado/eliminar', function(){
+
+    try{
+
+        DB::query("SET NAMES 'utf8mb4'");
+
+        $data = Flight::request()
+            ->data
+            ->getData();
+
+        $cat_mercado_id = intval(
+            $data['cat_mercado_id'] ?? 0
+        );
+
+        if($cat_mercado_id <= 0){
+
+            Flight::json([
+
+                'status'=>'error',
+
+                'msg'=>'cat_mercado_id inválido'
+
+            ],400);
+
+            return;
+        }
+
+        DB::update(
+
+            'reg_cat_mercado',
+
+            [
+
+                'borrado_el'=>
+                    date('Y-m-d H:i:s')
+
+            ],
+
+            "cat_mercado_id=%i",
+
+            $cat_mercado_id
+
+        );
+
+        Flight::json([
+
+            'status'=>'ok'
+
+        ]);
+
+    }catch(Exception $e){
+
+        Flight::json([
+
+            'status'=>'error',
+
+            'msg'=>$e->getMessage()
+
+        ],500);
+
+    }
+
+});
+
+Flight::route('POST /WEwr/catmercado/activo', function(){
+
+    try{
+
+        DB::query("SET NAMES 'utf8mb4'");
+
+        $data = Flight::request()
+            ->data
+            ->getData();
+
+        $cat_mercado_id = intval(
+            $data['cat_mercado_id'] ?? 0
+        );
+
+        $is_activo = intval(
+            $data['is_activo'] ?? -1
+        );
+
+        if($cat_mercado_id <= 0){
+
+            Flight::json([
+
+                'status'=>'error',
+
+                'msg'=>'cat_mercado_id inválido'
+
+            ],400);
+
+            return;
+        }
+
+        if(
+            $is_activo !== 0
+            &&
+            $is_activo !== 1
+        ){
+
+            Flight::json([
+
+                'status'=>'error',
+
+                'msg'=>'is_activo inválido'
+
+            ],400);
+
+            return;
+        }
+
+        DB::update(
+
+            'reg_cat_mercado',
+
+            [
+
+                'is_activo'=>$is_activo
+
+            ],
+
+            "cat_mercado_id=%i",
+
+            $cat_mercado_id
+
+        );
+
+        Flight::json([
+
+            'status'=>'ok'
+
+        ]);
+
+    }catch(Exception $e){
+
+        Flight::json([
+
+            'status'=>'error',
+
+            'msg'=>$e->getMessage()
+
+        ],500);
+
+    }
+
+});
+
+Flight::route('POST /WEwr/catmercado/visible', function(){
+
+    try{
+
+        DB::query("SET NAMES 'utf8mb4'");
+
+        $data = Flight::request()
+            ->data
+            ->getData();
+
+        $cat_mercado_id = intval(
+            $data['cat_mercado_id'] ?? 0
+        );
+
+        $is_visible = intval(
+            $data['is_visible'] ?? -1
+        );
+
+        if($cat_mercado_id <= 0){
+
+            Flight::json([
+
+                'status'=>'error',
+
+                'msg'=>'cat_mercado_id inválido'
+
+            ],400);
+
+            return;
+        }
+
+        if(
+            $is_visible !== 0
+            &&
+            $is_visible !== 1
+        ){
+
+            Flight::json([
+
+                'status'=>'error',
+
+                'msg'=>'is_visible inválido'
+
+            ],400);
+
+            return;
+        }
+
+        DB::update(
+
+            'reg_cat_mercado',
+
+            [
+
+                'is_visible'=>$is_visible
+
+            ],
+
+            "cat_mercado_id=%i",
+
+            $cat_mercado_id
+
+        );
+
+        Flight::json([
+
+            'status'=>'ok'
+
+        ]);
+
+    }catch(Exception $e){
+
+        Flight::json([
+
+            'status'=>'error',
+
+            'msg'=>$e->getMessage()
+
+        ],500);
+
+    }
+
+});
+
+
+
+
 
 

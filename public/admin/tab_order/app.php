@@ -6722,3 +6722,382 @@ Flight::route('POST /GHDk/graficoVentas', function(){
 
 });
 
+Flight::route('POST /XGdi/imp_ventas_fecha', function(){
+
+    include DEFINITION;
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    $d = json_decode(
+        Flight::request()->getBody(),
+        true
+    ) ?: [];
+
+    $ini = trim(
+        $d['ini'] ?? ''
+    );
+
+    $fin = trim(
+        $d['fin'] ?? ''
+    );
+
+    if(
+        $ini === ''
+        ||
+        $fin === ''
+    ){
+        Flight::halt(
+            400,
+            'Debe enviar ini y fin'
+        );
+    }
+
+    // =====================================
+    // VENTAS
+    // =====================================
+
+    $ventas = DB::query("
+
+        SELECT
+
+            po.product_order_id,
+
+            po.fecha_creacion,
+
+            po.total_fees,
+
+            c.nombres_apellidos AS cliente,
+
+            n.nombre AS negocio
+
+        FROM pos_product_order po
+
+        LEFT JOIN pos_cliente c
+            ON c.cliente_id = po.cliente_id
+
+        LEFT JOIN reg_neg n
+            ON n.neg_id = po.neg_id
+
+        WHERE po.borrado_el IS NULL
+
+        AND po.fecha_creacion >= %s
+
+        AND po.fecha_creacion < DATE_ADD(%s, INTERVAL 1 DAY)
+
+        ORDER BY
+            po.product_order_id ASC
+
+    ",
+        $ini,
+        $fin
+    );
+
+    $listado = [];
+
+    $i = 1;
+
+    $total_general = 0;
+
+    $total_costo_general = 0;
+
+    $ganancia_total = 0;
+
+    $cantidad_productos_vendidos = 0;
+
+    foreach(
+        $ventas as &$v
+    ){
+
+        // =====================================
+        // DETALLE VENTA
+        // =====================================
+
+        $detalles = DB::query("
+
+            SELECT
+
+                d.product_order_detail_id,
+
+                d.product_id,
+
+                d.product_name,
+
+                d.amount,
+
+                d.price_item,
+
+                p.compra_total,
+
+                p.cantidad_comprada,
+
+                CASE
+
+                    WHEN
+                        p.compra_total IS NULL
+                        OR
+                        p.cantidad_comprada IS NULL
+                        OR
+                        p.cantidad_comprada = 0
+
+                    THEN 0
+
+                    ELSE ROUND(
+
+                        p.compra_total
+                        /
+                        p.cantidad_comprada,
+
+                        2
+
+                    )
+
+                END AS costo_unitario
+
+            FROM pos_product_order_detail d
+
+            INNER JOIN pos_product p
+
+                ON p.product_id =
+                    d.product_id
+
+            WHERE
+
+                d.product_order_id = %i
+
+            AND d.borrado_el IS NULL
+
+        ",
+            $v['product_order_id']
+        );
+
+        foreach(
+            $detalles as &$d
+        ){
+
+            $cantidad_productos_vendidos +=
+                $d['amount'];
+
+            $subtotal_costo = round(
+
+                $d['amount']
+                *
+                $d['costo_unitario']
+
+            ,2);
+
+            $subtotal_venta = round(
+
+                $d['amount']
+                *
+                $d['price_item']
+
+            ,2);
+
+            $ganancia = round(
+
+                $subtotal_venta
+                -
+                $subtotal_costo
+
+            ,2);
+
+            $d['subtotal_costo'] =
+                number_format(
+                    $subtotal_costo,
+                    2
+                );
+
+            $d['subtotal_venta'] =
+                number_format(
+                    $subtotal_venta,
+                    2
+                );
+
+            $d['ganancia'] =
+                number_format(
+                    $ganancia,
+                    2
+                );
+
+            $d['costo_unitario'] =
+                number_format(
+                    $d['costo_unitario'],
+                    2
+                );
+
+            $d['price_item'] =
+                number_format(
+                    $d['price_item'],
+                    2
+                );
+
+            $total_costo_general +=
+                $subtotal_costo;
+
+            $ganancia_total +=
+                $ganancia;
+        }
+
+        $v['indice'] = $i++;
+
+        $v['detalles'] = $detalles;
+
+        $total_general +=
+            $v['total_fees'];
+
+        $listado[] = $v;
+    }
+
+    $ini_fmt = date(
+        'd/m/Y',
+        strtotime($ini)
+    );
+
+    $fin_fmt = date(
+        'd/m/Y',
+        strtotime($fin)
+    );
+
+
+    // =====================================
+    // DATA MUSTACHE
+    // =====================================
+
+    $template_data = [
+
+        'informacion' => [[
+
+            'razon_social' =>
+
+                'UNION COMERCIAL',
+
+            'ruc' =>
+
+                "999",
+
+            'logo' =>
+
+                $varhost .
+                '/public/admin/login/images/logo_login.png',
+
+            'titulo_reporte' =>
+
+                "RESUMEN DE VENTAS DEL $ini_fmt AL $fin_fmt",
+
+            'fecha' =>
+
+                date(
+                    'd/m/Y H:i'
+                ),
+
+            'total_items' =>
+
+                count(
+                    $ventas
+                ),
+
+            'cantidad_productos_vendidos' =>
+
+                number_format(
+                    $cantidad_productos_vendidos,
+                    0
+                ),
+
+            'total_costo_general' =>
+
+                number_format(
+                    $total_costo_general,
+                    2
+                ),
+
+            'ganancia' =>
+
+                number_format(
+                    $ganancia_total,
+                    2
+                ),
+
+            'total_general' =>
+
+                number_format(
+                    $total_general,
+                    2
+                )
+
+        ]],
+
+        'listado' =>
+
+            $listado
+
+    ];
+
+    // =====================================
+    // HTML
+    // =====================================
+
+    $html =
+
+        (new Mustache)
+
+        ->render(
+
+            file_get_contents(
+
+                VARPATH .
+
+                '/public/reportes/reporte_html/XGdi_imp_ventas_fecha.html'
+
+            ),
+
+            $template_data
+
+        );
+
+    // =====================================
+    // PDF
+    // =====================================
+
+    global $wkh_pdf;
+
+    $pdf =
+
+        $varpath_tmp .
+
+        'XGdi_ventas_' .
+
+        time() .
+
+        '.pdf';
+
+    $wkh_pdf->addPage(
+        $html
+    );
+
+    exec(
+
+        $wkh_pdf->getCommand(
+            $pdf
+        )
+
+    );
+
+    // =====================================
+    // DESCARGA
+    // =====================================
+
+    Flight::json([
+
+        'status' => 'ok',
+
+        'url' =>
+
+            $varhost_tmp .
+
+            basename(
+                $pdf
+            )
+
+    ]);
+
+});    
