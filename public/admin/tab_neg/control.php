@@ -3336,7 +3336,193 @@ Flight::route('POST /WEwr/catmercado/visible', function(){
 });
 
 
+Flight::route('POST /neg_pago/listar', function(){
 
+    autentificar_administrador();
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    $data = Flight::request()
+        ->data
+        ->getData();
+
+    $neg_id = intval(
+        $data['neg_id'] ?? 0
+    );
+
+    $rows = DB::query("
+
+        SELECT
+
+            neg_pago_id,
+
+            motivo,
+
+            monto,
+
+            fecha_inicio_premium,
+
+            fecha_fin_premium,
+
+            is_aprobado,
+
+            yaplin_id
+
+        FROM reg_neg_pago
+
+        WHERE neg_id = %i
+
+        AND borrado_el IS NULL
+
+        ORDER BY neg_pago_id DESC
+
+    ", $neg_id);
+
+    Flight::json([
+
+        'status' => 'ok',
+
+        'rows' => $rows
+
+    ]);
+
+});
+
+Flight::route('POST /neg_pago/crear', function(){
+
+    autentificar_administrador();
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    $data = Flight::request()
+        ->data
+        ->getData();
+
+    $neg_id = intval(
+        $data['neg_id'] ?? 0
+    );
+
+    $motivo = trim(
+        $data['motivo'] ?? ''
+    );
+
+    $monto = floatval(
+        $data['monto'] ?? 0
+    );
+
+    $fecha_inicio_premium =
+        trim(
+            $data['fecha_inicio_premium']
+            ?? ''
+        );
+
+    $fecha_fin_premium =
+        trim(
+            $data['fecha_fin_premium']
+            ?? ''
+        );
+
+    $is_aprobado = intval(
+        $data['is_aprobado'] ?? 1
+    );
+
+    if($neg_id <= 0){
+
+        Flight::json([
+            'status'=>'error',
+            'msg'=>'neg_id inválido'
+        ],400);
+
+        return;
+    }
+
+    DB::insert(
+
+        'reg_neg_pago',
+
+        [
+
+            'neg_id' =>
+                $neg_id,
+
+            'motivo' =>
+                $motivo,
+
+            'monto' =>
+                $monto,
+
+            'fecha_inicio_premium' =>
+                $fecha_inicio_premium,
+
+            'fecha_fin_premium' =>
+                $fecha_fin_premium,
+
+            'is_aprobado' =>
+                $is_aprobado
+
+        ]
+
+    );
+
+    Flight::json([
+
+        'status'=>'ok',
+
+        'neg_pago_id'=>
+            DB::insertId()
+
+    ]);
+
+});
+
+
+Flight::route(
+'POST /neg_pago/eliminar',
+function(){
+
+    autentificar_administrador();
+
+    $data = Flight::request()
+        ->data
+        ->getData();
+
+    $neg_pago_id = intval(
+        $data['neg_pago_id'] ?? 0
+    );
+
+    if($neg_pago_id <= 0){
+
+        Flight::json([
+            'status'=>'error'
+        ],400);
+
+        return;
+    }
+
+    DB::update(
+
+        'reg_neg_pago',
+
+        [
+
+            'borrado_el'=>
+                date('Y-m-d H:i:s')
+
+        ],
+
+        "neg_pago_id=%i",
+
+        $neg_pago_id
+
+    );
+
+    Flight::json([
+
+        'status'=>'ok'
+
+    ]);
+
+});
 
 
 

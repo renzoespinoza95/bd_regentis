@@ -915,6 +915,164 @@
 
 </div>
 
+<div
+  id="modalMembresia"
+  class="modal hide fade fullscreen"
+>
+
+  <div class="modal-header">
+
+    <button
+      class="close"
+      data-dismiss="modal"
+    >
+      ×
+    </button>
+
+    <h3>
+      Membresías
+    </h3>
+
+    <div>
+      Negocio:
+      <b>
+        {{ negMembresia.nombre }}
+      </b>
+    </div>
+
+  </div>
+
+  <div class="modal-body">
+
+    <h4>
+      Nueva membresía
+    </h4>
+
+    <div class="control-group">
+
+      <label>
+        Motivo
+      </label>
+
+     <select
+        v-model="nuevoPago.motivo"
+        @change="cambiarFechasMembresia"
+      >
+
+        <option value="FREE">
+          FREE
+        </option>
+
+        <option value="MENSUAL">
+          MENSUAL
+        </option>
+
+        <option value="PAGO_ANUAL">
+          PAGO_ANUAL
+        </option>
+
+        <option value="SLIDER_AI">
+          SLIDER_AI
+        </option>
+
+      </select>
+
+    </div>
+
+    <div class="control-group">
+
+      <label>
+        Monto
+      </label>
+
+      <input
+        type="number"
+        step="0.01"
+        v-model="nuevoPago.monto"
+      >
+
+    </div>
+
+    <div class="control-group">
+
+      <label>
+        Fecha inicio
+      </label>
+
+      <input
+        type="date"
+        v-model="nuevoPago.fecha_inicio_premium"
+      >
+
+    </div>
+
+    <div class="control-group">
+
+      <label>
+        Fecha fin
+      </label>
+
+      <input
+        type="date"
+        v-model="nuevoPago.fecha_fin_premium"
+      >
+
+    </div>
+
+    <button
+      class="btn btn-success"
+      @click="guardarMembresia"
+    >
+      Agregar
+    </button>
+
+    <hr>
+
+    <table
+      id="tablaMembresias"
+      class="table table-bordered table-condensed"
+    >
+
+      <thead>
+
+        <tr>
+
+          <th>ID</th>
+
+          <th>Motivo</th>
+
+          <th>Monto</th>
+
+          <th>Inicio</th>
+
+          <th>Fin</th>
+
+          <th>Aprobado</th>
+          <th> ⚙️ </th>
+
+        </tr>
+
+      </thead>
+
+      <tbody></tbody>
+
+    </table>
+
+  </div>
+
+  <div class="modal-footer">
+
+    <button
+      class="btn"
+      data-dismiss="modal"
+    >
+      Cerrar
+    </button>
+
+  </div>
+
+</div>
+
 
 <!-- =========================
      MODAL SUBIR LOGO
@@ -1134,6 +1292,32 @@ const appNeg = new Vue({
 
     },
 
+    negMembresia: {
+
+      neg_id: 0,
+
+      nombre: ''
+
+    },
+
+    membresias: [],
+
+    dtMembresia: null,
+
+    nuevoPago: {
+
+      motivo: 'MENSUAL',
+
+      monto: 0,
+
+      fecha_inicio_premium: '',
+
+      fecha_fin_premium: '',
+
+      is_aprobado: 1
+
+    },
+
     // propietario
     negProp: {
 
@@ -1213,6 +1397,171 @@ const appNeg = new Vue({
         });
 
     },
+
+    listarMembresias(){
+
+  this.bloquear(
+    'Cargando membresías...'
+  );
+
+  return axios.post(
+
+    `${this.apphost}/neg_pago/listar`,
+
+    {
+
+      neg_id:
+        this.negMembresia.neg_id
+
+    }
+
+  )
+  .then(r=>{
+
+    this.membresias =
+      r.data.rows || [];
+
+    this.$nextTick(()=>{
+
+      if(!this.dtMembresia){
+
+        this.dtMembresia =
+          $('#tablaMembresias')
+          .DataTable({
+
+            scrollX: true,
+
+            destroy: true,
+
+            pageLength: 25,
+
+            order: [[0,'desc']]
+
+          });
+
+        const self = this;
+
+        $('#tablaMembresias tbody')
+          .on(
+            'click',
+            '.eliminar-membresia',
+            function(e){
+
+              e.preventDefault();
+
+              const neg_pago_id =
+                $(this).data('id');
+
+              apprise(
+                '¿Eliminar membresía?',
+                {
+                  confirm:true
+                },
+                function(ok){
+
+                  if(!ok){
+                    return;
+                  }
+
+                  axios.post(
+
+                    `${self.apphost}/neg_pago/eliminar`,
+
+                    {
+
+                      neg_pago_id
+
+                    }
+
+                  )
+                  .then(()=>{
+
+                    apprise(
+                      'Registro eliminado'
+                    );
+
+                    self.listarMembresias();
+
+                  });
+
+                }
+
+              );
+
+            }
+          );
+
+      }
+
+      this.dtMembresia.clear();
+
+        this.membresias.forEach(m=>{
+
+          const btnEliminar = `
+
+            <a
+              href="#"
+              class="eliminar-membresia"
+              data-id="${m.neg_pago_id}"
+              title="Eliminar"
+              style="
+                color:red;
+                font-size:18px;
+                font-weight:bold;
+              "
+            >
+              ✖
+            </a>
+
+          `;
+
+          this.dtMembresia.row.add([
+
+            m.neg_pago_id,
+
+            m.motivo,
+
+            parseFloat(
+              m.monto || 0
+            ).toFixed(2),
+
+            m.fecha_inicio_premium || '',
+
+            m.fecha_fin_premium || '',
+
+            parseInt(
+              m.is_aprobado
+            ) === 1
+              ? 'SI'
+              : 'NO',
+
+            btnEliminar
+
+          ]);
+
+        });
+
+        this.dtMembresia.draw(false);
+
+      });
+
+    })
+    .catch(err=>{
+
+      console.error(err);
+
+      apprise(
+        'Error al cargar membresías'
+      );
+
+    })
+    .finally(()=>{
+
+      $.unblockUI();
+
+    });
+
+  },
 
     abrirModalRubro(n){
       this.negRubro = {
@@ -1399,6 +1748,35 @@ const appNeg = new Vue({
                 }
 
               })
+
+              .on(
+                'click',
+                'a.membresia-neg',
+                function(e){
+
+                  e.preventDefault();
+
+                  const id =
+                    $(this).data('id');
+
+                  const row =
+                    self.negs.find(
+                      x =>
+                        parseInt(x.neg_id)
+                        ===
+                        parseInt(id)
+                    );
+
+                  if(row){
+
+                    self.abrirModalMembresia(
+                      row
+                    );
+
+                  }
+
+                }
+              )
 
               .on('change', '.toggle-activo-neg', function(){
 
@@ -1598,6 +1976,13 @@ const appNeg = new Vue({
                       Subir logo
                     </a>
                   </li>
+              <li>
+                <a href="#"
+                  class="membresia-neg"
+                  data-id="${n.neg_id}">
+                  Membresía
+                </a>
+              </li>
 
                 </ul>
 
@@ -2018,6 +2403,226 @@ const appNeg = new Vue({
         $.unblockUI()
 
       })
+
+    },
+
+    abrirModalMembresia(n){
+
+      this.negMembresia = {
+
+        neg_id:
+          parseInt(n.neg_id),
+
+        nombre:
+          n.nombre
+
+      };
+
+      const hoy = new Date();
+
+      const yyyy =
+        hoy.getFullYear();
+
+      const mm =
+        String(
+          hoy.getMonth() + 1
+        ).padStart(2,'0');
+
+      const dd =
+        String(
+          hoy.getDate()
+        ).padStart(2,'0');
+
+      const fechaInicio =
+        `${yyyy}-${mm}-${dd}`;
+
+      const fechaFin =
+        new Date(hoy);
+
+      fechaFin.setMonth(
+        fechaFin.getMonth() + 1
+      );
+
+      const yyyy2 =
+        fechaFin.getFullYear();
+
+      const mm2 =
+        String(
+          fechaFin.getMonth() + 1
+        ).padStart(2,'0');
+
+      const dd2 =
+        String(
+          fechaFin.getDate()
+        ).padStart(2,'0');
+
+      const fechaFinStr =
+        `${yyyy2}-${mm2}-${dd2}`;
+
+      this.nuevoPago = {
+
+        motivo: 'MENSUAL',
+
+        monto: 20,
+
+        fecha_inicio_premium:
+          fechaInicio,
+
+        fecha_fin_premium:
+          fechaFinStr,
+
+        is_aprobado: 1
+
+      };
+
+      this.listarMembresias()
+        .then(()=>{
+
+          $('#modalMembresia')
+            .modal('show');
+
+        });
+
+    },  
+
+    guardarMembresia(){
+
+      const hoy = new Date();
+
+      const yyyy =
+        hoy.getFullYear();
+
+      const mm =
+        String(
+          hoy.getMonth() + 1
+        ).padStart(2,'0');
+
+      const dd =
+        String(
+          hoy.getDate()
+        ).padStart(2,'0');
+
+      const fechaInicio =
+        `${yyyy}-${mm}-${dd}`;
+
+      const fechaFin =
+        new Date(hoy);
+
+      switch(
+        this.nuevoPago.motivo
+      ){
+
+        case 'PAGO_ANUAL':
+
+          fechaFin.setFullYear(
+            fechaFin.getFullYear() + 1
+          );
+
+          break;
+
+        case 'MENSUAL':
+
+          fechaFin.setMonth(
+            fechaFin.getMonth() + 1
+          );
+
+          break;
+
+        default:
+
+          fechaFin.setDate(
+            fechaFin.getDate() + 30
+          );
+
+          break;
+
+      }
+
+      const yyyy2 =
+        fechaFin.getFullYear();
+
+      const mm2 =
+        String(
+          fechaFin.getMonth() + 1
+        ).padStart(2,'0');
+
+      const dd2 =
+        String(
+          fechaFin.getDate()
+        ).padStart(2,'0');
+
+      const fechaFinStr =
+        `${yyyy2}-${mm2}-${dd2}`;
+
+      this.bloquear(
+        'Guardando membresía...'
+      );
+
+      axios.post(
+
+        `${this.apphost}/neg_pago/crear`,
+
+        {
+
+          neg_id:
+            this.negMembresia.neg_id,
+
+          motivo:
+            this.nuevoPago.motivo,
+
+          monto:
+            this.nuevoPago.monto,
+
+          fecha_inicio_premium:
+            fechaInicio,
+
+          fecha_fin_premium:
+            fechaFinStr,
+
+          is_aprobado: 1
+
+        }
+
+      )
+      .then(()=>{
+
+        apprise(
+          'Membresía registrada'
+        );
+
+        this.nuevoPago = {
+
+          motivo:'MENSUAL',
+
+          monto:20,
+
+          fecha_inicio_premium:'',
+
+          fecha_fin_premium:'',
+
+          is_aprobado:1
+
+        };
+
+        this.listarMembresias();
+
+      })
+      .catch(err=>{
+
+        console.error(
+          err
+        );
+
+        apprise(
+          'Error al registrar membresía'
+        );
+
+      })
+      .finally(()=>{
+
+        $.unblockUI();
+
+      });
 
     },
 
@@ -2737,6 +3342,38 @@ const appNeg = new Vue({
 
   },
 
+  cambiarFechasMembresia(){
+
+    const hoy =
+      new Date();
+
+    const fin =
+      new Date(hoy);
+
+    if(
+      this.nuevoPago.motivo
+      ===
+      'PAGO_ANUAL'
+    ){
+
+      fin.setFullYear(
+        fin.getFullYear() + 1
+      );
+
+    }else{
+
+      fin.setMonth(
+        fin.getMonth() + 1
+      );
+
+    }
+
+    this.nuevoPago.fecha_fin_premium =
+      fin.toISOString()
+        .substring(0,10);
+
+  },
+
     guardarCategoriaMercado(){
 
         if(
@@ -3381,6 +4018,81 @@ const appNeg = new Vue({
   mounted() {
     this.listarNeg();
     this.cargarRubros(); // 🔥 NUEVO
+  },
+
+  watch: {
+
+    'nuevoPago.motivo': function(){
+
+      const hoy = new Date();
+
+      const yyyy = hoy.getFullYear();
+
+      const mm = String(
+        hoy.getMonth() + 1
+      ).padStart(2,'0');
+
+      const dd = String(
+        hoy.getDate()
+      ).padStart(2,'0');
+
+      const fechaHoy =
+        `${yyyy}-${mm}-${dd}`;
+
+      this.nuevoPago.fecha_inicio_premium =
+        fechaHoy;
+
+      const fin =
+        new Date(hoy);
+
+      if(
+        this.nuevoPago.motivo
+        ===
+        'PAGO_ANUAL'
+      ){
+
+        fin.setFullYear(
+          fin.getFullYear() + 1
+        );
+
+      }
+      else if(
+        this.nuevoPago.motivo
+        ===
+        'MENSUAL'
+      ){
+
+        fin.setMonth(
+          fin.getMonth() + 1
+        );
+
+      }
+      else{
+
+        fin.setDate(
+          fin.getDate() + 7
+        );
+
+      }
+
+      const yyyy2 =
+        fin.getFullYear();
+
+      const mm2 =
+        String(
+          fin.getMonth() + 1
+        ).padStart(2,'0');
+
+      const dd2 =
+        String(
+          fin.getDate()
+        ).padStart(2,'0');
+
+      this.nuevoPago.fecha_fin_premium =
+        `${yyyy2}-${mm2}-${dd2}`;
+
+    }
+
   }
 });
 </script>
