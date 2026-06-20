@@ -3524,5 +3524,65 @@ function(){
 
 });
 
+Flight::route(
+'POST /neg_pago/toggle_aprobado',
+function(){
+
+    autentificar_administrador();
+
+    $data = Flight::request()
+        ->data
+        ->getData();
+
+    $neg_pago_id = intval(
+        $data['neg_pago_id'] ?? 0
+    );
+
+    $row = DB::queryFirstRow("
+
+        SELECT
+
+            is_aprobado
+
+        FROM reg_neg_pago
+
+        WHERE neg_pago_id = %i
+
+    ", $neg_pago_id);
+
+    if(!$row){
+
+        Flight::json([
+            'status'=>'error'
+        ],404);
+
+        return;
+    }
+
+    DB::update(
+
+        'reg_neg_pago',
+
+        [
+
+            'is_aprobado'=>
+                $row['is_aprobado']
+                ? 0
+                : 1
+
+        ],
+
+        'neg_pago_id=%i',
+
+        $neg_pago_id
+
+    );
+
+    Flight::json([
+        'status'=>'ok'
+    ]);
+
+});
+
 
 

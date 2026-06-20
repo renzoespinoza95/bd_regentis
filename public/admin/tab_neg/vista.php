@@ -1442,6 +1442,64 @@ const appNeg = new Vue({
         const self = this;
 
         $('#tablaMembresias tbody')
+
+          .on(
+            'change',
+            '.toggle-aprobado',
+            function(e){
+
+              e.preventDefault();
+
+              const chk =
+                $(this);
+
+              const id =
+                chk.data('id');
+
+              apprise(
+
+                '¿Cambiar estado de aprobación?',
+
+                {
+                  confirm:true
+                },
+
+                function(ok){
+
+                  if(!ok){
+
+                    chk.prop(
+                      'checked',
+                      !chk.prop('checked')
+                    );
+
+                    return;
+                  }
+
+                  axios.post(
+
+                    `${self.apphost}/neg_pago/toggle_aprobado`,
+
+                    {
+
+                      neg_pago_id:id
+
+                    }
+
+                  )
+                  .then(()=>{
+
+                    self.listarMembresias();
+
+                  });
+
+                }
+
+              );
+
+            }
+          )
+
           .on(
             'click',
             '.eliminar-membresia',
@@ -1499,21 +1557,33 @@ const appNeg = new Vue({
 
           const btnEliminar = `
 
-            <a
-              href="#"
-              class="eliminar-membresia"
-              data-id="${m.neg_pago_id}"
-              title="Eliminar"
-              style="
-                color:red;
-                font-size:18px;
-                font-weight:bold;
-              "
-            >
-              ✖
-            </a>
+          <button
+            class="
+              btn
+              btn-mini
+              btn-danger
+              eliminar-membresia
+            "
+            data-id="${m.neg_pago_id}"
+            title="Eliminar"
+          >
+
+            <i class="icon-white icon-trash"></i>
+
+          </button>
 
           `;
+
+          const chkAprobado = `
+
+            <input
+              type="checkbox"
+              class="toggle-aprobado"
+              data-id="${m.neg_pago_id}"
+              ${parseInt(m.is_aprobado) ? 'checked' : ''}
+            >
+
+            `;
 
           this.dtMembresia.row.add([
 
@@ -1529,11 +1599,7 @@ const appNeg = new Vue({
 
             m.fecha_fin_premium || '',
 
-            parseInt(
-              m.is_aprobado
-            ) === 1
-              ? 'SI'
-              : 'NO',
+            chkAprobado,
 
             btnEliminar
 
