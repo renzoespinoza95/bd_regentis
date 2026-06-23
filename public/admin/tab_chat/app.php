@@ -264,6 +264,8 @@ Flight::route('GET /Z8gJ/msg/listar/@chat_id/@usu_id', function ($chat_id, $usu_
     ====================================== */
 
     $rows = DB::query("
+    SELECT *
+    FROM (
         SELECT 
             msg_id,
             chat_id,
@@ -279,8 +281,13 @@ Flight::route('GET /Z8gJ/msg/listar/@chat_id/@usu_id', function ($chat_id, $usu_
 
         WHERE chat_id = %i
 
-        ORDER BY msg_id ASC
-    ", $chat_id);
+        ORDER BY msg_id DESC
+
+        LIMIT 200
+    ) t
+
+    ORDER BY msg_id ASC
+", $chat_id);
 
     /* ======================================
        🔥 NORMALIZAR
@@ -886,10 +893,15 @@ Flight::route('POST /N3GT/contactosNeg', function(){
             LEFT JOIN reg_tipoxusu tu 
                 ON tu.tipoxusu_id = u.tipoxusu_id
 
-            WHERE nxu.neg_id = %i
-              AND nxu.is_activo = 1
+           WHERE nxu.neg_id = %i
 
-            ORDER BY u.nombres_apellidos ASC
+  AND nxu.is_activo = 1
+
+  AND nxu.borrado_el IS NULL
+
+  AND u.borrado_el IS NULL
+
+ORDER BY u.nombres_apellidos ASC
         ", $neg_id);
 
         /* ======================================

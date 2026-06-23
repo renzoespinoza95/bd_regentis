@@ -257,118 +257,7 @@ Flight::route('POST /app/principal', function() {
 });
 
 
-function veri_membresia($usu_id){
 
-    /* =====================================
-       LIMPIAR
-    ====================================== */
-
-    $usu_id = intval(
-        $usu_id
-    );
-
-    if($usu_id <= 0){
-
-        return null;
-
-    }
-
-    /* =====================================
-       BUSCAR NEGOCIO DEL USUARIO
-    ====================================== */
-
-    $negocio_usuario = DB::queryFirstRow("
-
-        SELECT
-
-            neg_id
-
-        FROM reg_negxusu
-
-        WHERE usu_id = %i
-
-        AND is_activo = 1
-
-        AND borrado_el IS NULL
-
-        ORDER BY negxusu_id DESC
-
-        LIMIT 1
-
-    ", $usu_id);
-
-    if(!$negocio_usuario){
-
-        return null;
-
-    }
-
-    $neg_id = intval(
-        $negocio_usuario['neg_id']
-    );
-
-    /* =====================================
-       BUSCAR MEMBRESIA
-    ====================================== */
-
-    $membresia = DB::queryFirstRow("
-
-        SELECT
-
-            motivo,
-
-            is_aprobado,
-
-            fecha_inicio_premium,
-
-            fecha_fin_premium
-
-        FROM reg_neg_pago
-
-        WHERE neg_id = %i
-
-        AND borrado_el IS NULL
-
-        ORDER BY fecha_fin_premium DESC,
-                 neg_pago_id DESC
-
-        LIMIT 1
-
-    ", $neg_id);
-
-    if(!$membresia){
-
-        return null;
-
-    }
-
-    /* =====================================
-       RESPONSE
-    ====================================== */
-
-    return [
-
-        'motivo' =>
-
-            $membresia['motivo'],
-
-        'is_aprobado' =>
-
-            intval(
-                $membresia['is_aprobado']
-            ),
-
-        'fecha_inicio_premium' =>
-
-            $membresia['fecha_inicio_premium'],
-
-        'fecha_fin_premium' =>
-
-            $membresia['fecha_fin_premium']
-
-    ];
-
-}
 
 Flight::route('POST /XQzQ/detalleNeg', function(){
 
@@ -633,14 +522,46 @@ Flight::route('POST /Fw7L/editarMiNeg', function(){
     $update = [];
 
     if(
-        $nombre !== ''
-        &&
-        $nombre != $info_negocio['nombre']
+    $nombre !== ''
+    &&
+    $nombre != $info_negocio['nombre']
+){
+
+    $update['nombre'] = $nombre;
+
+    $slug = generar_slug(
+        $nombre
+    );
+
+    // evita duplicados
+    $slug_base = $slug;
+
+    $i = 1;
+
+    while(
+        DB::queryFirstField("
+            SELECT neg_id
+            FROM reg_neg
+            WHERE slug = %s
+            AND neg_id <> %i
+            LIMIT 1
+        ",
+        $slug,
+        $neg_id)
     ){
 
-        $update['nombre'] = $nombre;
+        $slug =
+            $slug_base .
+            '-' .
+            $i;
+
+        $i++;
 
     }
+
+    $update['slug'] = $slug;
+
+}
 
     if(
         $celular_informes !=
@@ -840,3 +761,116 @@ Flight::route('POST /Fw7L/editarMiNeg', function(){
     ]);
 
 });
+
+function generar_slug($texto){
+
+    $texto = trim($texto);
+
+    $texto = mb_strtolower(
+        $texto,
+        'UTF-8'
+    );
+
+    $reemplazos = [
+
+        'á'=>'a',
+        'é'=>'e',
+        'í'=>'i',
+        'ó'=>'o',
+        'ú'=>'u',
+        'ä'=>'a',
+        'ë'=>'e',
+        'ï'=>'i',
+        'ö'=>'o',
+        'ü'=>'u',
+        'ñ'=>'n'
+
+    ];
+
+    $texto = strtr(
+        $texto,
+        $reemplazos
+    );
+
+    $texto = preg_replace(
+        '/[^a-z0-9]+/',
+        '-',
+        $texto
+    );
+
+    $texto = trim(
+        $texto,
+        '-'
+    );
+
+    return $texto;
+}
+
+Flight::route(
+
+    'POST /negocio/buscar_slug',
+
+    function(){
+
+        include DEFINITION;
+
+        DB::query(
+            "SET NAMES 'utf8mb4'"
+        );
+
+        $d = json_decode(
+
+            Flight::request()
+                ->getBody(),
+
+            true
+
+        ) ?: [];
+
+        $slug = trim(
+
+            $d['slug']
+            ??
+
+            ''
+
+        );
+
+        $row = DB::queryFirstRow("
+
+            SELECT
+
+                neg_id
+
+            FROM reg_neg
+
+            WHERE slug = %s
+
+            AND borrado_el IS NULL
+
+        ", $slug);
+
+        if(!$row){
+
+            Flight::json([
+
+                'status' => 'error'
+
+            ]);
+
+            return;
+        }
+
+        Flight::json([
+
+            'status' => 'ok',
+
+            'neg_id' =>
+
+                $row['neg_id']
+
+        ]);
+
+    }
+
+);

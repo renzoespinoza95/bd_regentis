@@ -1047,7 +1047,7 @@
 
           <th>Fin</th>
 
-          <th>Aprobado</th>
+          <th>Habilitado</th>
           <th> ⚙️ </th>
 
         </tr>
