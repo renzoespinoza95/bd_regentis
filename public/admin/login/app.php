@@ -274,6 +274,53 @@ function login_by_id($usu_id)
     ", $usu_id);
 
     /* =========================================
+       MEMBRESIA
+    ========================================= */
+
+    $row['fecha_inicio_premium'] = null;
+
+    $row['fecha_fin_premium'] = null;
+
+    if (!empty($row['neg_id'])) {
+
+        $membresia = DB::queryFirstRow("
+
+            SELECT
+
+                fecha_inicio_premium,
+
+                fecha_fin_premium
+
+            FROM reg_neg_pago
+
+            WHERE neg_id = %i
+
+            AND is_aprobado = 1
+
+            AND borrado_el IS NULL
+
+            ORDER BY fecha_fin_premium DESC,
+                     neg_pago_id DESC
+
+            LIMIT 1
+
+        ", $row['neg_id']);
+
+        if ($membresia) {
+
+            $row['fecha_inicio_premium'] =
+
+                $membresia['fecha_inicio_premium'];
+
+            $row['fecha_fin_premium'] =
+
+                $membresia['fecha_fin_premium'];
+
+        }
+
+    }
+
+    /* =========================================
        RUBROS
     ========================================= */
 
