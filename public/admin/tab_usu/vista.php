@@ -70,7 +70,6 @@
                   <ul class="dropdown-menu">
                     <li><a href="#" @click.prevent="abrirModalEditar(u)">Editar</a></li>
                     <li><a href="#" @click.prevent="eliminarUsuario(u)">Liquidar</a></li>
-                    <li><a href="#" @click.prevent="abrirModalDetalle(u)">Detalle</a></li>
                     <li>
                       <a
                         href="#"
@@ -113,6 +112,15 @@
                         Sesion
                       </a>
                     </li>
+
+                    <li>
+                      <a
+                        href="#"
+                        @click.prevent="crearPin(u)"
+                      >
+                        Pin
+                      </a>
+                    </li>                    
 
 
                   </ul>
@@ -1798,78 +1806,72 @@ crearUsuarioAutomatico(){
         .then(r=> this.mensajes = r.data);
     },
 
-     // ------------------- NUEVO: abre modal para crear chat -------------------
-    abrirModalNuevoChat(u) {
-      this.nuevoChat.rem_id  = u.usu_id;
-      this.nuevoChat.usu1_id = u.usu_id; // si lo mantienes así
-      this.nuevoChat.usu2_id = null;
-      this.nuevoChat.mensaje = '';
-      this.remitenteNombre   = u.sobrenombre;
+    async crearPin(u){
 
-      // Opciones para el v-select de Usuario 2
-      axios.get(this.apphost + '/usuario/listar').then(r => {
-        this.opcionesUsuarios = r.data.map(x => ({
-          id:   x.usu_id,
-          text: x.sobrenombre
-        }));
+      try{
 
-        // Summernote lo puedes mantener igual
-        this.$nextTick(() => {
-          if (!$('#summerMensaje').data('summernote')) {
-            $('#summerMensaje').summernote({
-              height: 150,
-              callbacks: {
-                onChange: contents => { this.nuevoChat.mensaje = contents; }
-              }
-            });
+        bloquearUI(
+          'Generando PIN...'
+        );
+
+        const response = await axios.post(
+
+          this.apphost +
+          '/KdB0/crearPin',
+
+          {
+
+            usu_id: u.usu_id
+
           }
-          $('#summerMensaje').summernote('code', this.nuevoChat.mensaje);
-          $('#modalNuevoChat').modal('show');
-        });
-      });
-    },
 
+        );
 
-    // ------------------- NUEVO: método para crear chat + mensaje -------------------
-    crearChat() {
-      if (!this.nuevoChat.usu2_id) {
-        apprise('Debes seleccionar el Usuario 2.');
-        return;
+        desbloquearUI();
+
+        if(
+          response.data.status === 'ok'
+        ){
+
+          apprise(
+
+            'PIN: ' +
+
+            response.data.pin_code +
+
+            '\n\nExpira: ' +
+
+            response.data.pin_code_fecha_fin
+
+          );
+
+        }else{
+
+          apprise(
+
+            response.data.msg ||
+
+            'No se pudo generar el PIN'
+
+          );
+
+        }
+
+      }
+      catch(e){
+
+        desbloquearUI();
+
+        console.error(e);
+
+        apprise(
+          'Error al generar PIN'
+        );
+
       }
 
-      // Tomar el HTML desde Summernote y validar que no sea vacío visualmente
-      const html = $('#summerMensaje').summernote('code') || '';
-      const plain = $('<div>').html(html).text().trim();
-      if (!plain) {
-        apprise('Debes escribir el mensaje inicial.');
-        return;
-      }
-
-      // Regla: usu1_id es el del remitente (como ya lo estás manejando)
-      const usu1 = this.nuevoChat.usu1_id;   // remitente
-      const usu2 = this.nuevoChat.usu2_id;   // destinatario seleccionado
-
-      // El endpoint actual necesita dest_id explícito:
-      const dest_id = (this.nuevoChat.rem_id === usu1) ? usu2 : usu1;
-
-      const payload = {
-        usu1_id:       usu1,
-        usu2_id:       usu2,
-        rem_id:        this.nuevoChat.rem_id,
-        dest_id:       dest_id,
-        contenido_rem: html   // si prefieres solo texto, usa `plain`
-      };
-
-      axios.post(this.apphost + '/chat/crear', payload)
-        .then(() => {
-          $('#modalNuevoChat').modal('hide');
-          this.abrirModalChats({ usu_id: this.nuevoChat.rem_id });
-        })
-        .catch(err => {
-          console.error('Error al crear chat:', err);
-          apprise('Ocurrió un error al crear el chat.');
-        });
     },
+     
 
     nuevoNegocio(u){
 

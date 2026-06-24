@@ -439,3 +439,86 @@ function veri_membresia($usu_id){
     ];
 
 }
+
+function veri_membresia_neg($neg_id){
+
+    /* =====================================
+       LIMPIAR
+    ====================================== */
+
+    $neg_id = intval(
+        $neg_id
+    );
+
+    if($neg_id <= 0){
+
+        return null;
+
+    }
+
+    /* =====================================
+       BUSCAR MEMBRESIA
+    ====================================== */
+
+    $membresia = DB::queryFirstRow("
+
+        SELECT
+
+            motivo,
+
+            is_aprobado,
+
+            fecha_inicio_premium,
+
+            fecha_fin_premium
+
+        FROM reg_neg_pago
+
+        WHERE neg_id = %i
+
+        AND borrado_el IS NULL
+
+        ORDER BY
+
+            fecha_fin_premium DESC,
+
+            neg_pago_id DESC
+
+        LIMIT 1
+
+    ", $neg_id);
+
+    if(!$membresia){
+
+        return null;
+
+    }
+
+    /* =====================================
+       RESPONSE
+    ====================================== */
+
+    return [
+
+        'motivo' =>
+
+            $membresia['motivo'],
+
+        'is_aprobado' =>
+
+            intval(
+                $membresia['is_aprobado']
+            ),
+
+        'fecha_inicio_premium' =>
+
+            $membresia['fecha_inicio_premium'],
+
+        'fecha_fin_premium' =>
+
+            $membresia['fecha_fin_premium']
+
+    ];
+
+}
+

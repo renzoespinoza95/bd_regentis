@@ -1288,7 +1288,11 @@ Flight::route('POST /EiwA/tiendaAutomatico', function(){
         $d['nombre_negocio'] ?? ''
     );
 
-    $mercado_id = 7;
+    $slug = trim(
+        $d['slug'] ?? ''
+    );
+
+    $mercado_id = 3;
 
     $celular_yape = trim(
         $d['celular_yape'] ?? ''
@@ -1425,6 +1429,9 @@ Flight::route('POST /EiwA/tiendaAutomatico', function(){
 
                 'provincia' =>
                     'Lima',
+
+                  'slug' =>
+                            $slug,                    
 
                 'departamento' =>
                     'Lima',
@@ -1850,41 +1857,7 @@ Flight::route('POST /EiwA/tiendaAutomatico', function(){
             ],
             "usu_id=%i",
             $usu_id
-        );
-
-        DB::insert(
-            'reg_neg_pago',
-            [
-
-                'neg_id' =>
-                    $neg_id,
-
-                'usu_id_yapeo' =>
-                    null,
-
-                'motivo' =>
-                    'FREE',
-
-                'monto' => 0,
-
-                'fecha_inicio_premium' =>
-                    $now,
-
-                'fecha_fin_premium' =>
-                    date(
-                        'Y-m-d H:i:s',
-                        strtotime('+15 days')
-                    ),
-
-                'yaplin_id' =>
-                    null,
-
-                'is_aprobado' => 1,
-
-                'borrado_el' => null
-
-            ]
-        );
+        );        
 
         DB::commit();
 

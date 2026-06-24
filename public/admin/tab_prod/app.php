@@ -476,17 +476,22 @@ Flight::route('POST /ArWL/tienda', function () {
        VALIDAR NEG_ID
     ============================================================ */
 
-    if (!$neg_id) {
+    if($neg_id <= 0){
 
         Flight::json([
 
-            'status' => 'error',
+            'status' => 'ok',
 
-            'msg' => 'neg_id requerido'
+            'data' => [
 
-        ], 400);
+                'redirect' => 'mod_404'
+
+            ]
+
+        ]);
 
         return;
+
     }
 
     /* ============================================================
@@ -521,19 +526,62 @@ Flight::route('POST /ArWL/tienda', function () {
        VALIDAR NEGOCIO
     ============================================================ */
 
-    if(!$negocio){
+        if(!$negocio){
 
-        Flight::json([
+            Flight::json([
 
-            'status' => 'error',
+                'status' => 'ok',
 
-            'msg' => 'Negocio no encontrado'
+                'neg_id' => $neg_id,
 
-        ],404);
+                'data' => [
 
-        return;
-    }
+                    'redirect' => 'mod_404'
 
+                ]
+
+            ]);
+
+            return;
+        }
+
+        /* ============================================================
+           VALIDAR MEMBRESIA
+        ============================================================ */
+
+        $membresia = veri_membresia_neg(
+            $negocio['neg_id']
+        );
+
+        if(
+
+            !$membresia
+
+            ||
+
+            intval(
+                $membresia['is_aprobado']
+            ) !== 1
+
+        ){
+
+            Flight::json([
+
+                'status' => 'ok',
+
+                'neg_id' => $neg_id,
+
+                'data' => [
+
+                    'redirect' => 'mod_404'
+
+                ]
+
+            ]);
+
+            return;
+
+        }        
     /* ============================================================
        1. SLIDERS
     ============================================================ */
@@ -1370,13 +1418,18 @@ Flight::route('POST /RvKx/nuevoProducto', function(){
 
         Flight::json([
 
-            'status'=>'error',
+            'status' => 'ok',
 
-            'msg'=>'neg_id requerido'
+            'data' => [
 
-        ],400);
+                'redirect' => 'mod_404'
+
+            ]
+
+        ]);
 
         return;
+
     }
 
     if(!$name){

@@ -223,10 +223,13 @@ Flight::route('POST /usuario/liquidar', function () {
        OBTENER USUARIO
     ====================================== */
     $u = DB::queryFirstRow("
-        SELECT *
+
+        SELECT
+            usu_id
         FROM reg_usu
         WHERE usu_id = %i
         LIMIT 1
+
     ", $usu_id);
 
     if(!$u){
@@ -239,109 +242,83 @@ Flight::route('POST /usuario/liquidar', function () {
         return;
     }
 
-    /* ======================================
-       RESPALDO JSON
-    ====================================== */
-    $backup_json = json_encode(
-        $u,
-        JSON_UNESCAPED_UNICODE |
-        JSON_UNESCAPED_SLASHES
-    );
+    DB::startTransaction();
 
-    /* ======================================
-       GENERAR NUEVO CÓDIGO
-    ====================================== */
-    $base_cod = trim($u['cod_usu']);
+    try{
 
-    if($base_cod == ''){
-        $base_cod = 'USUARIO_'.$usu_id;
+        /* ======================================
+           BORRADO LOGICO USUARIO
+        ====================================== */
+
+        DB::update(
+
+            'reg_usu',
+
+            [
+
+                'borrado_el' =>
+                    date('Y-m-d H:i:s')
+
+            ],
+
+            'usu_id=%i',
+
+            $usu_id
+
+        );
+
+        /* ======================================
+           DESACTIVAR RELACIONES NEGOCIO
+        ====================================== */
+
+        DB::update(
+
+            'reg_negxusu',
+
+            [
+
+                'is_activo' => 0,
+
+                'borrado_el' =>
+                    date('Y-m-d H:i:s')
+
+            ],
+
+            'usu_id=%i',
+
+            $usu_id
+
+        );
+
+        DB::commit();
+
+        /* ======================================
+           RESPONSE
+        ====================================== */
+
+        Flight::json([
+
+            'success' => true,
+
+            'usu_id' => $usu_id,
+
+            'msg' => 'Usuario liquidado'
+
+        ]);
+
+    }catch(Exception $e){
+
+        DB::rollback();
+
+        Flight::json([
+
+            'success' => false,
+
+            'msg' => $e->getMessage()
+
+        ],500);
+
     }
-
-    $nuevo_cod = 'LIQ_' . $base_cod;
-
-    /* ======================================
-       VALIDAR DUPLICADOS
-    ====================================== */
-    $existe = DB::queryFirstField("
-        SELECT COUNT(*)
-        FROM reg_usu
-        WHERE (
-            cod_usu = %s
-            OR google_uid = %s
-        )
-        AND usu_id <> %i
-    ", $nuevo_cod, $nuevo_cod, $usu_id);
-
-    if($existe > 0){
-
-        $nuevo_cod = 'LIQ_' . $base_cod . '_' . $usu_id;
-
-        $existe2 = DB::queryFirstField("
-            SELECT COUNT(*)
-            FROM reg_usu
-            WHERE (
-                cod_usu = %s
-                OR google_uid = %s
-            )
-            AND usu_id <> %i
-        ", $nuevo_cod, $nuevo_cod, $usu_id);
-
-        if($existe2 > 0){
-
-            Flight::json([
-                'success' => false,
-                'msg' => 'No se pudo generar código único'
-            ],400);
-
-            return;
-        }
-    }
-
-    /* ======================================
-       LIQUIDAR
-    ====================================== */
-    DB::update('reg_usu', [
-
-        'cod_usu'            => $nuevo_cod,
-
-        'google_uid'         => $nuevo_cod,
-
-        'nombres_apellidos'  => $nuevo_cod,
-
-        'email'              => $nuevo_cod,
-
-        'img_perfil'         => 'https://barsi-img.b-cdn.net/recursos/logo-regentis.png',
-
-        'sobrenombre'        => 'liquidado_' . $nuevo_cod,
-
-        'celular'            => '0',
-
-        'dni'                => null,
-
-        'provincia'          => null,
-
-        'fecha_nacimiento'   => null,
-
-        'is_activo'          => 0,
-
-        'borrado_el'  =>  date('Y-m-d H:i:s'),
-
-        'descripcion'        => $backup_json
-
-    ], 'usu_id = %i', $usu_id);
-
-    /* ======================================
-       RESPONSE
-    ====================================== */
-    Flight::json([
-
-        'success' => true,
-
-        'usu_id' => $usu_id,
-
-        'nuevo_cod' => $nuevo_cod
-
-    ]);
 
 });
 
@@ -2904,3 +2881,90 @@ Flight::route('POST /IS54/toggleIsFantasma', function () {
 
 });
 
+Flight::route('POST /KdB0/crearPin', function(){
+
+    include DEFINITION;
+    autentificar_administrador();
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    $d = json_decode(
+        Flight::request()->getBody(),
+        true
+    ) ?: [];
+
+    $usu_id = intval(
+        $d['usu_id'] ?? 0
+    );
+
+    if($usu_id <= 0){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => 'usu_id requerido'
+
+        ], 400);
+
+        return;
+    }
+
+    $usuario = DB::queryFirstRow("
+
+        SELECT
+            usu_id,
+            nombres_apellidos
+
+        FROM reg_usu
+
+        WHERE usu_id = %i
+        AND borrado_el IS NULL
+
+        LIMIT 1
+
+    ", $usu_id);
+
+    if(!$usuario){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => 'Usuario no encontrado'
+
+        ], 404);
+
+        return;
+    }
+
+    $r = crear_pin_code(
+        $usu_id
+    );
+
+    if(!$r['ok']){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => $r['msg']
+
+        ], 400);
+
+        return;
+    }
+
+    Flight::json([
+
+        'status' => 'ok',
+
+        'pin_code' =>
+            $r['pin_code'],
+
+        'pin_code_fecha_fin' =>
+            $r['pin_code_fecha_fin']
+
+    ]);
+
+});

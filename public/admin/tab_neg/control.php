@@ -754,83 +754,229 @@ Flight::route('POST /usu/buscar-dni', function() {
 ========================================================= */
 
 Flight::route('POST /negxusu/asignar', function() {
+
     try {
-        global $regentis;
 
         DB::query("SET NAMES 'utf8mb4'");
+
         $data = Flight::request()->data->getData();
 
-        $neg_id = isset($data['neg_id']) ? intval($data['neg_id']) : 0;
-        $usu_id = isset($data['usu_id']) ? intval($data['usu_id']) : 0;
+        $neg_id = intval(
+            $data['neg_id'] ?? 0
+        );
 
-        if ($neg_id <= 0) {
-            Flight::json(['status'=>'error','msg'=>'neg_id inválido'],400); return;
+        $usu_id = intval(
+            $data['usu_id'] ?? 0
+        );
+
+        /* =====================================
+           VALIDACIONES
+        ===================================== */
+
+        if($neg_id <= 0){
+
+            Flight::json([
+                'status' => 'error',
+                'msg'    => 'neg_id inválido'
+            ]);
+
+            return;
+
         }
 
-        if ($usu_id <= 0) {
-            Flight::json(['status'=>'error','msg'=>'usu_id inválido'],400); return;
+        if($usu_id <= 0){
+
+            Flight::json([
+                'status' => 'error',
+                'msg'    => 'usu_id inválido'
+            ]);
+
+            return;
+
         }
 
-        $neg = DB::queryFirstRow("SELECT neg_id FROM reg_neg WHERE neg_id=%i",$neg_id);
-        if (!$neg) {
-            Flight::json(['status'=>'error','msg'=>'Negocio no existe'],404); return;
+        /* =====================================
+           NEGOCIO
+        ===================================== */
+
+        $negocio = DB::queryFirstRow("
+
+            SELECT *
+
+            FROM reg_neg
+
+            WHERE neg_id = %i
+
+            AND borrado_el IS NULL
+
+            LIMIT 1
+
+        ", $neg_id);
+
+        if(!$negocio){
+
+            Flight::json([
+                'status' => 'error',
+                'msg'    => 'Negocio no existe'
+            ]);
+
+            return;
+
         }
 
-        $usu = DB::queryFirstRow("SELECT * FROM reg_usu WHERE usu_id=%i",$usu_id);
-        if (!$usu) {
-            Flight::json(['status'=>'error','msg'=>'Usuario no existe'],404); return;
+        /* =====================================
+           USUARIO
+        ===================================== */
+
+        $usuario = DB::queryFirstRow("
+
+            SELECT *
+
+            FROM reg_usu
+
+            WHERE usu_id = %i
+
+            AND borrado_el IS NULL
+
+            LIMIT 1
+
+        ", $usu_id);
+
+        if(!$usuario){
+
+            Flight::json([
+                'status' => 'error',
+                'msg'    => 'Usuario no existe'
+            ]);
+
+            return;
+
         }
 
-        $existe = DB::queryFirstRow("
-            SELECT negxusu_id
+        /* =====================================
+           VALIDAR DUPLICADO
+           (MISMO NEGOCIO + MISMO USUARIO)
+        ===================================== */
+
+        $relacion = DB::queryFirstRow("
+
+            SELECT
+
+                negxusu_id
+
             FROM reg_negxusu
-            WHERE neg_id=%i AND is_activo=1
-        ",$neg_id);
 
-        if ($existe) {
-            Flight::json(['status'=>'error','msg'=>'Este negocio ya tiene propietario'],400); return;
+            WHERE neg_id = %i
+
+            AND usu_id = %i
+
+            AND borrado_el IS NULL
+
+            LIMIT 1
+
+        ", $neg_id, $usu_id);
+
+        if($relacion){
+
+            Flight::json([
+                'status' => 'error',
+                'msg'    => 'El usuario ya está asociado a este negocio'
+            ]);
+
+            return;
+
         }
 
-        $trabajador_existente = DB::queryFirstRow("
-            SELECT deli_trabajador_id
-            FROM deli_trabajador
-            WHERE neg_id=%i AND usu_id=%i
-        ",$neg_id,$usu_id);
+        /* =====================================
+           TRANSACCION
+        ===================================== */
 
         DB::startTransaction();
 
         try {
-            DB::insert('reg_negxusu',[
-                'usu_id'=>$usu_id,
-                'neg_id'=>$neg_id,
-                'is_activo'=>1,
-                'fecha_creacion'=>date('Y-m-d H:i:s')
-            ]);
+
+            DB::insert(
+
+                'reg_negxusu',
+
+                [
+
+                    'neg_id' => $neg_id,
+
+                    'usu_id' => $usu_id,
+
+                    'is_activo' => 1,
+
+                    'fecha_creacion' => date(
+                        'Y-m-d H:i:s'
+                    )
+
+                ]
+
+            );
 
             $negxusu_id = DB::insertId();
 
-            if (!$trabajador_existente) {
-                DB::insert('deli_trabajador',[
-                    'neg_id'=>$neg_id,
-                    'usu_id'=>$usu_id,
-                    'nombre'=>$usu['nombres_apellidos'],
-                    'telefono'=>$usu['celular'],
-                    'is_activo'=>1
-                ]);
-            }
+            /* =====================================
+               CONVERTIR A NEGOCIO_ADMIN
+            ===================================== */
+
+            DB::update(
+
+                'reg_usu',
+
+                [
+
+                    'tipoxusu_id' => 2
+
+                ],
+
+                'usu_id = %i',
+
+                $usu_id
+
+            );            
 
             DB::commit();
 
-        } catch (Exception $e) {
+        }
+        catch(Exception $e){
+
             DB::rollback();
+
             throw $e;
+
         }
 
-        Flight::json(['status'=>'ok','negxusu_id'=>$negxusu_id]);
+        /* =====================================
+           RESPONSE
+        ===================================== */
 
-    } catch (Exception $e) {
-        Flight::json(['status'=>'error','msg'=>$e->getMessage()],500);
+        Flight::json([
+
+            'status' => 'ok',
+
+            'negxusu_id' => $negxusu_id,
+
+            'neg_id' => $neg_id,
+
+            'usu_id' => $usu_id
+
+        ]);
+
     }
+    catch(Exception $e){
+
+        Flight::json([
+
+            'status' => 'error',
+
+            'msg' => $e->getMessage()
+
+        ]);
+
+    }
+
 });
 
 
