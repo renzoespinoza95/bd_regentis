@@ -1400,28 +1400,9 @@ Flight::route('POST /EiwA/tiendaAutomatico', function(){
             );
         }
 
-        $rubro = DB::queryFirstRow("
-
-            SELECT
-                rubro_id,
-                nombre
-
-            FROM reg_rubro
-
-            WHERE is_activo = 1
-
-            ORDER BY RAND()
-
-            LIMIT 1
-
-        ");
-
-        if(!$rubro){
-
-            throw new Exception(
-                'No existe rubro'
-            );
-        }
+        $rubro = [
+            'rubro_id' => 1
+        ];
 
         do {
 

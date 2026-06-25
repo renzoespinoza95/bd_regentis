@@ -1061,7 +1061,7 @@ Flight::route('POST /Ko3d/agregarTrabajador', function(){
 
             [
 
-                'tipoxusu_id' => 4
+                'tipoxusu_id' => 2
 
             ],
 

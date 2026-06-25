@@ -5,7 +5,7 @@
 		<div class="titulo-fijo clearfix">
 
 			<div style="float:left;">
-				<h2 style="margin:0;">Trabajadores Delivery</h2>
+				<h2 style="margin:0;">Trabajadores</h2>
 			</div>
 
 			<div class="btn-group pull-right">

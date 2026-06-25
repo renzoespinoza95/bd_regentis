@@ -876,6 +876,51 @@ Flight::route('POST /ArWL/tienda', function () {
         $categorias_filtradas;
 
     /* ============================================================
+       TEMA DEL NEGOCIO
+    ============================================================ */
+
+    $tema = DB::queryFirstRow("
+
+        SELECT
+
+            t.tema_id,
+            t.nombre_tema,
+            t.topnavbar,
+            t.fondo,
+            t.boton,
+            t.fondo_card,
+            t.subtitulo
+
+        FROM reg_temaxneg txn
+
+        INNER JOIN reg_tema t
+            ON t.tema_id = txn.tema_id
+
+        WHERE txn.neg_id = %i
+
+        ORDER BY txn.temaxneg_id DESC
+
+        LIMIT 1
+
+    ", $neg_id);
+
+    if(!$tema){
+
+        $tema = [
+
+            'tema_id'      => 0,
+            'nombre_tema'  => '',
+            'topnavbar'    => '',
+            'fondo'        => '',
+            'boton'        => '',
+            'subtitulo'        => '',
+            'fondo_card'   => ''
+
+        ];
+
+    }    
+
+    /* ============================================================
        6. MÁS VENDIDOS
     ============================================================ */
 
@@ -928,6 +973,8 @@ Flight::route('POST /ArWL/tienda', function () {
         'data' => [
 
             'negocio' => $negocio,
+
+            'tema' => $tema,
 
             'sliders' => $sliders,
 

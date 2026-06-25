@@ -1833,17 +1833,56 @@ crearUsuarioAutomatico(){
           response.data.status === 'ok'
         ){
 
-          apprise(
+         apprise(
 
-            'PIN: ' +
+  'PIN: ' +
 
-            response.data.pin_code +
+  response.data.pin_code +
 
-            '\n\nExpira: ' +
+  '\n\nExpira: ' +
 
-            response.data.pin_code_fecha_fin
+  response.data.pin_code_fecha_fin,
 
-          );
+  {},
+
+  function(){
+
+    const pin =
+      String(
+        response.data.pin_code
+      );
+
+    const input =
+      document.createElement('input');
+
+    input.value = pin;
+
+    document.body.appendChild(
+      input
+    );
+
+    input.select();
+
+    input.setSelectionRange(
+      0,
+      99999
+    );
+
+    document.execCommand(
+      'copy'
+    );
+
+    document.body.removeChild(
+      input
+    );
+
+    apprise(
+      'PIN copiado: ' + pin
+    );
+
+  }
+
+);
 
         }else{
 

@@ -598,7 +598,7 @@ function veri_publico_general($neg_id){
                 'Y-m-d H:i:s',
 
                 strtotime(
-                    '+15 days'
+                    '+7 days'
                 )
 
             );

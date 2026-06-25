@@ -25,6 +25,7 @@ if (!empty($ssa_id) && is_string($ssa_id)) {
 			require_once VARPATH."/public/admin/tab_auto_msg/control.php";
 			require_once VARPATH."/public/admin/tab_screen/control.php";
 			require_once VARPATH."/public/admin/tab_prod_global/control.php";
+			require_once VARPATH."/public/admin/tab_tema/control.php";
 
 	        break;
 
