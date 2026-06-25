@@ -320,7 +320,7 @@
 
     <!-- Modal Editar Usuario -->
 <!-- Modal Editar Usuario -->
-<div id="modalEditarUsuario" class="modal hide fade" tabindex="-1">
+<div id="modalEditarUsuario" class="modal hide fade fullscreen" tabindex="-1">
   <div class="modal-header">
     <h3>Editar Usuario</h3>
   </div>
