@@ -239,11 +239,11 @@ Flight::route('POST /MylW/listar_categorias', function () {
             p.price,
 
             p.description,
-
+        p.variantes_json,
             p.is_visible,
             p.compra_total,
             p.cantidad_comprada,
-
+p.variantes_json,
             p.precio_volumen_json,
 
             pc.category_id,
@@ -282,6 +282,34 @@ Flight::route('POST /MylW/listar_categorias', function () {
         $cid = intval(
             $p['category_id']
         );
+
+        $variantes = [
+            'atributo' => '',
+            'opciones' => []
+        ];
+
+        if(
+            !empty(
+                $p['variantes_json']
+            )
+        ){
+
+            $variantes_decoded = json_decode(
+                $p['variantes_json'],
+                true
+            );
+
+            if(
+                is_array(
+                    $variantes_decoded
+                )
+            ){
+
+                $variantes = $variantes_decoded;
+
+            }
+
+        }
 
         if(!isset($map[$cid])){
 
@@ -358,6 +386,47 @@ Flight::route('POST /MylW/listar_categorias', function () {
             }
         }
 
+
+        $variantes = [
+
+                'atributo' => '',
+
+                'opciones' => []
+
+            ];
+
+            if(
+                !empty(
+                    $p['variantes_json']
+                )
+            ){
+
+                $variantes = json_decode(
+
+                    $p['variantes_json'],
+
+                    true
+
+                );
+
+                if(
+                    !is_array(
+                        $variantes
+                    )
+                ){
+
+                    $variantes = [
+
+                        'atributo' => '',
+
+                        'opciones' => []
+
+                    ];
+
+                }
+
+            }
+
         $map[$cid][] = [
 
             'product_id' => intval(
@@ -366,6 +435,12 @@ Flight::route('POST /MylW/listar_categorias', function () {
 
             'cod_producto' =>
                 $p['cod_producto'],
+
+            'variantes_json' =>
+                $p['variantes_json'],
+
+            'variantes' =>
+                $variantes,                
 
             'is_visible' => intval(
                 $p['is_visible']
@@ -391,6 +466,12 @@ Flight::route('POST /MylW/listar_categorias', function () {
 
             'precio_volumen' =>
                 $precio_volumen,
+
+            'variantes_json' =>
+                $p['variantes_json'],
+
+            'variantes' =>
+                $variantes,                
 
             'stock' => intval(
                 $p['stock']
@@ -650,7 +731,7 @@ Flight::route('POST /ArWL/tienda', function () {
             p.marca_des,
             p.is_visible,
             p.compra_total,
-
+p.variantes_json,
             p.cantidad_comprada,
 
             p.precio_volumen_json,
@@ -792,6 +873,46 @@ Flight::route('POST /ArWL/tienda', function () {
             }
         }
 
+        $variantes = [
+
+            'atributo' => '',
+
+            'opciones' => []
+
+        ];
+
+        if(
+            !empty(
+                $p['variantes_json']
+            )
+        ){
+
+            $variantes = json_decode(
+
+                $p['variantes_json'],
+
+                true
+
+            );
+
+            if(
+                !is_array(
+                    $variantes
+                )
+            ){
+
+                $variantes = [
+
+                    'atributo' => '',
+
+                    'opciones' => []
+
+                ];
+
+            }
+
+        }
+
         $map[$cid][] = [
 
             'product_id' => intval(
@@ -814,6 +935,12 @@ Flight::route('POST /ArWL/tienda', function () {
 
             'precio_volumen' =>
                 $precio_volumen,
+
+            'variantes_json' =>
+                $p['variantes_json'],
+
+            'variantes' =>
+                $variantes,    
 
             'stock' => intval(
                 $p['stock']
@@ -1455,6 +1582,30 @@ Flight::route('POST /RvKx/nuevoProducto', function(){
         ?? 'GENERICA'
     );
 
+    $variantes_json = trim(
+    $d['variantes_json'] ?? ''
+);
+
+if($variantes_json === ''){
+
+    $variantes_json = null;
+
+}else{
+
+    json_decode($variantes_json, true);
+
+    if(json_last_error() !== JSON_ERROR_NONE){
+
+        Flight::json([
+            'status'=>'error',
+            'msg'=>'variantes_json inválido'
+        ],400);
+
+        return;
+    }
+
+}
+
     $categorias = $d['categorias'] ?? [];
 
     /* ======================================
@@ -1613,6 +1764,9 @@ Flight::route('POST /RvKx/nuevoProducto', function(){
 
                     'description' =>
                         $description,
+
+                    'variantes_json' =>
+                        $variantes_json,
 
                     'fecha_modificacion' =>
                         $now_dt
@@ -1968,6 +2122,10 @@ Flight::route('POST /RvKx/nuevoProducto', function(){
 
                 'description' =>
                     $description,
+
+                'variantes_json' =>
+                    $variantes_json,
+
 
                 'fecha_creacion' =>
                     $now_dt,
