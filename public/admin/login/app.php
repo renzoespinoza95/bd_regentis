@@ -1471,7 +1471,7 @@ Flight::route('POST /EiwA/tiendaAutomatico', function(){
                     $celular_yape,
 
                 'img_logo' =>
-                    'https://barsi-img.b-cdn.net/recursos/sg3f.png',
+                    'https://barsi-img.b-cdn.net/recursos/logo-regentis.png',
 
                 'lista_yape' => json_encode(
                     [$celular_yape],

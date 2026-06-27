@@ -83,3 +83,4 @@ require_once VARPATH."/public/admin/tab_trabajador/app.php";
 require_once VARPATH."/public/admin/tab_cliente/app.php";
 require_once VARPATH."/public/admin/tab_cat/app.php";
 require_once VARPATH."/public/admin/tab_mercado/app.php";
+require_once VARPATH."/public/admin/tab_slider/app.php";
