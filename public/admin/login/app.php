@@ -1509,17 +1509,16 @@ Flight::route('POST /EiwA/tiendaAutomatico', function(){
             ]
         );
 
+        // 🔥 INSERT Corregido: Solo columnas existentes en tu tabla reg_slider
         DB::insert(
             'reg_slider',
             [
-                'img' => 'https://barsi-img.b-cdn.net/recursos/71ye.png',
-                'orden' => 1,
-                'is_visible' => 1,
+                'img'            => 'https://barsi-img.b-cdn.net/recursos/71ye.png',
+                'orden'          => 1,
+                'is_visible'     => 1,
                 'fecha_creacion' => $now,
-                // 'fecha_fin' => NULL,  <-- ESTA LÍNEA CAUSABA EL ERROR: "Unknown column 'fecha_fin'"
-                'neg_id' => $neg_id,
-                'titulo_superior' => 'Bienvenido a Regentis',
-                'descripcion' => 'Promociones especiales' // Asegúrate también de que la columna 'descripcion' exista en tu tabla física si la usas aquí
+                'neg_id'         => $neg_id,
+                'titulo_superior'=> 'Bienvenido a Regentis'
             ]
         );
 
