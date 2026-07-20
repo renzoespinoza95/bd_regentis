@@ -21,5 +21,8 @@
   global $fenix_key;
   global $varhost_tmp;
   global $varpath_tmp;
+  global $varhost_img;
+  global $varpath_img;
+
 
   

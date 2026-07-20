@@ -1529,7 +1529,7 @@ Flight::route('POST /RvKx/nuevoProducto', function(){
     ) ?: [];
 
     /* ======================================
-       FIRMA
+        FIRMA
     ====================================== */
 
     $xin = trim(
@@ -1546,7 +1546,7 @@ Flight::route('POST /RvKx/nuevoProducto', function(){
     );
 
     /* ======================================
-       CAMPOS
+        CAMPOS
     ====================================== */
 
     $product_id = intval(
@@ -1583,122 +1583,86 @@ Flight::route('POST /RvKx/nuevoProducto', function(){
     );
 
     $variantes_json = trim(
-    $d['variantes_json'] ?? ''
-);
+        $d['variantes_json'] ?? ''
+    );
 
-if($variantes_json === ''){
+    if($variantes_json === ''){
+        $variantes_json = null;
+    }else{
+        json_decode($variantes_json, true);
 
-    $variantes_json = null;
-
-}else{
-
-    json_decode($variantes_json, true);
-
-    if(json_last_error() !== JSON_ERROR_NONE){
-
-        Flight::json([
-            'status'=>'error',
-            'msg'=>'variantes_json inválido'
-        ],400);
-
-        return;
+        if(json_last_error() !== JSON_ERROR_NONE){
+            Flight::json([
+                'status'=>'error',
+                'msg'=>'variantes_json inválido'
+            ],400);
+            return;
+        }
     }
-
-}
 
     $categorias = $d['categorias'] ?? [];
 
     /* ======================================
-       VALIDAR
+        VALIDAR
     ====================================== */
 
     if($neg_id <= 0){
-
         Flight::json([
-
             'status' => 'ok',
-
             'data' => [
-
                 'redirect' => 'mod_404'
-
             ]
-
         ]);
-
         return;
-
     }
 
     if(!$name){
-
         Flight::json([
-
             'status'=>'error',
-
             'msg'=>'name requerido'
-
         ],400);
-
         return;
     }
 
-    if($price <= 0){
-
+    // 🔥 SOLUCIÓN: Cambiado de <= 0 a < 0 para permitir productos gratuitos (0)
+    if($price < 0){ 
         Flight::json([
-
             'status'=>'error',
-
             'msg'=>'price inválido'
-
         ],400);
-
         return;
     }
 
     DB::startTransaction();
 
     try{
-
         $now_dt = date(
             "Y-m-d H:i:s"
         );
 
         /* ======================================
-           NEGOCIO
-        ====================================== */
+            NEGOCIO
+    ====================================== */
 
         $negocio = DB::queryFirstRow("
-
             SELECT neg_id
-
             FROM reg_neg
-
             WHERE neg_id = %i
-
             AND borrado_el IS NULL
-
             LIMIT 1
-
         ", $neg_id);
 
         if(!$negocio){
-
             DB::rollback();
-
             Flight::json([
-
                 'status'=>'error',
-
                 'msg'=>'Negocio no encontrado'
-
             ],404);
-
             return;
         }
 
         /* ======================================
-           EDITAR PRODUCTO
+            EDITAR PRODUCTO
         ====================================== */
 
         if(
@@ -1708,106 +1672,63 @@ if($variantes_json === ''){
         ){
 
             $producto = DB::queryFirstRow("
-
                 SELECT
-
                     product_id
-
                 FROM pos_product
-
                 WHERE product_id = %i
-
                 AND neg_id = %i
-
                 AND borrado_el IS NULL
-
                 LIMIT 1
-
             ",
                 $product_id,
                 $neg_id
             );
 
             if(!$producto){
-
                 DB::rollback();
-
                 Flight::json([
-
                     'status'=>'error',
-
                     'msg'=>'Producto no encontrado'
-
                 ],404);
-
                 return;
             }
 
             /* ======================================
-               ACTUALIZAR PRODUCTO
+                ACTUALIZAR PRODUCTO
             ====================================== */
 
             DB::update(
-
                 'pos_product',
-
                 [
-
-                    'name' =>
-                        $name,
-
-                    'marca_des' =>
-                        $marca_des,
-
-                    'price' =>
-                        $price,
-
-                    'description' =>
-                        $description,
-
-                    'variantes_json' =>
-                        $variantes_json,
-
-                    'fecha_modificacion' =>
-                        $now_dt
-
+                    'name' => $name,
+                    'marca_des' => $marca_des,
+                    'price' => $price, // Se guardará 0.00 perfectamente
+                    'description' => $description,
+                    'variantes_json' => $variantes_json,
+                    'fecha_modificacion' => $now_dt
                 ],
-
                 "product_id=%i",
-
                 $product_id
-
             );
 
             /* ======================================
-               ELIMINAR CATEGORIAS
+                ELIMINAR CATEGORIAS
             ====================================== */
 
             DB::delete(
-
                 'pos_product_category',
-
                 "product_id=%i",
-
                 $product_id
-
             );
 
             /* ======================================
-               NUEVAS CATEGORIAS
+                NUEVAS CATEGORIAS
             ====================================== */
 
             if(!empty($categorias)){
-
                 foreach($categorias as $cat){
-
                     $category_id = is_array($cat)
-
-                        ? intval(
-                            $cat['category_id']
-                            ?? 0
-                        )
-
+                        ? intval($cat['category_id'] ?? 0)
                         : intval($cat);
 
                     if($category_id <= 0){
@@ -1815,32 +1736,19 @@ if($variantes_json === ''){
                     }
 
                     DB::insert(
-
                         'pos_product_category',
-
                         [
-
-                            'product_id' =>
-                                $product_id,
-
-                            'category_id' =>
-                                $category_id,
-
-                            'neg_id' =>
-                                $neg_id,
-
+                            'product_id' => $product_id,
+                            'category_id' => $category_id,
+                            'neg_id' => $neg_id,
                             'is_visible' => 1
-
                         ]
-
                     );
-
                 }
-
             }
 
             /* ======================================
-               INVENTARIO
+                INVENTARIO
             ====================================== */
 
             if($stock < 0){
@@ -1848,321 +1756,165 @@ if($variantes_json === ''){
             }
 
             $inventario = DB::queryFirstRow("
-
                 SELECT
-
                     inventario_id,
                     stock_actual
-
                 FROM pos_inventario
-
                 WHERE product_id = %i
-
                 LIMIT 1
-
             ", $product_id);
 
             if($inventario){
-
                 DB::update(
-
                     'pos_inventario',
-
                     [
-
-                        'stock_actual' =>
-                            $stock
-
+                        'stock_actual' => $stock
                     ],
-
                     "inventario_id=%i",
-
                     $inventario['inventario_id']
-
                 );
-
             } else {
-
                 DB::insert(
-
                     'pos_inventario',
-
                     [
-
-                        'product_id' =>
-                            $product_id,
-
-                        'stock_actual' =>
-                            $stock,
-
-                        'neg_id' =>
-                            $neg_id
-
+                        'product_id' => $product_id,
+                        'stock_actual' => $stock,
+                        'neg_id' => $neg_id
                     ]
-
                 );
-
             }
 
             /* ======================================
-               MOVIMIENTO INVENTARIO
+                MOVIMIENTO INVENTARIO
             ====================================== */
 
             DB::insert(
-
                 'pos_inventario_movimiento',
-
                 [
-
-                    'product_id' =>
-                        $product_id,
-
-                    'tipo' =>
-                        'AJUSTE',
-
-                    'origen' =>
-                        'AJUSTE',
-
-                    'cantidad' =>
-                        $stock,
-
-                    'precio_unitario' =>
-                        $price,
-
-                    'fecha' =>
-                        $now_dt,
-
-                    'stock_resultante' =>
-                        $stock,
-
-                    'neg_id' =>
-                        $neg_id
-
+                    'product_id' => $product_id,
+                    'tipo' => 'AJUSTE',
+                    'origen' => 'AJUSTE',
+                    'cantidad' => $stock,
+                    'precio_unitario' => $price, // Guarda 0.00 en el historial
+                    'fecha' => $now_dt,
+                    'stock_resultante' => $stock,
+                    'neg_id' => $neg_id
                 ]
-
             );
 
             /* ======================================
-               PRODUCTO RESPONSE
+                PRODUCTO RESPONSE
             ====================================== */
 
             $product = DB::queryFirstRow("
-
                 SELECT
-
                     p.product_id,
                     p.cod_producto,
                     p.name,
                     p.description,
                     p.price,
                     p.is_visible,
-
-                    IFNULL(
-                        i.stock_actual,
-                        0
-                    ) AS stock
-
+                    IFNULL(i.stock_actual, 0) AS stock
                 FROM pos_product p
-
                 LEFT JOIN pos_inventario i
                     ON i.product_id = p.product_id
-
                 WHERE p.product_id = %i
-
                 LIMIT 1
-
             ", $product_id);
 
             /* ======================================
-               IMAGENES
+                IMAGENES
             ====================================== */
 
             $imagenes = DB::query("
-
                 SELECT
-
                     product_image_id,
                     img,
                     orden,
                     is_visible
-
                 FROM pos_product_image
-
                 WHERE product_id = %i
-
                 AND borrado_el IS NULL
-
                 ORDER BY orden ASC
-
             ", $product_id);
 
             foreach($imagenes as &$img){
-
-                $img['product_image_id'] = intval(
-                    $img['product_image_id']
-                );
-
-                $img['orden'] = intval(
-                    $img['orden']
-                );
-
-                $img['is_visible'] = intval(
-                    $img['is_visible']
-                );
-
+                $img['product_image_id'] = intval($img['product_image_id']);
+                $img['orden'] = intval($img['orden']);
+                $img['is_visible'] = intval($img['is_visible']);
             }
 
             /* ======================================
-               CATEGORIAS RESPONSE
+                CATEGORIAS RESPONSE
             ====================================== */
 
             $cats = DB::query("
-
                 SELECT
-
                     c.category_id,
                     c.name AS descripcion
-
                 FROM pos_product_category pc
-
                 INNER JOIN pos_category c
-                    ON c.category_id =
-                       pc.category_id
-
+                    ON c.category_id = pc.category_id
                 WHERE pc.product_id = %i
-
                 ORDER BY c.name ASC
-
             ", $product_id);
 
             foreach($cats as &$c){
-
-                $c['category_id'] = intval(
-                    $c['category_id']
-                );
-
+                $c['category_id'] = intval($c['category_id']);
             }
 
-            $product['product_id'] = intval(
-                $product['product_id']
-            );
-
-            $product['price'] = floatval(
-                $product['price']
-            );
-
-            $product['stock'] = intval(
-                $product['stock']
-            );
-
-            $product['is_visible'] = intval(
-                $product['is_visible']
-            );
-
-            $product['imagenes'] =
-                $imagenes;
-
-            $product['categorias'] =
-                $cats;
+            $product['product_id'] = intval($product['product_id']);
+            $product['price'] = floatval($product['price']);
+            $product['stock'] = intval($product['stock']);
+            $product['is_visible'] = intval($product['is_visible']);
+            $product['imagenes'] = $imagenes;
+            $product['categorias'] = $cats;
 
             DB::commit();
 
             Flight::json([
-
                 'status'=>'ok',
-
                 'msg'=>'Producto actualizado correctamente',
-
                 'editando'=>true,
-
                 'product'=>$product
-
             ]);
 
             return;
-
         }
 
         /* ======================================
-           CREAR PRODUCTO
+            CREAR PRODUCTO
         ====================================== */
 
         DB::insert(
-
             'pos_product',
-
             [
-
-                'cod_producto' =>
-                    'P'
-                    .
-                    str_pad(
-
-                        rand(1,999999),
-
-                        6,
-
-                        '0',
-
-                        STR_PAD_LEFT
-
-                    ),
-
-                'name' =>
-                    $name,
-
-                'tipo_producto' =>
-                    'ABARROTES',
-
-                'marca_des' =>
-                    $marca_des,
-
-                'price' =>
-                    $price,
-
-                'description' =>
-                    $description,
-
-                'variantes_json' =>
-                    $variantes_json,
-
-
-                'fecha_creacion' =>
-                    $now_dt,
-
-                'fecha_modificacion' =>
-                    $now_dt,
-
-                'neg_id' =>
-                    $neg_id,
-
+                'cod_producto' => 'P' . str_pad(rand(1,999999), 6, '0', STR_PAD_LEFT),
+                'name' => $name,
+                'tipo_producto' => 'ABARROTES',
+                'marca_des' => $marca_des,
+                'price' => $price, // Registra 0.00 limpiamente
+                'description' => $description,
+                'variantes_json' => $variantes_json,
+                'fecha_creacion' => $now_dt,
+                'fecha_modificacion' => $now_dt,
+                'neg_id' => $neg_id,
                 'subcategoria_id' => null,
-
                 'is_visible' => 1,
-
                 'borrado_el' => null
-
             ]
-
         );
 
         $product_id = DB::insertId();
 
         /* ======================================
-           CATEGORÍAS
+            CATEGORÍAS
         ====================================== */
 
         if(!empty($categorias)){
-
             foreach($categorias as $cat){
-
                 $category_id = is_array($cat)
-
-                    ? intval(
-                        $cat['category_id']
-                        ?? 0
-                    )
-
+                    ? intval($cat['category_id'] ?? 0)
                     : intval($cat);
 
                 if($category_id <= 0){
@@ -2170,56 +1922,33 @@ if($variantes_json === ''){
                 }
 
                 DB::insert(
-
                     'pos_product_category',
-
                     [
-
-                        'product_id' =>
-                            $product_id,
-
-                        'category_id' =>
-                            $category_id,
-
-                        'neg_id' =>
-                            $neg_id,
-
+                        'product_id' => $product_id,
+                        'category_id' => $category_id,
+                        'neg_id' => $neg_id,
                         'is_visible' => 1
-
                     ]
-
                 );
-
             }
-
         }
 
         /* ======================================
-           IMAGEN DEFAULT
+            IMAGEN DEFAULT
         ====================================== */
 
         DB::insert(
-
             'pos_product_image',
-
             [
-
-                'product_id' =>
-                    $product_id,
-
-                'img' =>
-                    'https://barsi-img.b-cdn.net/recursos/6qz5.png',
-
+                'product_id' => $product_id,
+                'img' => 'https://barsi-img.b-cdn.net/recursos/6qz5.png',
                 'orden' => 1,
-
                 'is_visible' => 1
-
             ]
-
         );
 
         /* ======================================
-           INVENTARIO
+            INVENTARIO
         ====================================== */
 
         if($stock < 0){
@@ -2227,217 +1956,120 @@ if($variantes_json === ''){
         }
 
         DB::insert(
-
             'pos_inventario',
-
             [
-
-                'product_id' =>
-                    $product_id,
-
-                'stock_actual' =>
-                    $stock,
-
-                'neg_id' =>
-                    $neg_id
-
+                'product_id' => $product_id,
+                'stock_actual' => $stock,
+                'neg_id' => $neg_id
             ]
-
         );
 
         /* ======================================
-           MOVIMIENTO INVENTARIO
+            MOVIMIENTO INVENTARIO
         ====================================== */
 
         DB::insert(
-
             'pos_inventario_movimiento',
-
             [
-
-                'product_id' =>
-                    $product_id,
-
-                'tipo' =>
-                    'AJUSTE',
-
-                'origen' =>
-                    'AJUSTE',
-
-                'cantidad' =>
-                    $stock,
-
-                'precio_unitario' =>
-                    $price,
-
-                'fecha' =>
-                    $now_dt,
-
-                'stock_resultante' =>
-                    $stock,
-
-                'neg_id' =>
-                    $neg_id
-
+                'product_id' => $product_id,
+                'tipo' => 'AJUSTE',
+                'origen' => 'AJUSTE',
+                'cantidad' => $stock,
+                'precio_unitario' => $price, // Guarda 0.00 en transacciones
+                'fecha' => $now_dt,
+                'stock_resultante' => $stock,
+                'neg_id' => $neg_id
             ]
-
         );
 
         /* ======================================
-           PRODUCTO RESPONSE
+            PRODUCTO RESPONSE
         ====================================== */
 
         $product = DB::queryFirstRow("
-
             SELECT
-
                 p.product_id,
                 p.cod_producto,
                 p.name,
                 p.description,
                 p.price,
                 p.is_visible,
-
-                IFNULL(
-                    i.stock_actual,
-                    0
-                ) AS stock
-
+                IFNULL(i.stock_actual, 0) AS stock
             FROM pos_product p
-
             LEFT JOIN pos_inventario i
                 ON i.product_id = p.product_id
-
             WHERE p.product_id = %i
-
             LIMIT 1
-
         ", $product_id);
 
         /* ======================================
-           IMAGENES
+            IMAGENES
         ====================================== */
 
         $imagenes = DB::query("
-
             SELECT
-
                 product_image_id,
                 img,
                 orden,
                 is_visible
-
             FROM pos_product_image
-
             WHERE product_id = %i
-
             AND borrado_el IS NULL
-
             ORDER BY orden ASC
-
         ", $product_id);
 
         foreach($imagenes as &$img){
-
-            $img['product_image_id'] = intval(
-                $img['product_image_id']
-            );
-
-            $img['orden'] = intval(
-                $img['orden']
-            );
-
-            $img['is_visible'] = intval(
-                $img['is_visible']
-            );
-
+            $img['product_image_id'] = intval($img['product_image_id']);
+            $img['orden'] = intval($img['orden']);
+            $img['is_visible'] = intval($img['is_visible']);
         }
 
         /* ======================================
-           CATEGORIAS RESPONSE
+            CATEGORIAS RESPONSE
         ====================================== */
 
         $cats = DB::query("
-
             SELECT
-
                 c.category_id,
                 c.name AS descripcion
-
             FROM pos_product_category pc
-
             INNER JOIN pos_category c
-                ON c.category_id =
-                   pc.category_id
-
+                ON c.category_id = pc.category_id
             WHERE pc.product_id = %i
-
             ORDER BY c.name ASC
-
         ", $product_id);
 
         foreach($cats as &$c){
-
-            $c['category_id'] = intval(
-                $c['category_id']
-            );
-
+            $c['category_id'] = intval($c['category_id']);
         }
 
-        $product['product_id'] = intval(
-            $product['product_id']
-        );
-
-        $product['price'] = floatval(
-            $product['price']
-        );
-
-        $product['stock'] = intval(
-            $product['stock']
-        );
-
-        $product['is_visible'] = intval(
-            $product['is_visible']
-        );
-
-        $product['imagenes'] =
-            $imagenes;
-
-        $product['categorias'] =
-            $cats;
+        $product['product_id'] = intval($product['product_id']);
+        $product['price'] = floatval($product['price']);
+        $product['stock'] = intval($product['stock']);
+        $product['is_visible'] = intval($product['is_visible']);
+        $product['imagenes'] = $imagenes;
+        $product['categorias'] = $cats;
 
         DB::commit();
 
         /* ======================================
-           RESPONSE
+            RESPONSE
         ====================================== */
 
         Flight::json([
-
             'status'=>'ok',
-
             'msg'=>'Producto creado correctamente',
-
             'editando'=>false,
-
             'product'=>$product
-
         ]);
 
     }catch(Exception $e){
-
         DB::rollback();
-
         Flight::json([
-
             'status'=>'error',
-
             'msg'=>$e->getMessage()
-
         ],500);
-
     }
-
 });
 
 Flight::route('POST /ZnO3/eliminarProducto', function(){
@@ -3928,3 +3560,84 @@ Flight::route('POST /V8ke/calculadoraPrecioDetalle', function(){
 
 });
 
+
+/* =========================================================
+   🔥 GESTIÓN DE CARGA DIRECTA DE IMÁGENES (REEMPLAZO FLASK)
+========================================================= */
+
+// 1. Endpoint principal de subida de archivos
+Flight::route('POST /tk_guardar_img', function () {
+    global $varpath_img;
+    global $varhost_img;
+
+    // Verificar que se haya enviado un archivo válido
+    if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
+        Flight::json([
+            'status' => 'error',
+            'msg' => 'No se recibió ningún archivo válido o hubo un error en la carga.'
+        ], 400);
+        return;
+    }
+
+    $file = $_FILES['file'];
+    
+    // Obtener extensión original y sanitizar
+    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
+        $ext = 'jpg'; // Forzado por el Canvas de origen a image/jpeg
+    }
+
+    // Generar un nombre único basado en un hash aleatorio de 6 caracteres (siguiendo tu estilo de rutas)
+    $nuevo_nombre = substr(md5(uniqid(rand(), true)), 0, 6) . '.' . $ext;
+    $ruta_destino = $varpath_img . $nuevo_nombre;
+
+    // Asegurar que el directorio de destino exista
+    if (!is_dir($varpath_img)) {
+        mkdir($varpath_img, 0777, true);
+    }
+
+    // Mover el archivo temporal a la carpeta física F:/xampp/htdocs/88/
+    if (move_uploaded_files_sitio($file['tmp_name'], $ruta_destino)) {
+        
+        // Simular la respuesta del Job original de Flask pero ya procesado de inmediato
+        $url_final = $varhost_img . $nuevo_nombre;
+        
+        Flight::json([
+            'status' => 'ok',
+            'job_id' => 'direct_' . uniqid(), // ID sintético por compatibilidad
+            'url_directa' => $url_final       // Para uso optimizado directo
+        ], 200);
+        
+    } else {
+        Flight::json([
+            'status' => 'error',
+            'msg' => 'No se pudo guardar el archivo en el servidor local.'
+        ], 500);
+    }
+});
+
+// Función auxiliar de guardado seguro
+function move_uploaded_files_sitio($tmp, $destino) {
+    if (is_uploaded_file($tmp)) {
+        return move_uploaded_file($tmp, $destino);
+    }
+    // Soporte para entornos locales simulados si es necesario
+    return rename($tmp, $destino);
+}
+
+
+// 2. Endpoint de simulación de Polling (Por compatibilidad con el loop de Vue)
+Flight::route('GET /jobs/result', function () {
+    global $varhost_img;
+    
+    $job_id = Flight::request()->query['job_id'] ?? '';
+    
+    // Como el archivo ya se procesó de forma síncrona, respondemos inmediatamente "finished"
+    Flight::json([
+        'status' => 'finished',
+        'result' => [
+            // No rastreamos memoria de variables globales previas, pero dejamos la estructura limpia
+            'url' => null 
+        ]
+    ], 200);
+});
