@@ -1478,6 +1478,48 @@ function veri_pin_code($pin_code)
 
 }
 
+/* =========================================================
+   🔑 VERIFICAR PIN ETERNO / PERSISTENTE
+   Permite múltiples accesos sin invalidar/destruir el PIN.
+========================================================= */
+function veri_pin_eterno($pin_code)
+{
+    $pin_code = trim($pin_code);
+
+    if ($pin_code === '') {
+        return [
+            'ok' => false,
+            'msg' => 'pin_code requerido'
+        ];
+    }
+
+    // 1. Obtener fecha/hora exacta desde el servidor PHP (evita desajustes con NOW() de MySQL)
+    $now = date('Y-m-d H:i:s');
+
+    // 2. Buscar usuario con PIN coincidente y cuya fecha_fin sea mayor o igual a la actual
+    $usuario = DB::queryFirstRow("
+        SELECT *
+        FROM reg_usu
+        WHERE pin_code = %s
+          AND pin_code_fecha_fin >= %s
+          AND borrado_el IS NULL
+        LIMIT 1
+    ", $pin_code, $now);
+
+    if (!$usuario) {
+        return [
+            'ok' => false,
+            'msg' => 'PIN inválido o expirado'
+        ];
+    }
+
+    // 3. Respuesta exitosa (Mantiene el PIN e intocado en la Base de Datos)
+    return [
+        'ok' => true,
+        'usuario' => $usuario
+    ];
+}
+
 Flight::route('POST /K5jX/ingresarConPinCode', function(){
 
     try{
@@ -1522,7 +1564,7 @@ Flight::route('POST /K5jX/ingresarConPinCode', function(){
            VALIDAR PIN
         ====================================== */
 
-        $rPin = veri_pin_code(
+        $rPin = veri_pin_eterno(
             $pin_code
         );
 
