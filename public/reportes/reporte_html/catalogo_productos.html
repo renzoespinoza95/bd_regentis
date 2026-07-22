@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Catálogo de Productos</title>
+
+<style>
+  * {
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    padding: 20px;
+    color: #1e293b;
+    background-color: #E5E5F7;
+  }
+
+  /* Forzado de salto de página limpio para WkHtmlToPdf */
+  .page-break {
+    page-break-before: always;
+    height: 0;
+    line-height: 0;
+  }
+
+  /* ====================================
+     CABECERA PRINCIPAL (MEMBRETE)
+  ==================================== */
+  .header {
+    width: 100%;
+    margin-bottom: 25px;
+    background: #ffffff;
+    padding: 18px 22px;
+    border-radius: 16px;
+    border: 1px solid #cbd5e1;
+  }
+
+  .header-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .header-left-td {
+    width: 58%;
+    vertical-align: middle;
+  }
+
+  .header-right-td {
+    width: 42%;
+    text-align: right;
+    vertical-align: middle;
+    font-size: 11px;
+    color: #475569;
+    line-height: 1.5;
+  }
+
+  .membrete-table {
+    border-collapse: collapse;
+  }
+
+  .logo-empresa {
+    max-height: 50px;
+    max-width: 130px;
+    display: block;
+  }
+
+  .titulo-empresa {
+    font-size: 22px;
+    font-weight: bold;
+    color: #2563eb;
+    padding-left: 15px;
+  }
+
+  .titulo-reporte {
+    font-size: 13px;
+    font-weight: bold;
+    color: #2563eb;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .badge-info {
+    background: #e0f2fe;
+    color: #0284c7;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: bold;
+    display: inline-block;
+  }
+
+  /* ====================================
+     SECCIÓN CATEGORÍA
+  ==================================== */
+  .categoria-bloque {
+    margin-bottom: 30px;
+  }
+
+  .categoria-header-banner {
+    width: 100%;
+    background-color: #2563eb;
+    border-radius: 12px;
+    padding: 10px 16px;
+    margin-bottom: 18px;
+    page-break-inside: avoid;
+  }
+
+  .banner-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .categoria-img-td {
+    width: 60px;
+    vertical-align: middle;
+  }
+
+  .categoria-img-td img {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    border: 2px solid #ffffff;
+    background: #ffffff;
+    display: block;
+  }
+
+  .categoria-text-td {
+    vertical-align: middle;
+    padding-left: 12px;
+    color: #ffffff;
+    font-size: 17px;
+    font-weight: bold;
+    text-transform: uppercase;
+  }
+
+  .categoria-titulo-fallback {
+    font-size: 16px;
+    font-weight: bold;
+    color: #ffffff;
+    background-color: #2563eb;
+    padding: 12px 16px;
+    border-radius: 12px;
+    margin-bottom: 18px;
+    text-transform: uppercase;
+    page-break-inside: avoid;
+  }
+
+  /* ====================================
+     GRID DE PRODUCTOS (3 COLUMNAS FIJAS)
+  ==================================== */
+  .grid-container {
+    width: 100%;
+  }
+
+  .grid-container:after {
+    content: "";
+    display: table;
+    clear: both;
+  }
+
+  .card-wrapper {
+    float: left;
+    width: 31.33%;
+    margin-right: 2%;
+    margin-bottom: 20px;
+    page-break-inside: avoid;
+  }
+
+  /* Quita el margen derecho al último elemento de cada fila */
+  .card-wrapper:nth-child(3n) {
+    margin-right: 0;
+  }
+
+  /* CLAVE: Obliga a que el 1er elemento de CADA fila empiece desde la izquierda,
+     sin importar si las tarjetas de arriba tienen diferente altura */
+  .card-wrapper:nth-child(3n+1) {
+    clear: left;
+  }
+
+  .card {
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid #cbd5e1;
+    text-align: center;
+    overflow: hidden;
+  }
+
+  .img-box {
+    width: 100%;
+    height: 190px;
+    padding: 10px;
+    text-align: center;
+    background: #ffffff;
+  }
+
+  .product-img {
+    max-width: 100%;
+    max-height: 100%;
+    display: inline-block;
+  }
+
+  .card-footer-btn {
+    background-color: #3b82f6;
+    color: #ffffff;
+    font-weight: bold;
+    font-size: 11px;
+    padding: 8px 6px;
+    text-align: center;
+    height: 48px; /* Altura fija para que todas las tarjetas midan exactamente igual */
+    line-height: 1.2;
+    display: block;
+    word-wrap: break-word;
+    border-bottom-left-radius: 13px;
+    border-bottom-right-radius: 13px;
+    overflow: hidden;
+  }
+
+  .clearfix {
+    clear: both;
+  }
+</style>
+</head>
+
+<body>
+
+<!-- CABECERA -->
+<div class="header">
+  <table class="header-table">
+    <tr>
+      <td class="header-left-td">
+        {{#informacion}}
+          <table class="membrete-table">
+            <tr>
+              {{#logo}}
+                <td>
+                  <img class="logo-empresa" src="{{ logo }}">
+                </td>
+              {{/logo}}
+              <td>
+                <div class="titulo-empresa">{{ razon_social }}</div>
+              </td>
+            </tr>
+          </table>
+        {{/informacion}}
+      </td>
+      <td class="header-right-td">
+        {{#informacion}}
+          <div class="titulo-reporte">{{ titulo_reporte }}</div>
+          <div><strong>Fecha:</strong> <span class="badge-info">{{ fecha }}</span></div>
+          {{#celular}}<div><strong>Celular:</strong> {{ celular }}</div>{{/celular}}
+          {{#direccion}}<div><strong>Dirección:</strong> {{ direccion }}</div>{{/direccion}}
+        {{/informacion}}
+      </td>
+    </tr>
+  </table>
+</div>
+
+<!-- CATEGORÍAS Y PRODUCTOS -->
+{{#categorias}}
+
+  <!-- Salto de página condicional (solo a partir de la 2da categoría) -->
+  {{#salto_pagina}}
+    <div class="page-break"></div>
+  {{/salto_pagina}}
+
+  <div class="categoria-bloque">
+
+    {{#tiene_categoria_img}}
+      <div class="categoria-header-banner">
+        <table class="banner-table">
+          <tr>
+            <td class="categoria-img-td">
+              <img src="{{ categoria_img }}" alt="Categoría">
+            </td>
+            <td class="categoria-text-td">
+              {{ categoria_nombre }}
+            </td>
+          </tr>
+        </table>
+      </div>
+    {{/tiene_categoria_img}}
+
+    {{^tiene_categoria_img}}
+      <div class="categoria-titulo-fallback">
+        {{ categoria_nombre }}
+      </div>
+    {{/tiene_categoria_img}}
+
+    <div class="grid-container">
+      {{#productos}}
+        <div class="card-wrapper">
+          <div class="card">
+            <div class="img-box">
+              <img class="product-img" src="{{ producto_img }}" alt="Producto">
+            </div>
+            <div class="card-footer-btn">
+              {{ producto_nombre }}
+            </div>
+          </div>
+        </div>
+      {{/productos}}
+      <div class="clearfix"></div>
+    </div>
+
+  </div>
+{{/categorias}}
+
+</body>
+</html>

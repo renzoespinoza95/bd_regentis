@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Catálogo de Productos Premium</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Bootstrap 5.3 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Poppins', Arial, sans-serif;
+      padding: 24px;
+      color: #1e293b;
+      position: relative;
+      /* Fondo base */
+      background-color: #E5E5F7;
+      /* Patrón de líneas cruzadas geométricas */
+      background-image: 
+        repeating-linear-gradient(45deg, transparent 0, transparent 35px, #444CF7 35px, #444CF7 40px), 
+        repeating-linear-gradient(-45deg, transparent 0, transparent 35px, #22D1EE 35px, #22D1EE 40px), 
+        repeating-linear-gradient(90deg, transparent 0, transparent 35px, #df53ff 35px, #df53ff 40px);
+      background-attachment: fixed;
+    }
+
+    /* ====================================
+       CABECERA PRINCIPAL (MEMBRETE)
+    ==================================== */
+    .header-card {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 18px 22px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+      margin-bottom: 30px;
+    }
+
+    .logo-empresa {
+      max-height: 50px;
+      max-width: 120px;
+      object-fit: contain;
+    }
+
+    .titulo-empresa {
+      font-size: 22px;
+      font-weight: 700;
+      color: #444CF7;
+      letter-spacing: -0.5px;
+    }
+
+    .titulo-reporte {
+      font-size: 13px;
+      font-weight: 700;
+      color: #444CF7;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+
+    .badge-info {
+      background: #e0f2fe;
+      color: #0284c7;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-weight: 600;
+      display: inline-block;
+    }
+
+    .info-contacto {
+      font-size: 11px;
+      color: #475569;
+      line-height: 1.6;
+    }
+
+    /* ====================================
+       SECCIÓN CATEGORÍA (BANNER DEGRADADO)
+    ==================================== */
+    .categoria-bloque {
+      margin-bottom: 35px;
+      page-break-before: always;
+    }
+
+    .categoria-bloque:first-of-type {
+      page-break-before: auto;
+    }
+
+    .categoria-header-banner {
+      width: 100%;
+      background: linear-gradient(90deg, #1d6bf3 0%, #22D1EE 50%, #e052ff 100%);
+      border-radius: 16px;
+      padding: 12px 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 20px rgba(29, 107, 243, 0.3);
+      page-break-inside: avoid;
+    }
+
+    .categoria-img-col img {
+      width: 52px;
+      height: 52px;
+      object-fit: cover;
+      border-radius: 12px;
+      border: 2px solid rgba(255, 255, 255, 0.9);
+      background: #ffffff;
+    }
+
+    .categoria-text {
+      color: #ffffff;
+      font-size: 18px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    /* Fallback sin imagen */
+    .categoria-titulo-fallback {
+      font-size: 16px;
+      font-weight: 700;
+      color: #ffffff;
+      background: linear-gradient(90deg, #1d6bf3 0%, #22D1EE 50%, #e052ff 100%);
+      padding: 14px 20px;
+      border-radius: 14px;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      box-shadow: 0 6px 15px rgba(29, 107, 243, 0.3);
+      page-break-inside: avoid;
+    }
+
+    /* ====================================
+       TARJETAS DE PRODUCTOS
+    ==================================== */
+    .product-col {
+      page-break-inside: avoid;
+    }
+
+    .card-product {
+      background: #ffffff;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 12px 25px -5px rgba(0, 0, 0, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      text-align: center;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .card-product:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 16px 30px -5px rgba(0, 0, 0, 0.18);
+    }
+
+    /* Contenedor para la imagen */
+    .img-box {
+      width: 100%;
+      height: 220px;
+      padding: 14px;
+      background: #ffffff;
+    }
+
+    .product-img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      border-radius: 8px;
+    }
+
+    /* Pie de la tarjeta con degradado */
+    .card-footer-btn {
+      background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #d8b4fe 100%);
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 12px;
+      padding: 12px 10px;
+      text-align: center;
+      line-height: 1.35;
+      min-height: 48px;
+      border-bottom-left-radius: 17px;
+      border-bottom-right-radius: 17px;
+      letter-spacing: 0.2px;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Regla para impresión/PDF */
+    @media print {
+      body {
+        background-attachment: scroll;
+      }
+      .categoria-bloque {
+        page-break-before: always;
+      }
+      .categoria-bloque:first-of-type {
+        page-break-before: auto;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container-fluid p-0">
+
+  <!-- CABECERA PRINCIPAL -->
+  <div class="header-card">
+    <div class="row align-items-center g-3">
+      
+      <!-- LADO IZQUIERDO: LOGO + NOMBRE -->
+      <div class="col-12 col-md-7">
+        {{#informacion}}
+          <div class="d-flex align-items-center gap-3">
+            {{#logo}}
+              <div class="flex-shrink-0">
+                <img class="logo-empresa" src="{{ logo }}" alt="Logo">
+              </div>
+            {{/logo}}
+            <div>
+              <div class="titulo-empresa">{{ razon_social }}</div>
+            </div>
+          </div>
+        {{/informacion}}
+      </div>
+
+      <!-- LADO DERECHO: DETALLES REPORTES -->
+      <div class="col-12 col-md-5 text-md-end info-contacto">
+        {{#informacion}}
+          <div class="titulo-reporte">{{ titulo_reporte }}</div>
+          <div><strong>Fecha:</strong> <span class="badge-info">{{ fecha }}</span></div>
+          {{#celular}}<div><strong>Atención:</strong> {{ celular }}</div>{{/celular}}
+          {{#direccion}}<div><strong>Dirección:</strong> {{ direccion }}</div>{{/direccion}}
+        {{/informacion}}
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CATEGORÍAS Y PRODUCTOS -->
+  {{#categorias}}
+
+    <!-- Salto de página condicional para Mustache si se requiere -->
+    {{#salto_pagina}}
+      <div class="d-none d-print-block" style="page-break-before: always;"></div>
+    {{/salto_pagina}}
+
+    <div class="categoria-bloque">
+
+      <!-- BANNER CATEGORÍA -->
+      {{#tiene_categoria_img}}
+        <div class="categoria-header-banner d-flex align-items-center gap-3">
+          <div class="categoria-img-col flex-shrink-0">
+            <img src="{{ categoria_img }}" alt="Categoría">
+          </div>
+          <div class="categoria-text">
+            {{ categoria_nombre }}
+          </div>
+        </div>
+      {{/tiene_categoria_img}}
+
+      {{^tiene_categoria_img}}
+        <div class="categoria-titulo-fallback">
+          {{ categoria_nombre }}
+        </div>
+      {{/tiene_categoria_img}}
+
+      <!-- GRID DE PRODUCTOS ALINEADOS -->
+      <div class="row g-4 align-items-stretch">
+        {{#productos}}
+          <div class="col-12 col-sm-6 col-md-4 product-col d-flex">
+            <div class="card-product w-100 d-flex flex-column justify-content-between">
+              
+              <div class="img-box d-flex align-items-center justify-content-center">
+                <img class="product-img" src="{{ producto_img }}" alt="Producto">
+              </div>
+
+              <div class="card-footer-btn d-flex align-items-center justify-content-center">
+                {{ producto_nombre }}
+              </div>
+
+            </div>
+          </div>
+        {{/productos}}
+      </div>
+
+    </div>
+  {{/categorias}}
+
+</div>
+
+<!-- Bootstrap 5.3 JS Bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

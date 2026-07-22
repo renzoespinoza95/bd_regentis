@@ -3641,3 +3641,305 @@ Flight::route('GET /jobs/result', function () {
         ]
     ], 200);
 });
+
+Flight::route('POST /crear_catalogo', function () {
+
+    include DEFINITION; // Carga configuraciones globales y firmas
+    
+    global $wkh_pdf, $varhost, $varpath_tmp, $varhost_tmp;
+
+    // 1. Obtener y parsear el payload JSON enviado desde Vue 3
+    $body = json_decode(Flight::request()->getBody(), true) ?: [];
+
+    $xin    = trim($body['xin'] ?? '');
+    $yuan   = trim($body['yuan'] ?? '');
+    $neg_id = intval($body['neg_id'] ?? 0);
+
+    // 2. Validar firma de seguridad criptográfica
+    firma($xin, $yuan);
+
+    // 3. Validar presencia del parámetro neg_id
+    if ($neg_id <= 0) {
+        Flight::json([
+            'status' => 'error',
+            'msg'    => 'El neg_id es requerido y debe ser válido'
+        ], 400);
+        return;
+    }
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    // 4. Consultar datos del negocio seleccionado
+    $negocio = DB::queryFirstRow("
+        SELECT 
+            nombre, 
+            direccion, 
+            celular_informes, 
+            img_logo
+        FROM reg_neg
+        WHERE neg_id = %i AND (borrado_el IS NULL OR borrado_el = '')
+        LIMIT 1
+    ", $neg_id);
+
+    if (!$negocio) {
+        Flight::json([
+            'status' => 'error',
+            'msg'    => 'Negocio no encontrado'
+        ], 404);
+        return;
+    }
+
+    $ruc_empresa = '99999999';
+
+    // Logo del negocio o fallback por defecto
+    $logo_negocio = !empty($negocio['img_logo']) 
+        ? $negocio['img_logo'] 
+        : $varhost . '/public/admin/login/images/logo_login.png';
+
+    // 5. Consultar todas las categorías activas del negocio
+    $categorias = DB::query("
+        SELECT 
+            c.category_id,
+            c.name AS categoria_nombre,
+            c.img AS categoria_img
+        FROM pos_category c
+        WHERE c.neg_id = %i
+          AND (c.is_activo = 1 OR c.is_activo IS NULL)
+          AND (c.borrado_el IS NULL OR c.borrado_el = '')
+        ORDER BY c.priority ASC, c.category_id ASC
+    ", $neg_id);
+
+    $listado_categorias = [];
+
+    foreach ($categorias as $cat) {
+
+        // 6. Consultar productos de la categoría a través de pos_product_category
+        $productos = DB::query("
+            SELECT DISTINCT
+                p.product_id,
+                p.name AS producto_nombre,
+                p.price AS precio,
+                p.marca_des AS marca,
+                (
+                    SELECT pi.img 
+                    FROM pos_product_image pi 
+                    WHERE pi.product_id = p.product_id 
+                      AND (pi.borrado_el IS NULL OR pi.borrado_el = '')
+                    ORDER BY pi.orden ASC 
+                    LIMIT 1
+                ) AS producto_img
+            FROM pos_product p
+            INNER JOIN pos_product_category pc ON pc.product_id = p.product_id
+            WHERE pc.category_id = %i
+              AND p.neg_id = %i
+              AND (p.is_visible = 1 OR p.is_visible IS NULL)
+              AND (p.borrado_el IS NULL OR p.borrado_el = '')
+            ORDER BY p.product_id DESC
+        ", $cat['category_id'], $neg_id);
+
+        // Si la categoría no tiene productos, se ignora
+        if (empty($productos)) {
+            continue;
+        }
+
+        // Mapeo de productos para la plantilla Mustache
+        $listado_productos = [];
+        foreach ($productos as $prod) {
+            $img_prod = !empty($prod['producto_img']) 
+                ? $prod['producto_img'] 
+                : $varhost . '/public/admin/images/no_image.png';
+
+            $listado_productos[] = [
+                'product_id'      => $prod['product_id'],
+                'producto_nombre' => $prod['producto_nombre'],
+                'marca'           => !empty($prod['marca']) ? '#' . $prod['marca'] : '#DISPONIBLE',
+                'precio'          => number_format((float)$prod['precio'], 2),
+                'producto_img'    => $img_prod
+            ];
+        }
+
+        // Imagen de la cabecera de categoría
+        $img_cat = !empty($cat['categoria_img']) ? $cat['categoria_img'] : '';
+
+        $listado_categorias[] = [
+            'category_id'         => $cat['category_id'],
+            'categoria_nombre'    => $cat['categoria_nombre'],
+            'categoria_img'       => $img_cat,
+            'tiene_categoria_img' => !empty($img_cat),
+            'productos'           => $listado_productos
+        ];
+    }
+
+    // 7. Estructura de datos para Mustache
+    $template_data = [
+        'informacion' => [[
+            'razon_social'   => $negocio['nombre'] ?? 'CATÁLOGO DE PRODUCTOS',
+            'ruc'            => $ruc_empresa,
+            'direccion'      => $negocio['direccion'] ?? '',
+            'celular'        => $negocio['celular_informes'] ?? '',
+            'logo'           => $logo_negocio,
+            'titulo_reporte' => 'CATÁLOGO VIRTUAL',
+            'fecha'          => date('d/m/Y')
+        ]],
+        'categorias' => $listado_categorias
+    ];
+
+    // 8. Compilar plantilla HTML almacenada en disco
+    $html = (new Mustache)->render(
+        file_get_contents(VARPATH . '/public/reportes/reporte_html/catalogo_productos.html'),
+        $template_data
+    );
+
+    // 9. Generación de PDF mediante binario WkHtmlToPdf
+    $nombre_pdf = 'catalogo_negocio_' . $neg_id . '_' . time() . '.pdf';
+    $ruta_pdf   = $varpath_tmp . $nombre_pdf;
+
+    $wkh_pdf->addPage($html);
+    exec($wkh_pdf->getCommand($ruta_pdf));
+
+    // 10. Respuesta JSON con la URL directa del PDF generado
+    Flight::json([
+        'status' => 'ok',
+        'url'    => $varhost_tmp . $nombre_pdf
+    ]);
+});
+
+Flight::route('GET /catalogo/@neg_id', function ($neg_id) {
+
+    include DEFINITION;
+    autentificar_administrador();
+
+    global $wkh_pdf, $varhost, $varpath_tmp, $varhost_tmp, $administrador_actual;
+
+    DB::query("SET NAMES 'utf8mb4'");
+
+    // Validar y castear a entero el parametro de la URL
+    $neg_id = intval($neg_id);
+    if ($neg_id <= 0) {
+        $neg_id = intval($administrador_actual['neg_id'] ?? 8);
+    }
+
+    // 1. Obtener datos de la empresa/negocio
+    $negocio = DB::queryFirstRow("
+        SELECT 
+            nombre, 
+            direccion, 
+            celular_informes, 
+            img_logo
+        FROM reg_neg
+        WHERE neg_id = %i AND (borrado_el IS NULL OR borrado_el = '')
+        LIMIT 1
+    ", $neg_id);
+
+    if (!$negocio) {
+        Flight::json(['status' => 'error', 'msg' => 'Negocio no encontrado'], 404);
+        return;
+    }
+
+    $ruc_empresa = '99999999';
+
+    // Logo del negocio o fallback por defecto
+    $logo_negocio = !empty($negocio['img_logo']) 
+        ? $negocio['img_logo'] 
+        : $varhost . '/public/admin/login/images/logo_login.png';
+
+    // 2. Consultar todas las categorías del negocio
+    $categorias = DB::query("
+        SELECT 
+            c.category_id,
+            c.name AS categoria_nombre,
+            c.img AS categoria_img
+        FROM pos_category c
+        WHERE c.neg_id = %i
+          AND (c.is_activo = 1 OR c.is_activo IS NULL)
+          AND (c.borrado_el IS NULL OR c.borrado_el = '')
+        ORDER BY c.priority ASC, c.category_id ASC
+    ", $neg_id);
+
+    $listado_categorias = [];
+    $index_cat = 0;
+
+    foreach ($categorias as $cat) {
+
+        // 3. Consultar productos activos de la categoría
+        $productos = DB::query("
+            SELECT DISTINCT
+                p.product_id,
+                p.name AS producto_nombre,
+                p.price AS precio,
+                p.marca_des AS marca,
+                (
+                    SELECT pi.img 
+                    FROM pos_product_image pi 
+                    WHERE pi.product_id = p.product_id 
+                      AND (pi.borrado_el IS NULL OR pi.borrado_el = '')
+                    ORDER BY pi.orden ASC 
+                    LIMIT 1
+                ) AS producto_img
+            FROM pos_product p
+            INNER JOIN pos_product_category pc ON pc.product_id = p.product_id
+            WHERE pc.category_id = %i
+              AND p.neg_id = %i
+              AND (p.is_visible = 1 OR p.is_visible IS NULL)
+              AND (p.borrado_el IS NULL OR p.borrado_el = '')
+            ORDER BY p.product_id DESC
+        ", $cat['category_id'], $neg_id);
+
+        // Si la categoría no tiene productos, se ignora
+        if (empty($productos)) {
+            continue;
+        }
+
+        // Mapeo de productos para la plantilla Mustache
+        $listado_productos = [];
+        foreach ($productos as $prod) {
+            $img_prod = !empty($prod['producto_img']) 
+                ? $prod['producto_img'] 
+                : $varhost . '/public/admin/images/no_image.png';
+
+            $listado_productos[] = [
+                'product_id'      => $prod['product_id'],
+                'producto_nombre' => $prod['producto_nombre'],
+                'marca'           => !empty($prod['marca']) ? '#' . $prod['marca'] : '#DISPONIBLE',
+                'precio'          => number_format((float)$prod['precio'], 2),
+                'producto_img'    => $img_prod
+            ];
+        }
+
+        // Imagen de la cabecera de categoría
+        $img_cat = !empty($cat['categoria_img']) ? $cat['categoria_img'] : '';
+
+        $listado_categorias[] = [
+            'salto_pagina'        => ($index_cat > 0), // false para la 1ra categoría, true para la 2da en adelante
+            'category_id'         => $cat['category_id'],
+            'categoria_nombre'    => $cat['categoria_nombre'],
+            'categoria_img'       => $img_cat,
+            'tiene_categoria_img' => !empty($img_cat),
+            'productos'           => $listado_productos
+        ];
+
+        $index_cat++;
+    }
+
+    // 4. Estructura de datos para Mustache
+    $template_data = [
+        'informacion' => [[
+            'razon_social'   => $negocio['nombre'] ?? 'CATÁLOGO DE PRODUCTOS',
+            'ruc'            => $ruc_empresa,
+            'direccion'      => $negocio['direccion'] ?? '',
+            'celular'        => $negocio['celular_informes'] ?? '',
+            'logo'           => $logo_negocio,
+            'titulo_reporte' => 'CATÁLOGO VIRTUAL',
+            'fecha'          => date('d/m/Y')
+        ]],
+        'categorias' => $listado_categorias
+    ];
+
+    // 5. Compilar la plantilla HTML almacenada en disco
+    $html = (new Mustache)->render(
+        file_get_contents(VARPATH . '/public/reportes/reporte_html/catalogo_personal.html'),
+        $template_data
+    );
+
+    echo $html;
+});
