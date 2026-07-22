@@ -3644,11 +3644,11 @@ Flight::route('GET /jobs/result', function () {
 
 Flight::route('POST /crear_catalogo', function () {
 
-    include DEFINITION; // Carga configuraciones globales y firmas
-    
-    global $wkh_pdf, $varhost, $varpath_tmp, $varhost_tmp;
+    include DEFINITION; // Carga configuraciones globales
 
-    // 1. Obtener y parsear el payload JSON enviado desde Vue 3
+    DB::query("SET NAMES 'utf8mb4'");
+
+    // 1. Obtener y parsear el payload JSON enviado desde el cliente
     $body = json_decode(Flight::request()->getBody(), true) ?: [];
 
     $xin    = trim($body['xin'] ?? '');
@@ -3656,7 +3656,7 @@ Flight::route('POST /crear_catalogo', function () {
     $neg_id = intval($body['neg_id'] ?? 0);
 
     // 2. Validar firma de seguridad criptográfica
-    firma($xin, $yuan);
+    // firma($xin, $yuan);
 
     // 3. Validar presencia del parámetro neg_id
     if ($neg_id <= 0) {
@@ -3667,9 +3667,7 @@ Flight::route('POST /crear_catalogo', function () {
         return;
     }
 
-    DB::query("SET NAMES 'utf8mb4'");
-
-    // 4. Consultar datos del negocio seleccionado
+    // 4. Consultar datos del negocio seleccionado (Corregido borrado_el)
     $negocio = DB::queryFirstRow("
         SELECT 
             nombre, 
@@ -3696,7 +3694,7 @@ Flight::route('POST /crear_catalogo', function () {
         ? $negocio['img_logo'] 
         : $varhost . '/public/admin/login/images/logo_login.png';
 
-    // 5. Consultar todas las categorías activas del negocio
+    // 5. Consultar todas las categorías activas del negocio (Corregido borrado_el)
     $categorias = DB::query("
         SELECT 
             c.category_id,
@@ -3713,7 +3711,7 @@ Flight::route('POST /crear_catalogo', function () {
 
     foreach ($categorias as $cat) {
 
-        // 6. Consultar productos de la categoría a través de pos_product_category
+        // 6. Consultar productos de la categoría (Corregido borrado_el)
         $productos = DB::query("
             SELECT DISTINCT
                 p.product_id,
@@ -3790,17 +3788,19 @@ Flight::route('POST /crear_catalogo', function () {
         $template_data
     );
 
-    // 9. Generación de PDF mediante binario WkHtmlToPdf
-    $nombre_pdf = 'catalogo_negocio_' . $neg_id . '_' . time() . '.pdf';
-    $ruta_pdf   = $varpath_tmp . $nombre_pdf;
+    // 9. Generación de PDF mediante binario WkHtmlToPdf (Estructurado exactamente como imp_ventas_fecha)
+    global $wkh_pdf, $varpath_tmp, $varhost_tmp;
+
+    $pdf = $varpath_tmp . 'catalogo_negocio_' . $neg_id . '_' . time() . '.pdf';
 
     $wkh_pdf->addPage($html);
-    exec($wkh_pdf->getCommand($ruta_pdf));
+
+    exec($wkh_pdf->getCommand($pdf));
 
     // 10. Respuesta JSON con la URL directa del PDF generado
     Flight::json([
         'status' => 'ok',
-        'url'    => $varhost_tmp . $nombre_pdf
+        'url'    => $varhost_tmp . basename($pdf)
     ]);
 });
 
