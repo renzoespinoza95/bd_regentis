@@ -3677,7 +3677,7 @@ Flight::route('POST /crear_catalogo', function () {
             celular_informes, 
             img_logo
         FROM reg_neg
-        WHERE neg_id = %i AND (borrado_el IS NULL OR borrado_el = '')
+        WHERE neg_id = %i AND borrado_el IS NULL
         LIMIT 1
     ", $neg_id);
 
@@ -3705,7 +3705,7 @@ Flight::route('POST /crear_catalogo', function () {
         FROM pos_category c
         WHERE c.neg_id = %i
           AND (c.is_activo = 1 OR c.is_activo IS NULL)
-          AND (c.borrado_el IS NULL OR c.borrado_el = '')
+          AND c.borrado_el IS NULL
         ORDER BY c.priority ASC, c.category_id ASC
     ", $neg_id);
 
@@ -3724,7 +3724,7 @@ Flight::route('POST /crear_catalogo', function () {
                     SELECT pi.img 
                     FROM pos_product_image pi 
                     WHERE pi.product_id = p.product_id 
-                      AND (pi.borrado_el IS NULL OR pi.borrado_el = '')
+                      AND pi.borrado_el IS NULL
                     ORDER BY pi.orden ASC 
                     LIMIT 1
                 ) AS producto_img
@@ -3733,7 +3733,7 @@ Flight::route('POST /crear_catalogo', function () {
             WHERE pc.category_id = %i
               AND p.neg_id = %i
               AND (p.is_visible = 1 OR p.is_visible IS NULL)
-              AND (p.borrado_el IS NULL OR p.borrado_el = '')
+              AND p.borrado_el IS NULL
             ORDER BY p.product_id DESC
         ", $cat['category_id'], $neg_id);
 
