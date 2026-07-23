@@ -3642,18 +3642,24 @@ Flight::route('GET /jobs/result', function () {
     ], 200);
 });
 
+
 Flight::route('POST /crear_catalogo', function () {
 
-    include DEFINITION;
+    include DEFINITION; // Carga configuraciones globales
 
     DB::query("SET NAMES 'utf8mb4'");
 
+    // 1. Obtener y parsear el payload JSON enviado desde el cliente
     $body = json_decode(Flight::request()->getBody(), true) ?: [];
 
     $xin    = trim($body['xin'] ?? '');
     $yuan   = trim($body['yuan'] ?? '');
     $neg_id = intval($body['neg_id'] ?? 0);
 
+    // 2. Validar firma de seguridad criptográfica
+    // firma($xin, $yuan);
+
+    // 3. Validar presencia del parámetro neg_id
     if ($neg_id <= 0) {
         Flight::json([
             'status' => 'error',
@@ -3662,9 +3668,13 @@ Flight::route('POST /crear_catalogo', function () {
         return;
     }
 
-    // 1. Consultar datos del negocio
+    // 4. Consultar datos del negocio seleccionado (Corregido borrado_el)
     $negocio = DB::queryFirstRow("
-        SELECT nombre, direccion, celular_informes, img_logo
+        SELECT 
+            nombre, 
+            direccion, 
+            celular_informes, 
+            img_logo
         FROM reg_neg
         WHERE neg_id = %i AND borrado_el IS NULL
         LIMIT 1
@@ -3679,14 +3689,41 @@ Flight::route('POST /crear_catalogo', function () {
     }
 
     $ruc_empresa = '99999999';
+    global $varhost;
 
-    // Convertir la URL del logo a RUTA LOCAL DE DISCO (VARPATH) para evitar Time-Outs
-    $logo_raw = !empty($negocio['img_logo']) ? $negocio['img_logo'] : '/public/admin/login/images/logo_login.png';
-    $logo_negocio = str_replace($varhost, VARPATH, $logo_raw);
+    // --- FUNCIÓN PARA CONVERTIR URLs/RUTAS A ARCHIVOS LOCALES EN DISCO ---
+    $convertir_a_ruta_local = function($url_o_ruta) use ($varhost) {
+        if (empty($url_o_ruta)) {
+            return '';
+        }
 
-    // 2. Consultar Categorías
+        // Obtener solo el path (ej: /88/imagen.jpg o /public/admin/...)
+        $path = parse_url($url_o_ruta, PHP_URL_PATH) ?: $url_o_ruta;
+
+        // Si la imagen está en la carpeta hermana /88/
+        if (strpos($path, '/88/') === 0) {
+            // Elimina la carpeta del proyecto actual de VARPATH para apuntar al directorio padre (htdocs o /var/www/regentis/)
+            $raiz_padre = preg_replace('/[\\\\\/]bd_regentis[\\\\\/]?$/i', '', VARPATH);
+            return $raiz_padre . str_replace('/', DIRECTORY_SEPARATOR, $path);
+        }
+
+        // Si pertenece a la carpeta public de bd_regentis
+        return str_replace($varhost, VARPATH, $url_o_ruta);
+    };
+
+    // Logo del negocio o fallback por defecto
+    $logo_raw = !empty($negocio['img_logo']) 
+        ? $negocio['img_logo'] 
+        : $varhost . '/public/admin/login/images/logo_login.png';
+
+    $logo_negocio = $convertir_a_ruta_local($logo_raw);
+
+    // 5. Consultar todas las categorías activas del negocio (Corregido borrado_el)
     $categorias = DB::query("
-        SELECT c.category_id, c.name AS categoria_nombre, c.img AS categoria_img
+        SELECT 
+            c.category_id,
+            c.name AS categoria_nombre,
+            c.img AS categoria_img
         FROM pos_category c
         WHERE c.neg_id = %i
           AND (c.is_activo = 1 OR c.is_activo IS NULL)
@@ -3695,10 +3732,10 @@ Flight::route('POST /crear_catalogo', function () {
     ", $neg_id);
 
     $listado_categorias = [];
-    $index_cat = 0;
 
     foreach ($categorias as $cat) {
 
+        // 6. Consultar productos de la categoría (Corregido borrado_el)
         $productos = DB::query("
             SELECT DISTINCT
                 p.product_id,
@@ -3722,39 +3759,41 @@ Flight::route('POST /crear_catalogo', function () {
             ORDER BY p.product_id DESC
         ", $cat['category_id'], $neg_id);
 
-        if (empty($productos)) continue;
+        // Si la categoría no tiene productos, se ignora
+        if (empty($productos)) {
+            continue;
+        }
 
+        // Mapeo de productos para la plantilla Mustache
         $listado_productos = [];
         foreach ($productos as $prod) {
-            $img_raw = !empty($prod['producto_img']) ? $prod['producto_img'] : '/public/admin/images/no_image.png';
-            // Convertir la URL del producto a RUTA LOCAL DE DISCO (VARPATH)
-            $img_prod_local = str_replace($varhost, VARPATH, $img_raw);
+            $img_prod_raw = !empty($prod['producto_img']) 
+                ? $prod['producto_img'] 
+                : $varhost . '/public/admin/images/no_image.png';
 
             $listado_productos[] = [
                 'product_id'      => $prod['product_id'],
                 'producto_nombre' => $prod['producto_nombre'],
                 'marca'           => !empty($prod['marca']) ? '#' . $prod['marca'] : '#DISPONIBLE',
                 'precio'          => number_format((float)$prod['precio'], 2),
-                'producto_img'    => $img_prod_local
+                'producto_img'    => $convertir_a_ruta_local($img_prod_raw)
             ];
         }
 
-        $img_cat_raw = !empty($cat['categoria_img']) ? $cat['categoria_img'] : '';
-        $img_cat_local = !empty($img_cat_raw) ? str_replace($varhost, VARPATH, $img_cat_raw) : '';
+        // Imagen de la cabecera de categoría
+        $img_cat_raw   = !empty($cat['categoria_img']) ? $cat['categoria_img'] : '';
+        $img_cat_local = $convertir_a_ruta_local($img_cat_raw);
 
         $listado_categorias[] = [
-            'salto_pagina'        => ($index_cat > 0), // Salto de página desde la 2da categoría
             'category_id'         => $cat['category_id'],
             'categoria_nombre'    => $cat['categoria_nombre'],
             'categoria_img'       => $img_cat_local,
             'tiene_categoria_img' => !empty($img_cat_local),
             'productos'           => $listado_productos
         ];
-
-        $index_cat++;
     }
 
-    // 3. Renderizar HTML con Mustache
+    // 7. Estructura de datos para Mustache
     $template_data = [
         'informacion' => [[
             'razon_social'   => $negocio['nombre'] ?? 'CATÁLOGO DE PRODUCTOS',
@@ -3768,38 +3807,28 @@ Flight::route('POST /crear_catalogo', function () {
         'categorias' => $listado_categorias
     ];
 
-    // TRUCO IMPORTANTE: Aseguramos que el string empiece exactamente con <html>
-    // para que la REGEX_HTML de tu clase WkHtmlToPdf v1.1.0 lo reconozca como HTML y no como archivo
-    $html_content = (new Mustache)->render(
+    // 8. Compilar plantilla HTML almacenada en disco
+    $html = (new Mustache)->render(
         file_get_contents(VARPATH . '/public/reportes/reporte_html/catalogo_productos.html'),
         $template_data
     );
-    $html = "<html>" . $html_content;
 
-    // 4. Generación con la clase WkHtmlToPdf
+    // 9. Generación de PDF mediante binario WkHtmlToPdf (Estructurado exactamente como imp_ventas_fecha)
     global $wkh_pdf, $varpath_tmp, $varhost_tmp;
 
-    $nombre_pdf = 'catalogo_negocio_' . $neg_id . '_' . time() . '.pdf';
-    $pdf = $varpath_tmp . $nombre_pdf;
+    $pdf = $varpath_tmp . 'catalogo_negocio_' . $neg_id . '_' . time() . '.pdf';
 
-    // Usamos el método addPage pasándole el HTML
     $wkh_pdf->addPage($html);
 
-    // Usamos saveAs() que internamente ejecuta proc_open y genera el PDF correctamente
-    if ($wkh_pdf->saveAs($pdf)) {
-        Flight::json([
-            'status' => 'ok',
-            'url'    => $varhost_tmp . $nombre_pdf
-        ]);
-    } else {
-        // En caso de error, obtenemos el mensaje exacto
-        Flight::json([
-            'status' => 'error',
-            'msg'    => 'Error al generar el PDF con WkHtmlToPdf',
-            'error'  => $wkh_pdf->getError()
-        ], 500);
-    }
+    exec($wkh_pdf->getCommand($pdf));
+
+    // 10. Respuesta JSON con la URL directa del PDF generado
+    Flight::json([
+        'status' => 'ok',
+        'url'    => $varhost_tmp . basename($pdf)
+    ]);
 });
+
 
 Flight::route('GET /catalogo/@neg_id', function ($neg_id) {
 
