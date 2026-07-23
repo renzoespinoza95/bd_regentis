@@ -3910,7 +3910,7 @@ Flight::route('GET /megazas', function () {
         FROM pos_category c
         WHERE c.neg_id = %i
           AND (c.is_activo = 1 OR c.is_activo IS NULL)
-          AND (c.borrado_el IS NULL OR c.borrado_el = '')
+          AND (c.borrado_el IS NULL)
         ORDER BY c.priority ASC, c.category_id ASC
     ", $neg_id);
 
