@@ -3643,229 +3643,6 @@ Flight::route('GET /jobs/result', function () {
 });
 
 
-
-Flight::route('POST /crear_catalogo', function () {
-
-    include DEFINITION; // Carga configuraciones globales ($varhost, $varpath_img, VARPATH, etc.)
-
-    DB::query("SET NAMES 'utf8mb4'");
-
-    // 1. Obtener y parsear el payload JSON enviado desde el cliente
-    $body = json_decode(Flight::request()->getBody(), true) ?: [];
-
-    $xin    = trim($body['xin'] ?? '');
-    $yuan   = trim($body['yuan'] ?? '');
-    $neg_id = intval($body['neg_id'] ?? 0);
-
-    // 2. Validar firma de seguridad criptográfica (descomentar si aplica)
-    // firma($xin, $yuan);
-
-    // 3. Validar presencia del parámetro neg_id
-    if ($neg_id <= 0) {
-        Flight::json([
-            'status' => 'error',
-            'msg'    => 'El neg_id es requerido y debe ser válido'
-        ], 400);
-        return;
-    }
-
-    // 4. Consultar datos del negocio seleccionado
-    $negocio = DB::queryFirstRow("
-        SELECT 
-            nombre, 
-            direccion, 
-            celular_informes, 
-            img_logo
-        FROM reg_neg
-        WHERE neg_id = %i AND borrado_el IS NULL
-        LIMIT 1
-    ", $neg_id);
-
-    if (!$negocio) {
-        Flight::json([
-            'status' => 'error',
-            'msg'    => 'Negocio no encontrado'
-        ], 404);
-        return;
-    }
-
-    $ruc_empresa = '99999999';
-    global $varhost, $varpath_img;
-
-    // ------------------------------------------------------------------
-    // HELPER: Convierte archivos locales a Base64 para WkHtmlToPdf
-    // ------------------------------------------------------------------
-    $convertir_a_base64 = function($url_o_ruta) use ($varhost, $varpath_img) {
-        if (empty($url_o_ruta)) {
-            return '';
-        }
-
-        // Si la imagen ya viene formateada en base64
-        if (strpos($url_o_ruta, 'data:image') === 0) {
-            return $url_o_ruta;
-        }
-
-        $path = parse_url($url_o_ruta, PHP_URL_PATH) ?: $url_o_ruta;
-        $nombre_archivo = basename($path);
-
-        $ruta_absoluta = '';
-
-        // Intento 1: Evaluar en la carpeta /88/ ($varpath_img)
-        if (strpos($path, '88') !== false || !empty($nombre_archivo)) {
-            $ruta_absoluta = rtrim($varpath_img, '/\\') . '/' . $nombre_archivo;
-        }
-
-        // Intento 2: Evaluar en la estructura interna del proyecto (VARPATH)
-        if (!file_exists($ruta_absoluta) || !is_file($ruta_absoluta)) {
-            $ruta_absoluta = str_replace($varhost, VARPATH, $url_o_ruta);
-        }
-
-        // Si se encuentra el archivo físico, se lee y convierte a Base64
-        if (file_exists($ruta_absoluta) && is_file($ruta_absoluta)) {
-            $contenido = file_get_contents($ruta_absoluta);
-            
-            $extension = strtolower(pathinfo($ruta_absoluta, PATHINFO_EXTENSION));
-            $mime_type = 'jpeg';
-            if ($extension === 'png') {
-                $mime_type = 'png';
-            } elseif ($extension === 'webp') {
-                $mime_type = 'webp';
-            } elseif ($extension === 'gif') {
-                $mime_type = 'gif';
-            } elseif ($extension === 'svg') {
-                $mime_type = 'svg+xml';
-            }
-
-            return 'data:image/' . $mime_type . ';base64,' . base64_encode($contenido);
-        }
-
-        return '';
-    };
-
-    // Procesar Logo del negocio
-    $logo_raw = !empty($negocio['img_logo']) 
-        ? $negocio['img_logo'] 
-        : $varhost . '/public/admin/login/images/logo_login.png';
-
-    $logo_negocio = $convertir_a_base64($logo_raw);
-
-    // 5. Consultar todas las categorías activas del negocio
-    $categorias = DB::query("
-        SELECT 
-            c.category_id,
-            c.name AS categoria_nombre,
-            c.img AS categoria_img
-        FROM pos_category c
-        WHERE c.neg_id = %i
-          AND (c.is_activo = 1 OR c.is_activo IS NULL)
-          AND c.borrado_el IS NULL
-        ORDER BY c.priority ASC, c.category_id ASC
-    ", $neg_id);
-
-    $listado_categorias = [];
-    $contador_categorias = 0;
-
-    foreach ($categorias as $cat) {
-
-        // 6. Consultar productos de la categoría
-        $productos = DB::query("
-            SELECT DISTINCT
-                p.product_id,
-                p.name AS producto_nombre,
-                p.price AS precio,
-                p.marca_des AS marca,
-                (
-                    SELECT pi.img 
-                    FROM pos_product_image pi 
-                    WHERE pi.product_id = p.product_id 
-                      AND pi.borrado_el IS NULL
-                    ORDER BY pi.orden ASC 
-                    LIMIT 1
-                ) AS producto_img
-            FROM pos_product p
-            INNER JOIN pos_product_category pc ON pc.product_id = p.product_id
-            WHERE pc.category_id = %i
-              AND p.neg_id = %i
-              AND (p.is_visible = 1 OR p.is_visible IS NULL)
-              AND p.borrado_el IS NULL
-            ORDER BY p.product_id DESC
-        ", $cat['category_id'], $neg_id);
-
-        // Si la categoría no contiene productos activos, omitir
-        if (empty($productos)) {
-            continue;
-        }
-
-        // Mapeo de productos a Base64
-        $listado_productos = [];
-        foreach ($productos as $prod) {
-            $img_prod_raw = !empty($prod['producto_img']) 
-                ? $prod['producto_img'] 
-                : $varhost . '/public/admin/images/no_image.png';
-
-            $listado_productos[] = [
-                'product_id'      => $prod['product_id'],
-                'producto_nombre' => $prod['producto_nombre'],
-                'marca'           => !empty($prod['marca']) ? '#' . $prod['marca'] : '#DISPONIBLE',
-                'precio'          => number_format((float)$prod['precio'], 2),
-                'producto_img'    => $convertir_a_base64($img_prod_raw)
-            ];
-        }
-
-        // Mapeo de imagen de categoría a Base64
-        $img_cat_raw   = !empty($cat['categoria_img']) ? $cat['categoria_img'] : '';
-        $img_cat_local = $convertir_a_base64($img_cat_raw);
-
-        $contador_categorias++;
-
-        $listado_categorias[] = [
-            'category_id'         => $cat['category_id'],
-            'categoria_nombre'    => $cat['categoria_nombre'],
-            'categoria_img'       => $img_cat_local,
-            'tiene_categoria_img' => !empty($img_cat_local),
-            'salto_pagina'        => ($contador_categorias > 1), // Salto de página a partir de la 2da categoría
-            'productos'           => $listado_productos
-        ];
-    }
-
-    // 7. Estructura final de datos para Mustache
-    $template_data = [
-        'informacion' => [[
-            'razon_social'   => $negocio['nombre'] ?? 'CATÁLOGO DE PRODUCTOS',
-            'ruc'            => $ruc_empresa,
-            'direccion'      => $negocio['direccion'] ?? '',
-            'celular'        => $negocio['celular_informes'] ?? '',
-            'logo'           => $logo_negocio,
-            'titulo_reporte' => 'CATÁLOGO VIRTUAL',
-            'fecha'          => date('d/m/Y')
-        ]],
-        'categorias' => $listado_categorias
-    ];
-
-    // 8. Compilar plantilla HTML almacenada en disco
-    $html = (new Mustache)->render(
-        file_get_contents(VARPATH . '/public/reportes/reporte_html/catalogo_productos.html'),
-        $template_data
-    );
-
-    // 9. Generación de PDF mediante binario WkHtmlToPdf
-    global $wkh_pdf, $varpath_tmp, $varhost_tmp;
-
-    $pdf = $varpath_tmp . 'catalogo_negocio_' . $neg_id . '_' . time() . '.pdf';
-
-    $wkh_pdf->addPage($html);
-
-    exec($wkh_pdf->getCommand($pdf));
-
-    // 10. Respuesta JSON con la URL directa del PDF generado
-    Flight::json([
-        'status' => 'ok',
-        'url'    => $varhost_tmp . basename($pdf)
-    ]);
-});
-
-
-
 Flight::route('GET /megazas', function () {
 
     include DEFINITION;
@@ -3885,7 +3662,7 @@ Flight::route('GET /megazas', function () {
             celular_informes, 
             img_logo
         FROM reg_neg
-        WHERE neg_id = %i AND (borrado_el IS NULL OR borrado_el = '')
+        WHERE neg_id = %i AND borrado_el IS NULL
         LIMIT 1
     ", $neg_id);
 
@@ -3910,7 +3687,7 @@ Flight::route('GET /megazas', function () {
         FROM pos_category c
         WHERE c.neg_id = %i
           AND (c.is_activo = 1 OR c.is_activo IS NULL)
-          AND (c.borrado_el IS NULL)
+          AND c.borrado_el IS NULL
         ORDER BY c.priority ASC, c.category_id ASC
     ", $neg_id);
 
@@ -3930,7 +3707,7 @@ Flight::route('GET /megazas', function () {
                     SELECT pi.img 
                     FROM pos_product_image pi 
                     WHERE pi.product_id = p.product_id 
-                      AND (pi.borrado_el IS NULL OR pi.borrado_el = '')
+                      AND pi.borrado_el IS NULL
                     ORDER BY pi.orden ASC 
                     LIMIT 1
                 ) AS producto_img
@@ -3939,7 +3716,7 @@ Flight::route('GET /megazas', function () {
             WHERE pc.category_id = %i
               AND p.neg_id = %i
               AND (p.is_visible = 1 OR p.is_visible IS NULL)
-              AND (p.borrado_el IS NULL OR p.borrado_el = '')
+              AND p.borrado_el IS NULL
             ORDER BY p.product_id DESC
         ", $cat['category_id'], $neg_id);
 
