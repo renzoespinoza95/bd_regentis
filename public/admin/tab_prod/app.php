@@ -3643,9 +3643,10 @@ Flight::route('GET /jobs/result', function () {
 });
 
 
+
 Flight::route('POST /crear_catalogo', function () {
 
-    include DEFINITION; // Carga configuraciones globales
+    include DEFINITION; // Carga configuraciones globales ($varhost, $varpath_img, VARPATH, etc.)
 
     DB::query("SET NAMES 'utf8mb4'");
 
@@ -3656,7 +3657,7 @@ Flight::route('POST /crear_catalogo', function () {
     $yuan   = trim($body['yuan'] ?? '');
     $neg_id = intval($body['neg_id'] ?? 0);
 
-    // 2. Validar firma de seguridad criptográfica
+    // 2. Validar firma de seguridad criptográfica (descomentar si aplica)
     // firma($xin, $yuan);
 
     // 3. Validar presencia del parámetro neg_id
@@ -3668,7 +3669,7 @@ Flight::route('POST /crear_catalogo', function () {
         return;
     }
 
-    // 4. Consultar datos del negocio seleccionado (Corregido borrado_el)
+    // 4. Consultar datos del negocio seleccionado
     $negocio = DB::queryFirstRow("
         SELECT 
             nombre, 
@@ -3689,36 +3690,66 @@ Flight::route('POST /crear_catalogo', function () {
     }
 
     $ruc_empresa = '99999999';
-    global $varhost;
+    global $varhost, $varpath_img;
 
-    // --- FUNCIÓN PARA CONVERTIR URLs/RUTAS A ARCHIVOS LOCALES EN DISCO ---
-    $convertir_a_ruta_local = function($url_o_ruta) use ($varhost) {
+    // ------------------------------------------------------------------
+    // HELPER: Convierte archivos locales a Base64 para WkHtmlToPdf
+    // ------------------------------------------------------------------
+    $convertir_a_base64 = function($url_o_ruta) use ($varhost, $varpath_img) {
         if (empty($url_o_ruta)) {
             return '';
         }
 
-        // Obtener solo el path (ej: /88/imagen.jpg o /public/admin/...)
-        $path = parse_url($url_o_ruta, PHP_URL_PATH) ?: $url_o_ruta;
-
-        // Si la imagen está en la carpeta hermana /88/
-        if (strpos($path, '/88/') === 0) {
-            // Elimina la carpeta del proyecto actual de VARPATH para apuntar al directorio padre (htdocs o /var/www/regentis/)
-            $raiz_padre = preg_replace('/[\\\\\/]bd_regentis[\\\\\/]?$/i', '', VARPATH);
-            return $raiz_padre . str_replace('/', DIRECTORY_SEPARATOR, $path);
+        // Si la imagen ya viene formateada en base64
+        if (strpos($url_o_ruta, 'data:image') === 0) {
+            return $url_o_ruta;
         }
 
-        // Si pertenece a la carpeta public de bd_regentis
-        return str_replace($varhost, VARPATH, $url_o_ruta);
+        $path = parse_url($url_o_ruta, PHP_URL_PATH) ?: $url_o_ruta;
+        $nombre_archivo = basename($path);
+
+        $ruta_absoluta = '';
+
+        // Intento 1: Evaluar en la carpeta /88/ ($varpath_img)
+        if (strpos($path, '88') !== false || !empty($nombre_archivo)) {
+            $ruta_absoluta = rtrim($varpath_img, '/\\') . '/' . $nombre_archivo;
+        }
+
+        // Intento 2: Evaluar en la estructura interna del proyecto (VARPATH)
+        if (!file_exists($ruta_absoluta) || !is_file($ruta_absoluta)) {
+            $ruta_absoluta = str_replace($varhost, VARPATH, $url_o_ruta);
+        }
+
+        // Si se encuentra el archivo físico, se lee y convierte a Base64
+        if (file_exists($ruta_absoluta) && is_file($ruta_absoluta)) {
+            $contenido = file_get_contents($ruta_absoluta);
+            
+            $extension = strtolower(pathinfo($ruta_absoluta, PATHINFO_EXTENSION));
+            $mime_type = 'jpeg';
+            if ($extension === 'png') {
+                $mime_type = 'png';
+            } elseif ($extension === 'webp') {
+                $mime_type = 'webp';
+            } elseif ($extension === 'gif') {
+                $mime_type = 'gif';
+            } elseif ($extension === 'svg') {
+                $mime_type = 'svg+xml';
+            }
+
+            return 'data:image/' . $mime_type . ';base64,' . base64_encode($contenido);
+        }
+
+        return '';
     };
 
-    // Logo del negocio o fallback por defecto
+    // Procesar Logo del negocio
     $logo_raw = !empty($negocio['img_logo']) 
         ? $negocio['img_logo'] 
         : $varhost . '/public/admin/login/images/logo_login.png';
 
-    $logo_negocio = $convertir_a_ruta_local($logo_raw);
+    $logo_negocio = $convertir_a_base64($logo_raw);
 
-    // 5. Consultar todas las categorías activas del negocio (Corregido borrado_el)
+    // 5. Consultar todas las categorías activas del negocio
     $categorias = DB::query("
         SELECT 
             c.category_id,
@@ -3732,10 +3763,11 @@ Flight::route('POST /crear_catalogo', function () {
     ", $neg_id);
 
     $listado_categorias = [];
+    $contador_categorias = 0;
 
     foreach ($categorias as $cat) {
 
-        // 6. Consultar productos de la categoría (Corregido borrado_el)
+        // 6. Consultar productos de la categoría
         $productos = DB::query("
             SELECT DISTINCT
                 p.product_id,
@@ -3759,12 +3791,12 @@ Flight::route('POST /crear_catalogo', function () {
             ORDER BY p.product_id DESC
         ", $cat['category_id'], $neg_id);
 
-        // Si la categoría no tiene productos, se ignora
+        // Si la categoría no contiene productos activos, omitir
         if (empty($productos)) {
             continue;
         }
 
-        // Mapeo de productos para la plantilla Mustache
+        // Mapeo de productos a Base64
         $listado_productos = [];
         foreach ($productos as $prod) {
             $img_prod_raw = !empty($prod['producto_img']) 
@@ -3776,24 +3808,27 @@ Flight::route('POST /crear_catalogo', function () {
                 'producto_nombre' => $prod['producto_nombre'],
                 'marca'           => !empty($prod['marca']) ? '#' . $prod['marca'] : '#DISPONIBLE',
                 'precio'          => number_format((float)$prod['precio'], 2),
-                'producto_img'    => $convertir_a_ruta_local($img_prod_raw)
+                'producto_img'    => $convertir_a_base64($img_prod_raw)
             ];
         }
 
-        // Imagen de la cabecera de categoría
+        // Mapeo de imagen de categoría a Base64
         $img_cat_raw   = !empty($cat['categoria_img']) ? $cat['categoria_img'] : '';
-        $img_cat_local = $convertir_a_ruta_local($img_cat_raw);
+        $img_cat_local = $convertir_a_base64($img_cat_raw);
+
+        $contador_categorias++;
 
         $listado_categorias[] = [
             'category_id'         => $cat['category_id'],
             'categoria_nombre'    => $cat['categoria_nombre'],
             'categoria_img'       => $img_cat_local,
             'tiene_categoria_img' => !empty($img_cat_local),
+            'salto_pagina'        => ($contador_categorias > 1), // Salto de página a partir de la 2da categoría
             'productos'           => $listado_productos
         ];
     }
 
-    // 7. Estructura de datos para Mustache
+    // 7. Estructura final de datos para Mustache
     $template_data = [
         'informacion' => [[
             'razon_social'   => $negocio['nombre'] ?? 'CATÁLOGO DE PRODUCTOS',
@@ -3813,7 +3848,7 @@ Flight::route('POST /crear_catalogo', function () {
         $template_data
     );
 
-    // 9. Generación de PDF mediante binario WkHtmlToPdf (Estructurado exactamente como imp_ventas_fecha)
+    // 9. Generación de PDF mediante binario WkHtmlToPdf
     global $wkh_pdf, $varpath_tmp, $varhost_tmp;
 
     $pdf = $varpath_tmp . 'catalogo_negocio_' . $neg_id . '_' . time() . '.pdf';
@@ -3828,6 +3863,7 @@ Flight::route('POST /crear_catalogo', function () {
         'url'    => $varhost_tmp . basename($pdf)
     ]);
 });
+
 
 
 Flight::route('GET /catalogo/@neg_id', function ($neg_id) {
