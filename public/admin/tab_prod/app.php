@@ -3866,20 +3866,16 @@ Flight::route('POST /crear_catalogo', function () {
 
 
 
-Flight::route('GET /catalogo/@neg_id', function ($neg_id) {
+Flight::route('GET /megazas', function () {
 
     include DEFINITION;
-    autentificar_administrador();
 
     global $wkh_pdf, $varhost, $varpath_tmp, $varhost_tmp, $administrador_actual;
 
     DB::query("SET NAMES 'utf8mb4'");
 
     // Validar y castear a entero el parametro de la URL
-    $neg_id = intval($neg_id);
-    if ($neg_id <= 0) {
-        $neg_id = intval($administrador_actual['neg_id'] ?? 8);
-    }
+    $neg_id = vari('MEGAZAS');
 
     // 1. Obtener datos de la empresa/negocio
     $negocio = DB::queryFirstRow("
