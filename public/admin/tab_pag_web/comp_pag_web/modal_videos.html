@@ -1,0 +1,89 @@
+<!-- MODAL LISTADO DE VIDEOS -->
+<div id="modalVideos" class="modal hide fade fullscreen">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal">×</button>
+    <h3>Lista de videos</h3>
+  </div>
+
+  <div class="modal-body">
+    <div style="display:flex;flex-wrap:wrap;gap:10px;">
+      <div v-for="v in videos" 
+           :key="v.pag_item_vid_id"
+           style="width:150px; cursor:pointer;"
+           @click="verVideo(v)">
+        <img :src="v.url_img" style="width:100%; border-radius:6px;">
+        <div style="font-size:12px; margin-top:5px;" v-text="v.titulo"></div>
+        <button class="btn btn-warning btn-mini" @click.stop="eliminarVideo(v)">
+          <i class="fa fa-trash"></i>
+        </button>
+        <button class="btn btn-info btn-mini" @click.stop="editarVideo(v)">
+          <i class="fa fa-pencil"></i>
+        </button>
+        <button class="btn btn-default btn-mini" @click.stop="copiarCodigo(v)">
+          <i class="fa fa-copy"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-footer" style="text-align: left;">
+    <button class="btn btn-success" @click="abrirSubirVideo">Subir video</button>
+    <button class="btn" data-dismiss="modal">Cerrar</button>
+  </div>
+</div>
+
+<!-- MODAL REPRODUCTOR DE VIDEO -->
+<div id="modalVideoPlayer" class="modal hide fade fullscreen">
+  <div class="modal-header">
+    <button type="button" class="close" @click="cerrarVideo">×</button>
+    <h3 v-text="videoActual.titulo"></h3>
+  </div>
+  <div class="modal-body" style="text-align:center;">
+    <iframe 
+      v-if="videoActual.codigo_web"
+      :src="videoActual.codigo_web"
+      width="100%" 
+      height="400"
+      frameborder="0"
+      allowfullscreen>
+    </iframe>
+  </div>
+  <div class="modal-footer" style="text-align: left;">
+    <button class="btn" @click="cerrarVideo">Cerrar</button>
+  </div>
+</div>
+
+<!-- MODAL AGREGAR VIDEO -->
+<div id="modalSubirVideo" class="modal hide fade fullscreen">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal">×</button>
+    <h3>Agregar video</h3>
+  </div>
+  <div class="modal-body">
+    <label><b>Título</b></label>
+    <input v-model="videoForm.titulo" class="input-xxlarge" placeholder="Titulo"><br><br>
+    <label><b>URL de Vimeo</b></label>
+    <textarea v-model="videoForm.codigo" class="input-xxlarge" placeholder="https://vimeo.com/..."></textarea>
+    <div id="previewVideo" style="margin-top:10px;"></div>
+  </div>
+  <div class="modal-footer" style="text-align: left;">
+    <button class="btn btn-primary" @click="guardarVideo">Guardar</button>
+    <button class="btn" data-dismiss="modal">Cerrar</button>
+  </div>
+</div>
+
+<!-- MODAL EDITAR VIDEO -->
+<div id="modalEditarVideo" class="modal hide fade fullscreen">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal">×</button>
+    <h3>Editar Video</h3>
+  </div>
+  <div class="modal-body">
+    <label><b>Título</b></label>
+    <input v-model="videoFormEditar.titulo" class="input-xxlarge" placeholder="Titulo">
+  </div>
+  <div class="modal-footer" style="text-align: left;">
+    <button class="btn btn-primary" @click="guardarEditarVideo">Guardar</button>
+    <button class="btn" data-dismiss="modal">Cancelar</button>
+  </div>
+</div>

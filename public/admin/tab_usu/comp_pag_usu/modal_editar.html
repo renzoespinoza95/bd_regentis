@@ -1,0 +1,25 @@
+<div id="modalEditarUsuario" class="modal hide fade fullscreen" tabindex="-1">
+  <div class="modal-header"><h3>Editar Usuario</h3></div>
+  <div class="modal-body">
+    <form class="form-horizontal">
+      <div class="control-group">
+        <label class="control-label">Sobrenombre</label>
+        <div class="controls"><input v-model="formulario.sobrenombre" class="input-xxlarge"></div>
+      </div>
+      <div class="control-group">
+        <label class="control-label">Nombres y Apellidos</label>
+        <div class="controls"><input v-model="formulario.nombres_apellidos" class="input-xxlarge"></div>
+      </div>   
+      <div class="control-group">
+        <label class="control-label">Asignar Negocio:</label>
+        <div class="controls">
+            <v-select :options="negociosValidados" label="nombre" v-model="negocioSeleccionado" placeholder="Seleccione un negocio..."></v-select>
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-primary" @click="guardarEdicion"><i class="icon-ok icon-white"></i> Guardar</button>
+    <button class="btn" data-dismiss="modal">Cancelar</button>
+  </div>
+</div>

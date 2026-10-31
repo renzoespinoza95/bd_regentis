@@ -23,6 +23,7 @@
   global $varpath_tmp;
   global $varhost_img;
   global $varpath_img;
+  global $url_flask;
 
 
   

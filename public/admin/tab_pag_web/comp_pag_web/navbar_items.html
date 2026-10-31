@@ -1,0 +1,144 @@
+<div class="titulo-fijo clearfix">
+  <div style="float:left;">
+    <h2 style="margin:0;">Administración de Catálogo</h2>
+  </div>
+
+  <div class="btn-group pull-right">
+    <button class="btn btn-info dropdown-toggle" data-toggle="dropdown">
+      <i class="fa fa-cog"></i> Opciones Generales
+      <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu pull-right">
+      <li><a href="#" @click.prevent="abrirCategorias">Gestionar todas las categorías</a></li>
+      <li><a href="#" @click.prevent="abrirSubcategorias">Gestionar todas las subcategorías</a></li>
+      <li class="divider"></li>
+      <li><a href="#" @click.prevent="abrirNuevoItem">Nuevo item</a></li>
+    </ul>
+  </div>
+</div>
+
+<!-- =========================================================
+     DISTRIBUCIÓN EN 3 COLUMNAS: CAT -> SUBCAT -> ITEMS
+========================================================= -->
+<div class="row-fluid" style="margin-top: 15px;">
+
+  <!-- COLUMNA 1: CATEGORÍAS -->
+  <div class="span3">
+    <div class="well well-small" style="padding: 10px; background: #ffffff; border: 1px solid #dcdcdc; border-radius: 6px;">
+      <div class="clearfix" style="margin-bottom: 8px;">
+        <strong style="font-size: 14px; text-transform: uppercase; color: #333333;">1. Categorías</strong>
+        <button class="btn btn-mini btn-success pull-right" @click="abrirCrearCategoria" title="Nueva categoría">
+          <i class="fa fa-plus"></i>
+        </button>
+      </div>
+
+      <div class="list-group" style="max-height: 550px; overflow-y: auto; margin-bottom: 0;">
+        <a href="#" 
+           v-for="c in categorias" 
+           :key="c.cat_pag_web_id"
+           class="list-group-item clearfix"
+           :class="{ active: catSeleccionada && catSeleccionada.cat_pag_web_id == c.cat_pag_web_id }"
+           @click.prevent="seleccionarCategoria(c)"
+           style="display: block; padding: 10px 12px; margin-bottom: 5px; border: 1px solid #d0d7de; border-radius: 4px; text-decoration: none; transition: all 0.2s ease;"
+           :style="catSeleccionada && catSeleccionada.cat_pag_web_id == c.cat_pag_web_id 
+                    ? 'background-color: #0088cc !important; color: #ffffff !important; border-color: #0088cc !important;' 
+                    : 'background-color: #ffffff !important; color: #2c3e50 !important;'">
+          
+          <span style="font-weight: 700; font-size: 13px; letter-spacing: 0.3px;" 
+                :style="{ color: catSeleccionada && catSeleccionada.cat_pag_web_id == c.cat_pag_web_id ? '#ffffff' : '#2c3e50' }"
+                v-text="c.titulo">
+          </span>
+          
+          <span class="badge pull-right" 
+                :style="catSeleccionada && catSeleccionada.cat_pag_web_id == c.cat_pag_web_id 
+                         ? 'background-color: #005580; color: #ffffff;' 
+                         : 'background-color: #e9ecef; color: #2c3e50; font-weight: bold; border: 1px solid #ced4da;'"
+                v-text="contarSubcats(c.cat_pag_web_id)">
+          </span>
+        </a>
+
+        <div v-if="categorias.length === 0" class="muted text-center" style="padding: 15px; color: #777777;">
+          Sin categorías registradas.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COLUMNA 2: SUBCATEGORÍAS -->
+  <div class="span3">
+    <div class="well well-small" style="padding: 10px; background: #ffffff; border: 1px solid #dcdcdc; border-radius: 6px;">
+      <div class="clearfix" style="margin-bottom: 8px;">
+        <strong style="font-size: 14px; text-transform: uppercase; color: #333333;">2. Subcategorías</strong>
+        <button class="btn btn-mini btn-success pull-right" 
+                :disabled="!catSeleccionada"
+                @click="abrirCrearSubcatDirecta" 
+                title="Nueva subcategoría en esta categoría">
+          <i class="fa fa-plus"></i>
+        </button>
+      </div>
+
+      <div class="list-group" style="max-height: 550px; overflow-y: auto; margin-bottom: 0;">
+        <a href="#" 
+           v-for="s in subcatsVisibles" 
+           :key="s.subcat_pag_web_id"
+           class="list-group-item clearfix"
+           :class="{ active: subcatSeleccionada && subcatSeleccionada.subcat_pag_web_id == s.subcat_pag_web_id }"
+           @click.prevent="seleccionarSubcategoria(s)"
+           style="display: block; padding: 10px 12px; margin-bottom: 5px; border: 1px solid #d0d7de; border-radius: 4px; text-decoration: none; transition: all 0.2s ease;"
+           :style="subcatSeleccionada && subcatSeleccionada.subcat_pag_web_id == s.subcat_pag_web_id 
+                    ? 'background-color: #5bb75b !important; color: #ffffff !important; border-color: #5bb75b !important;' 
+                    : 'background-color: #ffffff !important; color: #2c3e50 !important;'">
+          
+          <span style="font-weight: 700; font-size: 13px; letter-spacing: 0.3px;" 
+                :style="{ color: subcatSeleccionada && subcatSeleccionada.subcat_pag_web_id == s.subcat_pag_web_id ? '#ffffff' : '#2c3e50' }"
+                v-text="s.titulo">
+          </span>
+          
+          <span class="badge pull-right" 
+                :style="subcatSeleccionada && subcatSeleccionada.subcat_pag_web_id == s.subcat_pag_web_id 
+                         ? 'background-color: #387038; color: #ffffff;' 
+                         : 'background-color: #e9ecef; color: #2c3e50; font-weight: bold; border: 1px solid #ced4da;'"
+                v-text="contarItems(s.subcat_pag_web_id)">
+          </span>
+        </a>
+
+        <div v-if="!catSeleccionada" class="muted text-center" style="padding: 15px; color: #777777;">
+          Selecciona una categoría primero.
+        </div>
+
+        <div v-else-if="subcatsVisibles.length === 0" class="muted text-center" style="padding: 15px; color: #777777;">
+          No hay subcategorías en esta categoría.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COLUMNA 3: GRID DATATABLE DE ITEMS -->
+  <div class="span6">
+    <div class="clearfix" style="margin-bottom: 8px;">
+      <h4 style="margin: 0; float: left; color: #ffffff;">
+        Items de: 
+        <span class="text-info" style="color: #00d0ff; font-weight: bold;" v-text="subcatSeleccionada ? subcatSeleccionada.titulo : '(Seleccione una subcategoría)'"></span>
+      </h4>
+      <button class="btn btn-small btn-primary pull-right" 
+              :disabled="!subcatSeleccionada"
+              @click="abrirNuevoItemDirecto">
+        <i class="fa fa-plus"></i> Nuevo Item
+      </button>
+    </div>
+
+    <table id="tablaItems" class="table table-bordered table-condensed sel-fila" style="width: 100%; background: #ffffff;">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Título</th>
+          <th>Clave TXT</th>
+          <th style="width: 60px; text-align: center;">Visible</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+</div>

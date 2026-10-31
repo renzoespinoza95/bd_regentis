@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  {{> head}}
+</head>
+<body>
+  <div class="navbar navbar-fixed-top">
+    <div class="navbar-inner">
+      {{{menu_html}}}
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="row-fluid" id="appPagWeb">
+      <div class="span12">
+        {{> navbar_items}}
+        {{> modal_item}}
+        {{> modal_categorias}}
+        {{> modal_subcategorias}}
+        {{> modal_imagenes}}
+        {{> modal_videos}}
+      </div>
+    </div>
+    {{{footer_html}}}
+  </div>
+
+  {{> scripts}}
+</body>
+</html>

@@ -1,0 +1,156 @@
+<!-- MODAL LISTAR CATEGORIAS -->
+<div id="modalCategorias" class="modal hide fade fullscreen">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal">×</button>
+    <h3>Categorías</h3>
+  </div>
+
+  <div class="modal-body">
+    <table id="tablaCat" class="table table-bordered table-condensed" style="width: 100%; background: #ffffff;">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th style="width: 70px; text-align: center;">Vista</th>
+          <th>Titulo</th>
+          <th>Clave</th>
+          <th style="width: 70px; text-align: center;">Visible</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div class="modal-footer" style="text-align: left;">
+    <button class="btn btn-success" @click="abrirCrearCategoria">
+      <i class="icon-plus icon-white"></i> Agregar Categoría
+    </button>
+    <button class="btn" data-dismiss="modal">Cerrar</button>
+  </div>
+</div>
+
+<!-- MODAL CREAR CATEGORIA -->
+<div id="modalCrearCategoria" class="modal hide fade fullscreen">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal">×</button>
+    <h3>Nueva Categoría</h3>
+  </div>
+  <div class="modal-body">
+    <div class="row-fluid">
+      <div class="span8">
+        <label><b>Título</b></label>
+        <input v-model="catForm.titulo" class="input-xxlarge" style="width:100%;" placeholder="Titulo">
+      </div>
+      <div class="span4">
+        <label><b>Visible</b></label>
+        <select v-model.number="catForm.is_visible" class="input-small" style="width:100%;">
+          <option :value="1">Sí</option>
+          <option :value="0">No</option>
+        </select>
+      </div>
+    </div>
+
+    <br>
+
+    <div class="row-fluid">
+      <div class="span6">
+        <label><b>Clave TXT</b></label>
+        <input v-model="catForm.clave_txt" class="input-xxlarge" style="width:100%;" placeholder="Clave TXT">
+      </div>
+      <div class="span6">
+        <label><b>URL Imagen</b></label>
+        <input v-model="catForm.url_img" class="input-xxlarge" style="width:100%;" placeholder="https://...">
+      </div>
+    </div>
+
+    <div v-if="catForm.url_img" style="margin-top: 8px;">
+      <img :src="catForm.url_img" style="max-width: 120px; max-height: 80px; border-radius: 4px; border: 1px solid #ccc;">
+    </div>
+
+    <br>
+
+    <div class="row-fluid">
+      <div class="span12">
+        <label><b>Texto 01 (HTML)</b></label>
+        <textarea id="txtCatTexto01"></textarea>
+      </div>
+    </div>
+
+    <br>
+
+    <div class="row-fluid">
+      <div class="span12">
+        <label><b>Texto 02 (HTML)</b></label>
+        <textarea id="txtCatTexto02"></textarea>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer" style="text-align: left;">
+    <button class="btn btn-primary" @click="guardarCategoria">Guardar</button>
+    <button class="btn" data-dismiss="modal">Cancelar</button>
+  </div>
+</div>
+
+<!-- MODAL EDITAR CATEGORIA -->
+<div id="modalEditarCategoria" class="modal hide fade fullscreen">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal">×</button>
+    <h3>Editar Categoría</h3>
+  </div>
+  <div class="modal-body">
+    <input v-model="catForm.cat_pag_web_id" type="hidden">
+    
+    <div class="row-fluid">
+      <div class="span8">
+        <label><b>Título</b></label>
+        <input v-model="catForm.titulo" class="input-xxlarge" style="width:100%;" placeholder="Titulo">
+      </div>
+      <div class="span4">
+        <label><b>Visible</b></label>
+        <select v-model.number="catForm.is_visible" class="input-small" style="width:100%;">
+          <option :value="1">Sí</option>
+          <option :value="0">No</option>
+        </select>
+      </div>
+    </div>
+
+    <br>
+
+    <div class="row-fluid">
+      <div class="span6">
+        <label><b>Clave TXT</b></label>
+        <input v-model="catForm.clave_txt" class="input-xxlarge" style="width:100%;" placeholder="Clave TXT">
+      </div>
+      <div class="span6">
+        <label><b>URL Imagen</b></label>
+        <input v-model="catForm.url_img" class="input-xxlarge" style="width:100%;" placeholder="https://...">
+      </div>
+    </div>
+
+    <div v-if="catForm.url_img" style="margin-top: 8px;">
+      <img :src="catForm.url_img" style="max-width: 120px; max-height: 80px; border-radius: 4px; border: 1px solid #ccc;">
+    </div>
+
+    <br>
+
+    <div class="row-fluid">
+      <div class="span12">
+        <label><b>Texto 01 (HTML)</b></label>
+        <textarea id="txtCatEditarTexto01"></textarea>
+      </div>
+    </div>
+
+    <br>
+
+    <div class="row-fluid">
+      <div class="span12">
+        <label><b>Texto 02 (HTML)</b></label>
+        <textarea id="txtCatEditarTexto02"></textarea>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer" style="text-align: left;">
+    <button class="btn btn-primary" @click="actualizarCategoria">Guardar</button>
+    <button class="btn" data-dismiss="modal">Cerrar</button>
+  </div>
+</div>

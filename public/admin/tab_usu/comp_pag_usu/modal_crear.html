@@ -1,0 +1,57 @@
+<div id="modalCrearUsuario" class="modal hide fade" tabindex="-1">
+  <div class="modal-header"><h3>Nuevo Usuario</h3></div>
+  <div class="modal-body">
+    <form class="form-horizontal">
+       <div class="control-group">
+          <label class="control-label">Código Usuario</label>
+          <div class="controls" style="display:flex; gap:5px;">
+            <input v-model="nuevo.cod_usuario" class="input-small">
+            <button type="button" class="btn btn-mini" @click="generarCodigo">🎲</button>
+          </div>
+      </div>
+      <div class="control-group">
+        <label class="control-label">DNI</label>
+        <div class="controls" style="display:flex; gap:5px;">
+          <input v-model="nuevo.dni" class="input-small">
+          <button type="button" class="btn btn-mini" @click="generarDni">🎲</button>
+        </div>
+      </div>          
+      <div class="control-group">
+        <label class="control-label">Google UID</label>
+        <div class="controls" style="display:flex; gap:5px;">
+          <input v-model="nuevo.google_uid" class="input-xxlarge">
+          <button type="button" class="btn btn-mini" @click="generarUid">🎲</button>
+        </div>
+      </div>
+      <div class="control-group">
+        <label class="control-label">Sobrenombre</label>
+        <div class="controls">
+          <input v-model="nuevo.sobrenombre" class="input-large">
+        </div>
+      </div>
+      <div class="control-group">
+        <label class="control-label">Celular</label>
+        <div class="controls">
+          <input type="text" v-model="nuevo.celular" class="input-medium">
+        </div>
+      </div>
+      <div class="control-group">
+        <label class="control-label">Provincia</label>
+        <div class="controls">
+          <input v-model="nuevo.provincia" class="input-small">
+        </div>
+      </div>
+      <div class="control-group">
+        <label class="control-label">Tipo Usuario</label>
+        <div class="controls">
+          <v-select :options="tipousuarios" label="descripcion" :reduce="t => t.tipoxusu_id" v-model="nuevo.tipoxusu_id" placeholder="Seleccione tipo…"></v-select>
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer">
+     <button class="btn btn-warning" @click="crearUsuarioAutomatico"><i class="icon-magic icon-white"></i> Automático</button>
+    <button class="btn btn-primary" @click="crearUsuario">Crear</button>
+    <button class="btn" data-dismiss="modal">Cancelar</button>
+  </div>
+</div>

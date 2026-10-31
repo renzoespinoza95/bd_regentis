@@ -1,0 +1,21 @@
+<div id="modalBuscarUsuario" class="modal hide fade" tabindex="-1">
+  <div class="modal-header"><h3>Buscar Usuario</h3></div>
+  <div class="modal-body">
+    <div class="control-group">
+      <label class="control-label">Sobrenombre</label>
+      <div class="controls">
+        <input v-model="buscarSobrenombre" class="input-large" placeholder="Escribe sobrenombre...">
+        <button class="btn btn-mini" @click="buscarUsuario"><i class="icon-search"></i> Buscar</button>
+      </div>
+    </div>
+    <table class="table table-bordered table-striped" v-if="resultados.length">
+      <thead><tr><th>ID</th><th>Código</th><th>Sobrenombre</th><th>Celular</th></tr></thead>
+      <tbody>
+        <tr v-for="u in resultados" :key="u.usuario_id">
+          <td>[[ u.usuario_id ]]</td><td>[[ u.cod_usuario ]]</td><td>[[ u.sobrenombre ]]</td><td>[[ u.celular ]]</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="modal-footer"><button class="btn" data-dismiss="modal">Cerrar</button></div>
+</div>

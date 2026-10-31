@@ -1,0 +1,91 @@
+<div id="modalItem" class="modal hide fade fullscreen">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal">×</button>
+    <h3 v-text="itemForm.item_pag_web_id ? 'Editar Item' : 'Nuevo Item'"></h3>
+  </div>
+
+  <div class="modal-body">
+    <div class="row-fluid">
+      <div class="span6">
+        <label><b>Título</b></label>
+        <input v-model="itemForm.titulo" class="input-xxlarge" style="width:100%;" placeholder="Titulo">
+      </div>
+      <div class="span6">
+        <label><b>Clave TXT</b></label>
+        <input v-model="itemForm.clave_txt" class="input-xxlarge" style="width:100%;" placeholder="Clave TXT">
+      </div>
+    </div>
+
+    <br>
+
+    <div class="row-fluid">
+      <div class="span4">
+        <label><b>Categoría</b></label>
+        <v-select 
+          :options="categorias" 
+          label="titulo" 
+          v-model="itemForm.cat"
+          placeholder="Categoría">
+        </v-select>
+      </div>
+
+      <div class="span4">
+        <label><b>Subcategoría</b></label>
+        <v-select 
+          :options="subcatsFiltradas" 
+          label="titulo" 
+          v-model="itemForm.subcat"
+          placeholder="Subcategoría">
+        </v-select>
+      </div>
+
+      <div class="span4">
+        <label><b>Precio</b></label>
+        <input v-model="itemForm.precio" class="input-small" style="width:100%;" placeholder="Precio">
+      </div>
+    </div>
+
+    <br>
+
+    <div class="row-fluid">
+      <div class="span12">
+        <label><b>Contenido</b></label>
+        <textarea id="txtContenido"></textarea>
+      </div>
+    </div>
+
+    <br>
+
+    <div class="row-fluid">
+      <div class="span12">
+        <label><b>Subtítulo Detalle (40 palabras)</b></label>
+        <textarea id="txtSubtitulo"></textarea>
+      </div>
+    </div>
+
+    <br>
+
+    <!-- 🔥 NUEVO: HTML 01 -->
+    <div class="row-fluid">
+      <div class="span12">
+        <label><b>HTML 01</b></label>
+        <textarea id="txtHtml01"></textarea>
+      </div>
+    </div>
+
+    <br>
+
+    <!-- 🔥 NUEVO: HTML 02 -->
+    <div class="row-fluid">
+      <div class="span12">
+        <label><b>HTML 02</b></label>
+        <textarea id="txtHtml02"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-footer" style="text-align: left;">
+    <button class="btn btn-primary" @click="guardarItem">Guardar</button>
+    <button class="btn" data-dismiss="modal">Cerrar</button>
+  </div>
+</div>

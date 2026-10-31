@@ -25,7 +25,8 @@ if (!empty($ssa_id) && is_string($ssa_id)) {
 			require_once VARPATH."/public/admin/tab_auto_msg/control.php";
 			require_once VARPATH."/public/admin/tab_screen/control.php";
 			require_once VARPATH."/public/admin/tab_prod_global/control.php";
-			require_once VARPATH."/public/admin/tab_tema/control.php";
+			require_once VARPATH."/public/admin/tab_tema/control.php";			
+			require_once VARPATH."/public/admin/tab_pag_web/control.php";
 
 	        break;
 
@@ -46,11 +47,13 @@ if (!empty($ssa_id) && is_string($ssa_id)) {
 			require_once VARPATH."/public/admin/tab_neg/control.php";
 			require_once VARPATH."/public/admin/tab_trabajador/control.php";
 			require_once VARPATH."/public/admin/tab_usu/control.php";
+			require_once VARPATH."/public/admin/tab_usu02/control.php";
 			require_once VARPATH."/public/admin/tab_auto_msg/control.php";
 			require_once VARPATH."/public/admin/tab_master/control.php";
 			require_once VARPATH."/classes/JWT.class.php";
 			require_once VARPATH. "/classes/SimpleImage.class.php";
 			require_once VARPATH."/classes/WkHtmlToPdf.php";
+			require_once VARPATH."/public/admin/tab_pag_web/control.php";
 	        break;
 
 	    case 'ADMIN_PAG_WEB':        

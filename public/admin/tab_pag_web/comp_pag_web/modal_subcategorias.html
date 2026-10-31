@@ -1,0 +1,249 @@
+<!-- MODAL LISTAR SUBCATEGORIAS (PANEL A 2 COLUMNAS CON BUSCADOR + BOTON LIMPIAR 'X') -->
+<div id="modalSubcategorias" class="modal hide fade fullscreen">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal">×</button>
+    <div class="clearfix">
+      <h3 style="float:left; margin:0;">Gestión de Subcategorías</h3>
+      <button class="btn btn-success pull-right" style="margin-right:20px;" @click="abrirCrearSubcat">
+        <i class="icon-plus icon-white"></i> Nueva Subcategoría
+      </button>
+    </div>
+  </div>
+
+  <div class="modal-body" style="padding: 15px;">
+    <div class="row-fluid">
+      <!-- PANEL IZQUIERDO: FILTRO DE CATEGORÍAS -->
+      <div class="span3" style="border-right: 1px solid #e3e3e3; padding-right: 15px;">
+        <div class="clearfix" style="margin-bottom: 8px;">
+          <strong style="color: #333; text-transform: uppercase; font-size: 13px;">Categorías</strong>
+        </div>
+
+        <div class="list-group" style="max-height: 480px; overflow-y: auto;">
+          <a href="#" 
+             class="list-group-item clearfix" 
+             :class="{ active: catModalSubcatFiltro === null }"
+             @click.prevent="filtrarSubcatsPorCatModal(null)"
+             style="display:block; padding: 8px 10px; margin-bottom: 4px; border: 1px solid #d0d7de; border-radius: 4px; text-decoration: none;"
+             :style="catModalSubcatFiltro === null ? 'background:#0088cc !important; color:#fff !important;' : 'background:#fff !important; color:#2c3e50 !important;'">
+            <span style="font-weight: 700;">(Todas)</span>
+            <span class="badge pull-right" :class="{ 'badge-info': catModalSubcatFiltro !== null }" v-text="subcategorias.length"></span>
+          </a>
+
+          <a href="#" 
+             v-for="c in categorias" 
+             :key="c.cat_pag_web_id"
+             class="list-group-item clearfix" 
+             :class="{ active: catModalSubcatFiltro && catModalSubcatFiltro.cat_pag_web_id == c.cat_pag_web_id }"
+             @click.prevent="filtrarSubcatsPorCatModal(c)"
+             style="display:block; padding: 8px 10px; margin-bottom: 4px; border: 1px solid #d0d7de; border-radius: 4px; text-decoration: none;"
+             :style="catModalSubcatFiltro && catModalSubcatFiltro.cat_pag_web_id == c.cat_pag_web_id ? 'background:#0088cc !important; color:#fff !important;' : 'background:#fff !important; color:#2c3e50 !important;'">
+            <span style="font-weight: 600;" v-text="c.titulo"></span>
+            <span class="badge pull-right" :class="{ 'badge-info': !(catModalSubcatFiltro && catModalSubcatFiltro.cat_pag_web_id == c.cat_pag_web_id) }" v-text="contarSubcats(c.cat_pag_web_id)"></span>
+          </a>
+        </div>
+      </div>
+
+      <!-- PANEL DERECHO: BUSCADOR CON 'X' + TABLA DE SUBCATEGORÍAS (Sin estilo zebra) -->
+      <div class="span9" style="padding-left: 10px;">
+        <div class="form-inline clearfix" style="margin-bottom: 12px;">
+          <div class="input-append" style="float: left; position: relative;">
+            <input type="text" 
+                   id="txtBuscarSubcatModal" 
+                   class="input-xlarge" 
+                   placeholder="Buscar subcategoría..." 
+                   style="border-radius: 4px 0 0 4px; padding-right: 25px;"
+                   @keyup="onBuscarSubcatModal($event)">
+            <button class="btn" 
+                    type="button" 
+                    title="Limpiar búsqueda" 
+                    @click="limpiarBuscadorSubcatModal"
+                    style="border-radius: 0 4px 4px 0;">
+              &times;
+            </button>
+          </div>
+
+          <span class="muted pull-right" style="margin-top: 6px; font-weight: 600;">
+            Mostrando subcategorías de: 
+            <span class="text-info" v-text="catModalSubcatFiltro ? catModalSubcatFiltro.titulo : 'Todas'"></span>
+          </span>
+        </div>
+
+        <table id="tablaSubcat" class="table table-bordered table-condensed" style="width: 100%; background: #ffffff;">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th style="width: 60px; text-align: center;">Vista</th>
+              <th>Titulo</th>
+              <th>Clave</th>
+              <th>Categoría</th>
+              <th style="width: 60px; text-align: center;">Visible</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-footer" style="text-align: left;">
+    <button class="btn" data-dismiss="modal">Cerrar</button>
+  </div>
+</div>
+
+<!-- MODAL CREAR SUBCATEGORIA -->
+<div id="modalCrearSubcat" class="modal hide fade fullscreen">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal">×</button>
+    <h3>Nueva Subcategoría</h3>
+  </div>
+
+  <div class="modal-body">
+    <div class="row-fluid">
+      <div class="span8">
+        <label><b>Título</b></label>
+        <input v-model="subcatForm.titulo" class="input-xxlarge" style="width:100%;" placeholder="Titulo">
+      </div>
+      <div class="span4">
+        <label><b>Visible</b></label>
+        <select v-model.number="subcatForm.is_visible" class="input-small" style="width:100%;">
+          <option :value="1">Sí</option>
+          <option :value="0">No</option>
+        </select>
+      </div>
+    </div>
+
+    <br>
+
+    <div class="row-fluid">
+      <div class="span6">
+        <label><b>Categoría Padre</b></label>
+        <v-select
+          :options="categorias"
+          label="titulo"
+          v-model="subcatForm.cat"
+          placeholder="Selecciona categoría"
+        ></v-select>
+      </div>
+      <div class="span6">
+        <label><b>Clave TXT</b></label>
+        <input v-model="subcatForm.clave_txt" class="input-xxlarge" style="width:100%;" placeholder="Clave TXT">
+      </div>
+    </div>
+
+    <br>
+
+    <div class="row-fluid">
+      <div class="span12">
+        <label><b>URL Imagen</b></label>
+        <input v-model="subcatForm.url_img" class="input-xxlarge" style="width:100%;" placeholder="https://...">
+      </div>
+    </div>
+
+    <div v-if="subcatForm.url_img" style="margin-top: 8px;">
+      <img :src="subcatForm.url_img" style="max-width: 120px; max-height: 80px; border-radius: 4px; border: 1px solid #ccc;">
+    </div>
+
+    <br>
+
+    <div class="row-fluid">
+      <div class="span12">
+        <label><b>Texto 01 (HTML)</b></label>
+        <textarea id="txtSubcatTexto01"></textarea>
+      </div>
+    </div>
+
+    <br>
+
+    <div class="row-fluid">
+      <div class="span12">
+        <label><b>Texto 02 (HTML)</b></label>
+        <textarea id="txtSubcatTexto02"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-footer" style="text-align: left;">
+    <button class="btn btn-primary" @click="guardarSubcat">Guardar</button>
+    <button class="btn" data-dismiss="modal">Cerrar</button>
+  </div>
+</div>
+
+<!-- MODAL EDITAR SUBCATEGORIA -->
+<div id="modalEditarSubcat" class="modal hide fade fullscreen">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal">×</button>
+    <h3>Editar Subcategoría</h3>
+  </div>
+
+  <div class="modal-body">
+    <input v-model="subcatForm.subcat_pag_web_id" type="hidden">
+
+    <div class="row-fluid">
+      <div class="span8">
+        <label><b>Título</b></label>
+        <input v-model="subcatForm.titulo" class="input-xxlarge" style="width:100%;" placeholder="Titulo">
+      </div>
+      <div class="span4">
+        <label><b>Visible</b></label>
+        <select v-model.number="subcatForm.is_visible" class="input-small" style="width:100%;">
+          <option :value="1">Sí</option>
+          <option :value="0">No</option>
+        </select>
+      </div>
+    </div>
+
+    <br>
+
+    <div class="row-fluid">
+      <div class="span6">
+        <label><b>Categoría Padre</b></label>
+        <v-select
+          :options="categorias"
+          label="titulo"
+          v-model="subcatForm.cat"
+        ></v-select>
+      </div>
+      <div class="span6">
+        <label><b>Clave TXT</b></label>
+        <input v-model="subcatForm.clave_txt" class="input-xxlarge" style="width:100%;" placeholder="Clave TXT">
+      </div>
+    </div>
+
+    <br>
+
+    <div class="row-fluid">
+      <div class="span12">
+        <label><b>URL Imagen</b></label>
+        <input v-model="subcatForm.url_img" class="input-xxlarge" style="width:100%;" placeholder="https://...">
+      </div>
+    </div>
+
+    <div v-if="subcatForm.url_img" style="margin-top: 8px;">
+      <img :src="subcatForm.url_img" style="max-width: 120px; max-height: 80px; border-radius: 4px; border: 1px solid #ccc;">
+    </div>
+
+    <br>
+
+    <div class="row-fluid">
+      <div class="span12">
+        <label><b>Texto 01 (HTML)</b></label>
+        <textarea id="txtSubcatEditarTexto01"></textarea>
+      </div>
+    </div>
+
+    <br>
+
+    <div class="row-fluid">
+      <div class="span12">
+        <label><b>Texto 02 (HTML)</b></label>
+        <textarea id="txtSubcatEditarTexto02"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-footer" style="text-align: left;">
+    <button class="btn btn-primary" @click="actualizarSubcat">Guardar</button>
+    <button class="btn" data-dismiss="modal">Cerrar</button>
+  </div>
+</div>

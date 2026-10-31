@@ -1,0 +1,77 @@
+<table id="tablaUsuarios" class="table table-bordered table-condensed sel-fila">
+  <thead>
+    <tr>
+      <th></th>
+      <th>ID</th>
+      <th>Código</th>
+      <th>Google</th>
+      <th width="90">Fantasma</th>
+      <th>Sobrenombre</th>
+      <th>Nom. Ape.</th>
+      <th>Celular</th>
+      <th>DNI</th>
+      <th>Clavel</th>
+      <th>Rol</th>
+      <th>Tipo Usuario</th>
+      <th>Negocio</th>
+      <th>Acciones</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr v-for="u in usuarios" :key="u.usu_id">
+      <td>
+        <div class="avatar-mini">
+          <img :src="u.img_perfil" alt="avatar">
+         </div> 
+      </td>
+      <td>[[ u.usu_id ]]</td>
+      <td>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+          <!-- Bloque colorido con diseño badge e iconos de Font Awesome 4.6 -->
+          <div style="display: flex; align-items: center; gap: 4px;">
+            <span class="badge" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">
+              <i class="fa fa-user-circle"></i> [[ u.cod_usu ]]
+            </span>
+            <span style="color: #94a3b8; font-weight: bold;">-</span>
+            <span class="badge" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">
+              <i class="fa fa-key"></i> [[ u.pin_code || 'S/PIN' ]]
+            </span>
+          </div>
+          <!-- Botón de copiar actualizado -->
+          <button class="btn btn-mini btn-copiar-pin" :data-copiar="u.pin_code ? ('usuario: ' + u.cod_usu + '\npin: ' + u.pin_code) : ('usuario: ' + u.cod_usu)" title="Copiar código y PIN" style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; padding: 3px 6px;">
+            <i class="fa fa-clipboard" style="color: #0d9488;"></i>
+          </button>
+        </div>
+      </td>
+      <td>[[ u.google_uid ]]</td>
+      <td class="text-center">
+          <input type="checkbox" :checked="parseInt(u.is_fantasma) === 1" @click.prevent="toggleFantasma(u)">
+      </td>            
+      <td>[[ u.sobrenombre ]]</td>
+      <td>[[ u.nombres_apellidos ]]</td>
+      <td>[[ u.celular ]]</td>
+      <td>[[ u.dni ]]</td>
+      <td>[[ u.clavel ]]</td>
+      <td>[[ u.rol_nombre ]]</td>
+      <td>[[ getTipoDescripcion(u.tipoxusu_id) ]]</td>
+      <td>[[ u.negocio_nombre ]]</td>
+      <td>
+        <div class="btn-group">
+          <button class="btn btn-mini dropdown-toggle" data-toggle="dropdown">
+          ⚙ <span class="caret"></span>
+          </button>
+          <ul class="dropdown-menu pull-right">
+            <li><a href="#" @click.prevent="abrirModalEditar(u)">Editar</a></li>
+            <li><a href="#" @click.prevent="eliminarUsuario(u)">Liquidar</a></li>
+            <li><a href="#" @click.prevent="reiniciarUsuario(u)">Reiniciar</a></li>                    
+            <li><a href="#" @click.prevent="clave12(u)">Clave 12</a></li>
+            <li><a href="#" @click.prevent="nuevoNegocio(u)">BtnNegocio</a></li> 
+            <li><a href="#" @click.prevent="crearNegocioFantasma(u)">NegFantasma</a></li>
+            <li><a href="#" @click.prevent="iniciarSesionUsuario(u)">Sesion</a></li>
+            <li><a href="#" @click.prevent="crearPin(u)">Pin</a></li>                    
+          </ul>
+        </div>
+      </td>
+    </tr>
+  </tbody>
+</table>
