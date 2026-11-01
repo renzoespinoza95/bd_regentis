@@ -100,6 +100,43 @@ Flight::route('POST /xoxo/reg_img/crear_url', function(){
     Flight::json(['status'=>'ok']);
 });
 
+// 🟢 NUEVO: Crear imagen desde URL (Worker / Flask) para Ítems
+Flight::route('POST /xoxo/reg_img/crear_desde_url', function () {
+    include DEFINITION;
+    autentificar_administrador();
+
+    $data = json_decode(Flight::request()->getBody(), true);
+
+    $item_pag_web_id = $data['item_pag_web_id'] ?? null;
+    $url_img         = $data['url_img'] ?? null;
+
+    if (!$item_pag_web_id || !$url_img) {
+        Flight::json(['success' => false, 'error' => 'Faltan datos requeridos'], 400);
+        return;
+    }
+
+    try {
+        DB::insert('reg_pag_item_img', [
+            'item_pag_web_id' => $item_pag_web_id,
+            'url_img'         => $url_img,
+            'is_visible'      => 1,
+            'orden'           => 0
+        ]);
+
+        Flight::json([
+            'success'   => true,
+            'img_id'    => DB::insertId(),
+            'url_img'   => $url_img
+        ]);
+
+    } catch (Exception $e) {
+        Flight::json([
+            'success' => false,
+            'error'   => $e->getMessage()
+        ], 500);
+    }
+});
+
 // Actualizar imagen principal de Subcategoría
 Flight::route('POST /xoxo/reg_subcat/actualizar_url_img', function () {
     include DEFINITION;

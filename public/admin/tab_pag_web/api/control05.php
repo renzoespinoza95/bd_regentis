@@ -31,30 +31,40 @@ Flight::route('POST /xoxo/reg_img/ordenar', function(){
     }
 });
 
-// 21. Eliminar Imagen
+// 21. Eliminar Imagen (Validando si pertenece a Bunny CDN con barsi-img.b-cdn.net)
 Flight::route('POST /xoxo/reg_img/eliminar', function(){
-    include DEFINITION;
-    autentificar_administrador();
+    try {
+        include DEFINITION;
+        autentificar_administrador();
 
-    $d = Flight::request()->data->getData();
-    $id = $d['id'] ?? null;
+        $d = Flight::request()->data->getData();
+        $id = $d['id'] ?? null;
 
-    if (!$id) {
-        Flight::json(['status'=>'error']);
-        return;
+        if (!$id) {
+            Flight::json(['status'=>'error', 'msg'=>'ID requerido']);
+            return;
+        }
+
+        $row = DB::queryFirstRow(
+            "SELECT url_img FROM reg_pag_item_img WHERE pag_item_img_id=%i",
+            $id
+        );
+
+        if ($row && !empty($row['url_img'])) {
+            $url_img = $row['url_img'];
+            // Verificamos si la ruta contiene barsi-img.b-cdn.net
+            if (strpos($url_img, 'barsi-img.b-cdn.net') !== false) {
+                if (function_exists('bunnyDelete')) {
+                    bunnyDelete($url_img);
+                }
+            }
+        }
+
+        DB::delete('reg_pag_item_img', "pag_item_img_id=%i", $id);
+        Flight::json(['status'=>'ok']);
+    } catch(Exception $e) {
+        Flight::json(['status'=>'error', 'msg' => $e->getMessage()], 500);
     }
-
-    $row = DB::queryFirstRow(
-        "SELECT url_img FROM reg_pag_item_img WHERE pag_item_img_id=%i",
-        $id
-    );
-
-    if ($row && !empty($row['url_img'])) {
-        bunnyDelete($row['url_img']);
-    }
-
-    DB::delete('reg_pag_item_img', "pag_item_img_id=%i", $id);
-    Flight::json(['status'=>'ok']);
 });
 
 // 22. Listar Videos
