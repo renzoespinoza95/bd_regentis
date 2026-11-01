@@ -355,3 +355,41 @@ Flight::route('GET /api/usuario/mis-datos', function(){
     ]);
 
 });
+
+
+Flight::route('GET /menus/tree', function () {
+    include DEFINITION;
+    autentificar_administrador();
+
+    global $administrador_actual;
+    $rol_id = $administrador_actual['rol_id'] ?? 1;
+
+    DB::query("SET NAMES 'utf8'");
+
+    // 🔥 Corrección: Se agregó SELECT para evitar el error de sintaxis SQL
+    $menus = DB::query("
+        SELECT m.menu_id, m.titulo, m.orden
+        FROM reg_rolxmenu rxm
+        INNER JOIN reg_menu m ON m.menu_id = rxm.menu_id
+        WHERE rxm.rol_id = %i
+        AND rxm.is_activo = 1
+        AND m.borrado_el IS NULL
+        ORDER BY m.orden ASC
+    ", $rol_id);
+
+    if (empty($menus)) {
+        $menus = DB::query("SELECT menu_id, titulo, orden FROM reg_menu WHERE borrado_el IS NULL ORDER BY orden ASC");
+    }
+
+    foreach ($menus as &$menu) {
+        $menu['lista_submenu'] = DB::query("
+            SELECT submenu_id, titulo, url, target, orden
+            FROM reg_submenu
+            WHERE menu_id = %i
+            AND borrado_el IS NULL
+            ORDER BY orden ASC
+        ", $menu['menu_id']);
+    }
+
+    Flight::json($menus);
+});

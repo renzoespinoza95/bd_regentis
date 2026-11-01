@@ -1,0 +1,57 @@
+<div class="row-fluid" style="margin-top: 50px;">
+  <div class="span12">
+    <div class="row-fluid" style="margin-bottom: 20px;">
+      <div class="span6">
+        <h2>Gestión de Sliders</h2>
+      </div>
+      <div class="span6" style="text-align: right;">
+        <button class="btn btn-success" @click="abrirModalCrear" style="margin-right: 5px;">
+          <i class="icon-plus icon-white"></i> Nuevo Slider
+        </button>
+        <button class="btn btn-info" @click="crearSliderAutomatico">
+          <i class="icon-magic icon-white"></i> Automático
+        </button>
+      </div>
+    </div>
+
+    <table id="tablaSliders" class="table table-bordered table-striped" style="width:100%; background-color: #fff; color: #333;">
+      <thead>
+        <tr>
+          <th style="text-align: center;">ID</th>
+          <th style="text-align: center;">Vista</th>
+          <th>Descripción</th>
+          <th style="text-align: center;">Orden</th>
+          <th style="text-align: center;">Visible</th>
+          <th style="text-align: center;">Negocio ID</th>
+          <th style="text-align: center;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="sortable">
+        <tr v-for="s in sliders" :key="s.slider_id" :data-id="s.slider_id">
+          <td style="text-align: center; vertical-align: middle; color: #333; font-weight: bold;">[[ s.slider_id ]]</td>
+          <td style="text-align: center; vertical-align: middle;"><img :src="s.img_thumb" style="max-width:100px; max-height:60px;" /></td>
+          <td style="vertical-align: middle; color: #333;" v-html="s.descripcion"></td>
+          <td style="text-align:center; vertical-align: middle;">
+            <span class="label label-info drag-handle" style="cursor:move; padding: 5px 10px;">
+              ⇅ ([[ s.orden ]])
+            </span>
+          </td>
+          <td style="text-align: center; vertical-align: middle; color: #333;">[[ s.is_visible == 1 ? 'Sí' : 'No' ]]</td>
+          <td style="text-align: center; vertical-align: middle; color: #333;">[[ s.neg_id ]]</td>
+          <td style="text-align: center; vertical-align: middle;">
+            <div class="btn-group">
+              <button class="btn btn-mini dropdown-toggle" data-toggle="dropdown">
+                ⚙ <span class="caret"></span>
+              </button>
+              <ul class="dropdown-menu" style="text-align: left;">
+                <li><a href="#" @click.prevent="abrirModalEditar(s)">Editar</a></li>
+                <li><a href="#" @click.prevent="eliminarSlider(s)">Eliminar</a></li>
+                <li><a href="#" @click.prevent="abrirModalDetalle(s)">Detalle</a></li>
+              </ul>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

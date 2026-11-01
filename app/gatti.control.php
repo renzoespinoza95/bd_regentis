@@ -75,8 +75,8 @@ if (!empty($ssa_id) && is_string($ssa_id)) {
 	}
 }	
 
-require_once VARPATH."/public/api/usu.php";
-require_once VARPATH."/public/api/neg.php";
+require_once VARPATH."/public/ofer/usu.php";
+require_once VARPATH."/public/ofer/neg.php";
 require_once VARPATH."/public/admin/tab_prod/app.php";
 require_once VARPATH."/public/admin/login/app.php";
 require_once VARPATH."/public/admin/tab_chat/app.php";
@@ -86,4 +86,4 @@ require_once VARPATH."/public/admin/tab_trabajador/app.php";
 require_once VARPATH."/public/admin/tab_cliente/app.php";
 require_once VARPATH."/public/admin/tab_cat/app.php";
 require_once VARPATH."/public/admin/tab_mercado/app.php";
-require_once VARPATH."/public/admin/tab_slider/app.php";
+require_once VARPATH."/public/ofer/slider.php";

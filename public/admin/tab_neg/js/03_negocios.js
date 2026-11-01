@@ -59,9 +59,9 @@ const negociosMethods = {
         neg_id: n.neg_id,
         nombre: n.nombre,
         puesto: n.puesto,
+        img_logo: n.img_logo || '',
         celular_informes: n.celular_informes || '',
         direccion: n.direccion || '',
-        img_logo: n.img_logo || '',
         fecha_fin_premium: n.fecha_fin_premium || '',
         mercado_id: this.mercadosOptions.find(m => m.mercado_id == n.mercado_id),
         rubros: n.rubros_obj || []
@@ -80,9 +80,9 @@ const negociosMethods = {
       neg_id: this.formNeg.neg_id,
       nombre: this.formNeg.nombre.trim(),
       puesto: this.formNeg.puesto.trim(),
+      img_logo: (this.formNeg.img_logo || '').trim(),
       celular_informes: (this.formNeg.celular_informes || '').trim(),
       direccion: (this.formNeg.direccion || '').trim(),
-      img_logo: (this.formNeg.img_logo || '').trim(),
       fecha_fin_premium: (this.formNeg.fecha_fin_premium || '').trim(),
       mercado_id: mercado_id,
       rubros: (this.formNeg.rubros || []).map(r => r.rubro_id)

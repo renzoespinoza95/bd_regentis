@@ -1,0 +1,17 @@
+<div id="modalDetalleSlider" class="modal hide fade" tabindex="-1">
+  <div class="modal-header"><h3>Detalle Slider</h3></div>
+  <div class="modal-body">
+    <dl class="dl-horizontal">
+      <dt>ID</dt><dd>{{ detalle.slider_id }}</dd>
+      <dt>Imagen</dt><dd><img :src="detalle.img_thumb" style="max-width:200px; max-height:100px;" /></dd>
+      <dt>Descripcion</dt><dd>{{ detalle.descripcion }}</dd>
+      <dt>Orden</dt><dd>{{ detalle.orden }}</dd>
+      <dt>Visible</dt><dd>{{ detalle.is_visible ? 'Sí' : 'No' }}</dd>          
+      <dt>Fin</dt><dd>{{ detalle.fecha_fin }}</dd>
+      <dt>Negocio ID</dt><dd>{{ detalle.neg_id }}</dd>
+    </dl>
+  </div>
+  <div class="modal-footer">
+    <button class="btn" data-dismiss="modal">Cerrar</button>
+  </div>
+</div>
