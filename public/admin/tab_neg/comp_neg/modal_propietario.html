@@ -1,0 +1,53 @@
+<div id="modalPropietario" class="modal hide fade fullscreen" tabindex="-1">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal">×</button>
+    <h3>Propietario del Negocio</h3>
+    <div style="margin-top:6px; color:#777;">
+      Negocio: <b id="modal_neg_nombre">-</b> 
+      <span id="modal_neg_id"></span>
+      <span id="modal_neg_celular"></span>
+    </div>
+  </div>
+
+  <div class="modal-body">
+    <div class="control-group">
+      <label class="control-label">
+        Código de usuario
+      </label>
+      <div class="controls" style="display:flex; gap:8px; align-items:center;">
+        <input type="text" class="span12" id="modal_cod_usu" placeholder="Ejemplo: USR002"/>
+        <button class="btn btn-primary" id="btn_modal_buscar_usu" type="button">
+          <i class="icon-search icon-white"></i> Buscar
+        </button>
+      </div>
+    </div>
+
+    <!-- USUARIO ENCONTRADO -->
+    <div id="modal_card_usuario" class="well" style="display:none; margin-top:15px;">
+      <div style="display:flex; gap:12px;">
+        <img id="modal_usu_img" src="" style="width:70px; height:70px; border-radius:14px; object-fit:cover;">
+        <div style="flex:1;">
+          <div id="modal_usu_nombre" style="font-weight:bold; font-size:14px; color:#333;"></div>
+          <div id="modal_usu_sobrenombre" style="color:#666;"></div>
+          <div id="modal_usu_cod" style="color:#666;"></div>
+          <div id="modal_usu_cel" style="color:#666;"></div>
+          <div id="modal_usu_email" style="color:#666;"></div>
+        </div>
+        <div>
+          <button class="btn btn-success" id="btn_modal_asignar_usu" type="button">Asignar</button>
+        </div>
+      </div>
+    </div>
+
+    <hr>
+    <h4>Propietarios actuales</h4>
+
+    <div id="modal_lista_propietarios">
+      <div class="alert">No hay propietarios asignados</div>
+    </div>
+  </div>
+
+  <div class="modal-footer">
+    <button class="btn" data-dismiss="modal">Cerrar</button>
+  </div>
+</div>

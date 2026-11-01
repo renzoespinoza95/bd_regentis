@@ -1,0 +1,97 @@
+<!-- Modal Crear Negocio -->
+<div id="modalCrearNeg" class="modal hide fade" tabindex="-1">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal">×</button>
+    <h3>Nuevo Negocio</h3>
+  </div>
+  <div class="modal-body">
+    <form class="form-horizontal">
+      <div class="control-group">
+        <label class="control-label">Nombre</label>
+        <div class="controls">
+          <input type="text" class="span12" v-model="nuevoNeg.nombre" placeholder="Nombre del negocio">
+        </div>
+      </div>
+      <div class="control-group">
+        <label class="control-label">Puesto</label>
+        <div class="controls">
+          <input type="text" class="span12" v-model="nuevoNeg.puesto" placeholder="Número o nombre de puesto">
+        </div>
+      </div>
+      <div class="control-group">
+        <label class="control-label">Mercado</label>
+        <div class="controls">
+          <v-select :options="mercadosOptions" label="nombre" v-model="nuevoNeg.mercado_id" placeholder="Seleccione mercado"></v-select>
+        </div>
+      </div>
+      <div class="control-group">
+        <label class="control-label">Rubros</label>
+        <div class="controls">
+          <v-select :options="rubrosOptions" label="nombre" multiple v-model="nuevoNeg.rubros" placeholder="Seleccione rubros"></v-select>
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer" style="text-align: left !important;">
+    <button class="btn btn-primary" @click="crearNeg">Crear Negocio</button>
+    <button class="btn" data-dismiss="modal">Cancelar</button>
+  </div>
+</div>
+
+<!-- Modal Editar Negocio -->
+<div id="modalEditarNeg" class="modal hide fade" tabindex="-1">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal">×</button>
+    <h3>Editar Negocio</h3>
+  </div>
+  <div class="modal-body">
+    <form class="form-horizontal">
+      <div class="control-group">
+        <label class="control-label">Nombre</label>
+        <div class="controls">
+          <input type="text" class="span12" v-model="formNeg.nombre" placeholder="Nombre del negocio">
+        </div>
+      </div>
+      <div class="control-group">
+        <label class="control-label">Puesto</label>
+        <div class="controls">
+          <input type="text" class="span12" v-model="formNeg.puesto" placeholder="Número o nombre de puesto">
+        </div>
+      </div>
+      <div class="control-group">
+        <label class="control-label">Celular Informes</label>
+        <div class="controls">
+          <input type="text" class="span12" v-model="formNeg.celular_informes" placeholder="Celular de contacto">
+        </div>
+      </div>
+      <div class="control-group">
+        <label class="control-label">Dirección</label>
+        <div class="controls">
+          <input type="text" class="span12" v-model="formNeg.direccion" placeholder="Dirección exacta">
+        </div>
+      </div>
+      <div class="control-group">
+        <label class="control-label">Fin Premium</label>
+        <div class="controls">
+          <input type="date" class="span12" v-model="formNeg.fecha_fin_premium">
+        </div>
+      </div>
+      <div class="control-group">
+        <label class="control-label">Mercado</label>
+        <div class="controls">
+          <v-select :options="mercadosOptions" label="nombre" v-model="formNeg.mercado_id" placeholder="Seleccione mercado"></v-select>
+        </div>
+      </div>
+      <div class="control-group">
+        <label class="control-label">Rubros</label>
+        <div class="controls">
+          <v-select :options="rubrosOptions" label="nombre" multiple v-model="formNeg.rubros" placeholder="Seleccione rubros"></v-select>
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="modal-footer" style="text-align: left !important;">
+    <button class="btn btn-primary" @click="guardarNeg">Guardar cambios</button>
+    <button class="btn" data-dismiss="modal">Cancelar</button>
+  </div>
+</div>

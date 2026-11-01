@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>{{titulo_sitio}}</title>
+  {{> head}}
+</head>
+<body>
+  <div class="navbar navbar-fixed-top">
+    <div class="navbar-inner">
+      {{{menu_html}}}
+    </div>
+  </div>
+  <div class="container" id="appNeg" style="margin-top: 60px;">
+    {{> navbar_negocios}}
+    {{> modal_negocio}}
+    {{> modal_mercados}}
+    {{> modal_cat_mercado}}
+    {{> modal_propietario}}
+    {{> modal_rubros}}
+    {{> modal_logo}}
+  </div>
+  {{> scripts}}
+</body>
+</html>

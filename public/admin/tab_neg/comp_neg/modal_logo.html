@@ -1,0 +1,36 @@
+<div id="modalLogoNeg" class="modal hide fade" tabindex="-1">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal">×</button>
+    <h3>Gestionar Logo del Negocio</h3>
+    <div style="margin-top:6px; color:#777;">
+      Negocio: <b>{{ logoNeg.nombre }}</b> (#{{ logoNeg.neg_id }})
+    </div>
+  </div>
+  <div class="modal-body" style="text-align: center;">
+    <div style="margin-bottom: 15px; position: relative; display: inline-block;">
+      <!-- Vista previa local (nueva_preview) o el logo actual del negocio (preview) -->
+      <img :src="logoNeg.nueva_preview || logoNeg.preview || 'https://barsi-img.b-cdn.net/recursos/sg3f.png'" 
+           style="width: 140px; height: 140px; object-fit: cover; border-radius: 16px; border: 1px solid #ddd; background: #fff;">
+      
+      <!-- Botón de eliminar con icono en la esquina superior derecha -->
+      <button v-if="logoNeg.nueva_preview || logoNeg.preview" 
+              @click="eliminarLogoBunny" 
+              class="btn btn-danger btn-mini" 
+              style="position: absolute; top: -6px; right: -6px; border-radius: 50%; padding: 2px 6px;" 
+              title="Eliminar imagen">
+        <i class="icon-remove icon-white"></i>
+      </button>
+    </div>
+
+    <div class="control-group" style="text-align: left;">
+      <label class="control-label">Seleccionar nueva imagen</label>
+      <div class="controls">
+        <input type="file" @change="onFileChangeLogo" accept="image/*" class="input-xlarge">
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer" style="text-align: left !important;">
+    <button class="btn btn-primary" @click="guardarLogoBunny" :disabled="!logoNeg.file">Guardar cambios</button>
+    <button class="btn" data-dismiss="modal">Cancelar</button>
+  </div>
+</div>

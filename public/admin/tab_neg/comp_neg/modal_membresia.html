@@ -1,0 +1,50 @@
+<div id="modalMembresia" class="modal hide fade fullscreen">
+  <div class="modal-header">
+    <button class="close" data-dismiss="modal">×</button>
+    <h3>Membresías</h3>
+    <div>Negocio: <b>{{ negMembresia.nombre }}</b></div>
+  </div>
+  <div class="modal-body">
+    <h4>Nueva membresía</h4>
+    <div class="control-group">
+      <label>Motivo</label>
+      <select v-model="nuevoPago.motivo" @change="cambiarFechasMembresia">
+        <option value="FREE">FREE</option>
+        <option value="MENSUAL">MENSUAL</option>
+        <option value="PAGO_ANUAL">PAGO_ANUAL</option>
+        <option value="SLIDER_AI">SLIDER_AI</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label>Monto</label>
+      <input type="number" step="0.01" v-model="nuevoPago.monto">
+    </div>
+    <div class="control-group">
+      <label>Fecha inicio</label>
+      <input type="date" v-model="nuevoPago.fecha_inicio_premium">
+    </div>
+    <div class="control-group">
+      <label>Fecha fin</label>
+      <input type="date" v-model="nuevoPago.fecha_fin_premium">
+    </div>
+    <button class="btn btn-success" @click="guardarMembresia">Agregar</button>
+    <hr>
+    <table id="tablaMembresias" class="table table-bordered table-condensed">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Motivo</th>
+          <th>Monto</th>
+          <th>Inicio</th>
+          <th>Fin</th>
+          <th>Habilitado</th>
+          <th> ⚙️ </th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="modal-footer">
+    <button class="btn" data-dismiss="modal">Cerrar</button>
+  </div>
+</div>

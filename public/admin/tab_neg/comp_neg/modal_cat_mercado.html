@@ -1,0 +1,60 @@
+<div id="modalCategoriasMercado" class="modal hide fade fullscreen" tabindex="-1">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal">×</button>
+    <h3>Categorías de Mercado</h3>
+  </div>
+  <div class="modal-body">
+    <table id="tablaCategoriasMercado" class="table table-bordered table-condensed">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nombre</th>
+          <th>Visible</th>
+          <th>Activo</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-success" @click="abrirModalCrearCategoriaMercado">
+      <i class="icon-plus icon-white"></i> Agregar
+    </button>
+    <button class="btn" data-dismiss="modal">Cerrar</button>
+  </div>
+</div>
+
+<div id="modalEditarCategoriaMercado" class="modal hide fade" tabindex="-1">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal">×</button>
+    <h3>Editar Categoría</h3>
+  </div>
+  <div class="modal-body">
+    <label>Nombre</label>
+    <input v-model="formCatMercado.nombre" type="text" class="input-xxlarge">
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-primary" @click="guardarCategoriaMercado">Guardar</button>
+    <button class="btn" data-dismiss="modal">Cancelar</button>
+  </div>
+</div>
+
+<div id="modalCrearCategoriaMercado" class="modal hide fade fullscreen">
+  <div class="modal-header">
+    <button class="close" data-dismiss="modal">×</button>
+    <h3>Nueva Categoría Mercado</h3>
+  </div>
+  <div class="modal-body">
+    <div class="control-group">
+      <label class="control-label">Nombre</label>
+      <div class="controls">
+        <input v-model="nuevoCatMercado.nombre" class="input-xxlarge">
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-primary" @click="crearCategoriaMercado">Guardar</button>
+    <button class="btn" data-dismiss="modal">Cancelar</button>
+  </div>
+</div>

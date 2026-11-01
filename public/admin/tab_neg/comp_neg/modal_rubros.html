@@ -1,0 +1,37 @@
+<div id="modalRubro" class="modal hide fade fullscreen">
+  <div class="modal-header">
+    <button class="close" data-dismiss="modal">×</button>
+    <h3>Rubros del negocio</h3>
+    <div>Negocio: <b>{{ negRubro.nombre }}</b></div>
+  </div>
+  <div class="modal-body">
+    <table id="tablaRubros" class="table table-bordered table-condensed">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nombre</th>
+          <th>Acción</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-success" @click="abrirModalAgregarRubro">+ Rubro</button>
+    <button class="btn" data-dismiss="modal">Cerrar</button>
+  </div>
+</div>
+
+<div id="modalAgregarRubro" class="modal hide fade fullscreen">
+  <div class="modal-header">
+    <button class="close" data-dismiss="modal">×</button>
+    <h3>Agregar Rubro</h3>
+  </div>
+  <div class="modal-body">
+    <v-select :options="rubrosOptions" :reduce="r => r.rubro_id" label="nombre" v-model="nuevoRubro.rubro_id" placeholder="Selecciona rubro..." style="width:400px;"></v-select>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-primary" @click="guardarRubro">Guardar</button>
+    <button class="btn" data-dismiss="modal">Cancelar</button>
+  </div>
+</div>

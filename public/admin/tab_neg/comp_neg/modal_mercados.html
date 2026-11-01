@@ -1,0 +1,126 @@
+<div id="modalMercados" class="modal hide fade fullscreen" tabindex="-1">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal">×</button>
+    <h3>Mercados</h3>
+  </div>
+  <div class="modal-body">
+    <table id="tablaMercados" class="table table-bordered table-condensed">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nombre</th>
+          <th>Categoría</th>
+          <th>Dirección</th>
+          <th>Activo</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-success" @click="abrirModalCrearMercadoDesdeLista">
+      <i class="icon-plus icon-white"></i> Agregar
+    </button>
+    <button class="btn" data-dismiss="modal">Cerrar</button>
+  </div>
+</div>
+
+<div id="modalCrearMercado" class="modal hide fade fullscreen" tabindex="-1">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal">×</button>
+    <h3>Nuevo Mercado</h3>
+  </div>
+  <div class="modal-body">
+    <div class="control-group">
+      <label class="control-label">Nombre</label>
+      <div class="controls">
+        <input v-model="nuevoMercado.nombre" class="input-xxlarge" placeholder="Nombre del mercado">
+      </div>
+    </div>
+    <div class="control-group">
+      <label class="control-label">Dirección</label>
+      <div class="controls">
+        <input v-model="nuevoMercado.direccion" class="input-xxlarge" placeholder="Dirección">
+      </div>
+    </div>
+    <div class="control-group">
+      <label class="control-label">Activo</label>
+      <div class="controls">
+        <select v-model="nuevoMercado.is_activo" class="input-small">
+          <option :value="1">SI</option>
+          <option :value="0">NO</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-primary" @click="crearMercado">Guardar</button>
+    <button class="btn" data-dismiss="modal">Cancelar</button>
+  </div>
+</div>
+
+<div id="modalEditarMercado" class="modal hide fade fullscreen" tabindex="-1">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal">×</button>
+    <h3>Editar Mercado</h3>
+  </div>
+  <div class="modal-body">
+    <div class="control-group">
+      <label class="control-label">Nombre</label>
+      <div class="controls">
+        <input v-model="formMercado.nombre" class="input-xxlarge" placeholder="Nombre del mercado">
+      </div>
+    </div>
+    <div class="control-group">
+      <label class="control-label">Dirección</label>
+      <div class="controls">
+        <input v-model="formMercado.direccion" class="input-xxlarge" placeholder="Dirección">
+      </div>
+    </div>
+    <div class="control-group">
+      <label class="control-label">Categoría</label>
+      <div class="controls">
+        <v-select :options="catMercadoOptions" label="nombre" v-model="formMercado.cat_mercado" placeholder="Seleccione categoría" style="width:420px;"></v-select>
+      </div>
+    </div>
+    <div class="control-group">
+      <label class="control-label">Activo</label>
+      <div class="controls">
+        <select v-model="formMercado.is_activo" class="input-small">
+          <option :value="1">SI</option>
+          <option :value="0">NO</option>
+        </select>
+      </div>
+    </div>
+    <div class="control-group">
+      <label class="control-label">Logo</label>
+      <div class="controls">
+        <input v-model="formMercado.logo" class="input-xxlarge" placeholder="https://...">
+        <div style="margin-top:10px;">
+          <img v-if="formMercado.logo" :src="formMercado.logo" style="width:120px;height:120px;object-fit:cover;border-radius:16px;border:1px solid #ddd;background:#fff;">
+        </div>
+      </div>
+    </div>
+    <div class="control-group">
+      <label class="control-label">Top Navbar Color</label>
+      <div class="controls" style="display:flex; gap:10px; align-items:center;">
+        <input v-model="formMercado.topnavbar_color" class="input-medium" placeholder="#FD7635">
+        <div :style="{width:'45px',height:'45px',borderRadius:'10px',border:'1px solid #ccc',background: formMercado.topnavbar_color || '#fff'}"></div>
+      </div>
+    </div>
+    <div class="control-group">
+      <label class="control-label">Patrón Fondo (CSS)</label>
+      <div class="controls">
+        <textarea v-model="formMercado.patron_fondo" class="input-xxlarge" rows="10" placeholder="background-color: #fff;"></textarea>
+        <div style="margin-top:12px;">
+          <div :style="cssToObject(formMercado.patron_fondo)" style="width:100%;height:180px;border-radius:16px;border:1px solid #ddd;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-primary" @click="guardarMercado">Guardar</button>
+    <button class="btn" data-dismiss="modal">Cancelar</button>
+  </div>
+</div>
