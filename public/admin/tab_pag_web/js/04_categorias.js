@@ -1,4 +1,4 @@
-// F:\xampp\htdocs\bd_regentis\public\admin\tab_pag_web\js\04_categorias.js
+// tab_pag_web/js/04_categorias.js
 
 const categoriaMethods = {
   abrirCategorias() {
@@ -7,71 +7,79 @@ const categoriaMethods = {
       .then(r => {
         this.categorias = r.data.data || [];
         this.$nextTick(() => {
-          if (!this.dtCat) {
-            this.dtCat = $('#tablaCat').DataTable({
-              language: (typeof dt_language !== 'undefined' ? dt_language : undefined),
-              scrollX: true,
-              dom: 'frtip',
-              order: [[0, 'desc']]
-            });
-
-            const self = this;
-            $('#tablaCat tbody')
-              .on('click', '.editar-cat', function () {
-                const id = $(this).data('id');
-                const row = self.categorias.find(x => x.cat_pag_web_id == id);
-                self.abrirEditarCategoria(row);
-              })
-              .on('click', '.eliminar-cat', function () {
-                const id = $(this).data('id');
-                self.eliminarCategoria(id);
-              })
-              .on('click', '.imagenes-cat', function () {
-                const id = $(this).data('id');
-                self.verImagenesCategoria(id);
-              })
-              .on('change', '.chk-cat-visible', function () {
-                const id = $(this).data('id');
-                const isChecked = $(this).is(':checked') ? 1 : 0;
-                self.cambiarVisibleCategoria(id, isChecked);
-              });
-          }
-
-          this.dtCat.clear();
-          this.categorias.forEach(c => {
-            const vistaThumb = c.url_img 
-              ? `<img src="${c.url_img}" style="max-width: 60px; max-height: 40px; border-radius: 3px; object-fit: cover;">`
-              : `<span class="muted" style="font-size: 11px;">Sin img</span>`;
-
-            const checkedHtml = (c.is_visible == 1) ? 'checked' : '';
-
-            this.dtCat.row.add([
-              c.cat_pag_web_id,
-              vistaThumb,
-              c.titulo,
-              c.clave_txt || '',
-              `<div style="text-align:center;"><input type="checkbox" class="chk-cat-visible" data-id="${c.cat_pag_web_id}" ${checkedHtml} style="cursor:pointer;"></div>`,
-              `
-              <div class="btn-group">
-                <button class="btn btn-mini btn-primary dropdown-toggle" data-toggle="dropdown">
-                  Opciones <span class="caret"></span>
-                </button>
-                <ul class="dropdown-menu pull-right">
-                  <li><a href="#" class="editar-cat" data-id="${c.cat_pag_web_id}">Editar</a></li>
-                  <li><a href="#" class="eliminar-cat" data-id="${c.cat_pag_web_id}">Eliminar</a></li>
-                  <li class="divider"></li>
-                  <li><a href="#" class="imagenes-cat" data-id="${c.cat_pag_web_id}">Imágenes</a></li>
-                </ul>
-              </div>
-              `
-            ]);
-          });
-
-          this.dtCat.draw();
+          this.renderTablaCat();
           $('#modalCategorias').modal('show');
         });
       })
       .finally(() => desbloquearUI());
+  },
+
+  renderTablaCat() {
+    if (!this.dtCat) {
+      this.dtCat = $('#tablaCat').DataTable({
+        language: (typeof dt_language !== 'undefined' ? dt_language : undefined),
+        scrollX: true,
+        dom: 'frtip',
+        order: [[0, 'desc']]
+      });
+
+      const self = this;
+      $('#tablaCat tbody')
+        .off('click', '.editar-cat')
+        .on('click', '.editar-cat', function () {
+          const id = $(this).data('id');
+          const row = self.categorias.find(x => x.cat_pag_web_id == id);
+          self.abrirEditarCategoria(row);
+        })
+        .off('click', '.eliminar-cat')
+        .on('click', '.eliminar-cat', function () {
+          const id = $(this).data('id');
+          self.eliminarCategoria(id);
+        })
+        .off('click', '.imagenes-cat')
+        .on('click', '.imagenes-cat', function () {
+          const id = $(this).data('id');
+          self.verImagenesCategoria(id);
+        })
+        .off('change', '.chk-cat-visible')
+        .on('change', '.chk-cat-visible', function () {
+          const id = $(this).data('id');
+          const isChecked = $(this).is(':checked') ? 1 : 0;
+          self.cambiarVisibleCategoria(id, isChecked);
+        });
+    }
+
+    this.dtCat.clear();
+    this.categorias.forEach(c => {
+      const vistaThumb = c.url_img 
+        ? `<img src="${c.url_img}" style="max-width: 60px; max-height: 40px; border-radius: 3px; object-fit: cover;">`
+        : `<span class="muted" style="font-size: 11px;">Sin img</span>`;
+
+      const checkedHtml = (c.is_visible == 1) ? 'checked' : '';
+
+      this.dtCat.row.add([
+        c.cat_pag_web_id,
+        vistaThumb,
+        c.titulo,
+        c.clave_txt || '',
+        `<div style="text-align:center;"><input type="checkbox" class="chk-cat-visible" data-id="${c.cat_pag_web_id}" ${checkedHtml} style="cursor:pointer;"></div>`,
+        `
+        <div class="btn-group">
+          <button class="btn btn-mini btn-primary dropdown-toggle" data-toggle="dropdown">
+            Opciones <span class="caret"></span>
+          </button>
+          <ul class="dropdown-menu pull-right">
+            <li><a href="#" class="editar-cat" data-id="${c.cat_pag_web_id}">Editar</a></li>
+            <li><a href="#" class="eliminar-cat" data-id="${c.cat_pag_web_id}">Eliminar</a></li>
+            <li class="divider"></li>
+            <li><a href="#" class="imagenes-cat" data-id="${c.cat_pag_web_id}">Imágenes</a></li>
+          </ul>
+        </div>
+        `
+      ]);
+    });
+
+    this.dtCat.draw();
   },
 
   cambiarVisibleCategoria(cat_id, is_visible) {

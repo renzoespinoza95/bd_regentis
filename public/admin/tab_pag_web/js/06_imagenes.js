@@ -1,4 +1,4 @@
-// F:\xampp\htdocs\bd_regentis\public\admin\tab_pag_web\js\06_imagenes.js
+// tab_pag_web/js/06_imagenes.js
 
 const imagenMethods = {
   // ==========================================
@@ -28,7 +28,9 @@ const imagenMethods = {
       .then(r => {
         this.imagenes = r.data.data || [];
         this.$nextTick(() => {
-          this.activarDragImagenes();
+          if (this.entidadActual === 'item') {
+            this.activarDragImagenes();
+          }
         });
         $('#modalImagenes').modal('show');
       })
@@ -49,9 +51,6 @@ const imagenMethods = {
         });
 
         let urlOrdenar = `${vm.apphost}/xoxo/reg_img/ordenar`;
-        if (vm.entidadActual === 'cat') urlOrdenar = `${vm.apphost}/xoxo/reg_cat_img/ordenar`;
-        if (vm.entidadActual === 'subcat') urlOrdenar = `${vm.apphost}/xoxo/reg_subcat_img/ordenar`;
-
         fetch(urlOrdenar, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -59,9 +58,7 @@ const imagenMethods = {
         })
         .then(r => r.json())
         .then(() => {
-          if (vm.entidadActual === 'cat') vm.verImagenesCategoria(vm.itemActual);
-          else if (vm.entidadActual === 'subcat') vm.verImagenesSubcategoria(vm.itemActual);
-          else vm.verImagenes(vm.itemActual);
+          vm.verImagenes(vm.itemActual);
         });
       }
     });
@@ -74,7 +71,6 @@ const imagenMethods = {
     $('#modalImagenes').modal('hide');
     $('#modalSubirImagen').modal('show');
 
-    // Escuchar evento global de pegado (Ctrl + V) mientras el modal esté abierto
     const vm = this;
     window.onpaste = function(event) {
       const items = (event.clipboardData || event.originalEvent.clipboardData).items;
@@ -83,12 +79,21 @@ const imagenMethods = {
         if (item.kind === 'file') {
           let blob = item.getAsFile();
           if (blob && blob.type.startsWith('image/')) {
-            vm.archivosSeleccionados.push(blob);
-            vm.previewsTemporales.push({
-              id: Math.random().toString(36).substring(2),
-              url: URL.createObjectURL(blob),
-              file: blob
-            });
+            if (vm.entidadActual === 'cat' || vm.entidadActual === 'subcat') {
+              vm.archivosSeleccionados = [blob];
+              vm.previewsTemporales = [{
+                id: Math.random().toString(36).substring(2),
+                url: URL.createObjectURL(blob),
+                file: blob
+              }];
+            } else {
+              vm.archivosSeleccionados.push(blob);
+              vm.previewsTemporales.push({
+                id: Math.random().toString(36).substring(2),
+                url: URL.createObjectURL(blob),
+                file: blob
+              });
+            }
           }
         }
       }
@@ -104,14 +109,24 @@ const imagenMethods = {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      this.archivosSeleccionados.push(file);
-      this.previewsTemporales.push({
+    if (this.entidadActual === 'cat' || this.entidadActual === 'subcat') {
+      const file = files[0];
+      this.archivosSeleccionados = [file];
+      this.previewsTemporales = [{
         id: Math.random().toString(36).substring(2),
         url: URL.createObjectURL(file),
         file: file
-      });
+      }];
+    } else {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        this.archivosSeleccionados.push(file);
+        this.previewsTemporales.push({
+          id: Math.random().toString(36).substring(2),
+          url: URL.createObjectURL(file),
+          file: file
+        });
+      }
     }
     e.target.value = '';
   },
@@ -120,15 +135,27 @@ const imagenMethods = {
     const files = e.dataTransfer.files;
     if (!files || files.length === 0) return;
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
+    if (this.entidadActual === 'cat' || this.entidadActual === 'subcat') {
+      const file = files[0];
       if (file.type.startsWith('image/')) {
-        this.archivosSeleccionados.push(file);
-        this.previewsTemporales.push({
+        this.archivosSeleccionados = [file];
+        this.previewsTemporales = [{
           id: Math.random().toString(36).substring(2),
           url: URL.createObjectURL(file),
           file: file
-        });
+        }];
+      }
+    } else {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file.type.startsWith('image/')) {
+          this.archivosSeleccionados.push(file);
+          this.previewsTemporales.push({
+            id: Math.random().toString(36).substring(2),
+            url: URL.createObjectURL(file),
+            file: file
+          });
+        }
       }
     }
   },
@@ -149,26 +176,37 @@ const imagenMethods = {
     }
 
     window.onpaste = null;
-    bloquearUI('Subiendo imágenes al worker...');
+    bloquearUI('Subiendo imagen(es)...');
 
     const archivos = [...this.archivosSeleccionados];
+    const negId = window.neg_id || (this.catSeleccionada ? this.catSeleccionada.neg_id : 1); 
+    const subfolderVal = `bd_regentis/neg_${negId}/pag_web`;
 
     const subirSiguiente = (index) => {
       if (index >= archivos.length) {
         desbloquearUI();
         $('#modalSubirImagen').modal('hide');
         
-        if (this.entidadActual === 'cat') this.verImagenesCategoria(this.itemActual);
-        else if (this.entidadActual === 'subcat') this.verImagenesSubcategoria(this.itemActual);
-        else this.verImagenes(this.itemActual);
+        if (this.entidadActual === 'cat') {
+          this.cargarTodo();
+          if (this.dtCat) this.renderTablaCat();
+          this.verImagenesCategoria(this.itemActual);
+        } else if (this.entidadActual === 'subcat') {
+          this.cargarTodo();
+          if (this.dtSubcat) this.renderTablaSubcatModal();
+          this.verImagenesSubcategoria(this.itemActual);
+        } else {
+          this.verImagenes(this.itemActual);
+        }
 
-        apprise('¡Todas las imágenes se procesaron y guardaron con éxito!');
+        apprise('¡Imagen(es) procesada(s) y guardada(s) con éxito!');
         return;
       }
 
       let f = new FormData();
       f.append('file', archivos[index]);
       f.append('item', this.itemActual);
+      f.append('subfolder', subfolderVal);
 
       axios.post(`${flaskUrl}/tk_guardar_img`, f, {
         headers: { 'Content-Type': 'multipart/form-data' }
@@ -206,10 +244,10 @@ const imagenMethods = {
               let payload = { item_pag_web_id: this.itemActual, url_img: urlImagenCDN };
 
               if (this.entidadActual === 'cat') {
-                urlPhpCrear = `${this.apphost}/xoxo/reg_cat_img/crear_desde_url`;
+                urlPhpCrear = `${this.apphost}/xoxo/reg_cat/actualizar_url_img`;
                 payload = { cat_pag_web_id: this.itemActual, url_img: urlImagenCDN };
               } else if (this.entidadActual === 'subcat') {
-                urlPhpCrear = `${this.apphost}/xoxo/reg_subcat_img/crear_desde_url`;
+                urlPhpCrear = `${this.apphost}/xoxo/reg_subcat/actualizar_url_img`;
                 payload = { subcat_pag_web_id: this.itemActual, url_img: urlImagenCDN };
               }
 
@@ -255,20 +293,28 @@ const imagenMethods = {
     let payload = { url: this.urlImagenPegar, item: this.itemActual };
 
     if (this.entidadActual === 'cat') {
-      urlPhp = `${this.apphost}/xoxo/reg_cat_img/crear_url`;
-      payload = { url: this.urlImagenPegar, cat: this.itemActual };
+      urlPhp = `${this.apphost}/xoxo/reg_cat/actualizar_url_img`;
+      payload = { cat_pag_web_id: this.itemActual, url_img: this.urlImagenPegar };
     } else if (this.entidadActual === 'subcat') {
-      urlPhp = `${this.apphost}/xoxo/reg_subcat_img/crear_url`;
-      payload = { url: this.urlImagenPegar, subcat: this.itemActual };
+      urlPhp = `${this.apphost}/xoxo/reg_subcat/actualizar_url_img`;
+      payload = { subcat_pag_web_id: this.itemActual, url_img: this.urlImagenPegar };
     }
 
     axios.post(urlPhp, payload)
       .then(() => {
         $('#modalPegarImagen').modal('hide');
         setTimeout(() => {
-          if (this.entidadActual === 'cat') this.verImagenesCategoria(this.itemActual);
-          else if (this.entidadActual === 'subcat') this.verImagenesSubcategoria(this.itemActual);
-          else this.verImagenes(this.itemActual);
+          if (this.entidadActual === 'cat') {
+            this.cargarTodo();
+            if (this.dtCat) this.renderTablaCat();
+            this.verImagenesCategoria(this.itemActual);
+          } else if (this.entidadActual === 'subcat') {
+            this.cargarTodo();
+            if (this.dtSubcat) this.renderTablaSubcatModal();
+            this.verImagenesSubcategoria(this.itemActual);
+          } else {
+            this.verImagenes(this.itemActual);
+          }
         }, 200);
       })
       .finally(() => desbloquearUI());
@@ -286,17 +332,31 @@ const imagenMethods = {
       if (!ok) return;
       bloquearUI('Eliminando imagen...');
       
-      const imgId = img.pag_item_img_id || img.cat_pag_img_id || img.subcat_pag_img_id;
-      let urlEliminar = `${self.apphost}/xoxo/reg_img/eliminar`;
+      const imgId = img.pag_item_img_id || img.cat_pag_web_id || img.subcat_pag_web_id;
       
-      if (self.entidadActual === 'cat') urlEliminar = `${self.apphost}/xoxo/reg_cat_img/eliminar`;
-      if (self.entidadActual === 'subcat') urlEliminar = `${self.apphost}/xoxo/reg_subcat_img/eliminar`;
+      if (self.entidadActual === 'cat') {
+        axios.post(`${self.apphost}/xoxo/reg_cat/actualizar_url_img`, { cat_pag_web_id: self.itemActual, url_img: '' })
+          .then(() => {
+            self.cargarTodo();
+            if (self.dtCat) self.renderTablaCat();
+            self.verImagenesCategoria(self.itemActual);
+          })
+          .finally(() => desbloquearUI());
+        return;
+      } else if (self.entidadActual === 'subcat') {
+        axios.post(`${self.apphost}/xoxo/reg_subcat/actualizar_url_img`, { subcat_pag_web_id: self.itemActual, url_img: '' })
+          .then(() => {
+            self.cargarTodo();
+            if (self.dtSubcat) self.renderTablaSubcatModal();
+            self.verImagenesSubcategoria(self.itemActual);
+          })
+          .finally(() => desbloquearUI());
+        return;
+      }
 
-      axios.post(urlEliminar, { id: imgId })
+      axios.post(`${self.apphost}/xoxo/reg_img/eliminar`, { id: imgId })
         .then(() => {
-          if (self.entidadActual === 'cat') self.verImagenesCategoria(self.itemActual);
-          else if (self.entidadActual === 'subcat') self.verImagenesSubcategoria(self.itemActual);
-          else self.verImagenes(self.itemActual);
+          self.verImagenes(self.itemActual);
         })
         .catch(() => apprise('Error al eliminar'))
         .finally(() => desbloquearUI());

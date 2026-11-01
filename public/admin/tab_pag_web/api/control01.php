@@ -35,10 +35,6 @@ Flight::route('GET /pagweb/inicio', function () {
     $assets_head = ob_get_clean();
 
     ob_start();
-    include VARPATH . "/public/admin/menu.php";
-    $menu_html = ob_get_clean();
-
-    ob_start();
     include VARPATH . "/public/admin/footer.php";
     $footer_html = ob_get_clean();
 
@@ -47,7 +43,6 @@ Flight::route('GET /pagweb/inicio', function () {
         'varhost'     => $varhost,
         'apphost'     => $apphost,
         'assets_head' => $assets_head,
-        'menu_html'   => $menu_html,
         'footer_html' => $footer_html
     ];
 
@@ -62,6 +57,7 @@ Flight::route('GET /pagweb/inicio', function () {
         'modal_imagenes'      => file_get_contents($basePath . '/modal_imagenes.html'),
         'modal_videos'        => file_get_contents($basePath . '/modal_videos.html'),
         'scripts'             => file_get_contents($basePath . '/scripts.html'),
+        'menu_flot'           => file_get_contents(VARPATH . '/public/admin/menu_flot.html'),
     ];
 
     echo (new Mustache)->render(
@@ -153,31 +149,6 @@ Flight::route('POST /xoxo/reg_item/editar', function(){
             'stock'             => $d['stock'],
             'subcat_pag_web_id' => $d['subcat_id']
         ],"item_pag_web_id=%i", $d['item_pag_web_id']);
-
-        Flight::json(['status'=>'ok']);
-    }catch(Exception $e){
-        Flight::json(['status'=>'error','msg'=>$e->getMessage()]);
-    }
-});
-
-// NUEVO: Actualización rápida de clave_txt de Ítem
-Flight::route('POST /xoxo/reg_item/actualizarClave', function(){
-    try{
-        include DEFINITION;
-        autentificar_administrador();
-
-        $d = json_decode(Flight::request()->getBody(), true) ?: Flight::request()->data->getData();
-        $item_id   = $d['item_pag_web_id'] ?? null;
-        $clave_txt = $d['clave_txt'] ?? '';
-
-        if(!$item_id){
-            Flight::json(['status'=>'error','msg'=>'ID requerido']);
-            return;
-        }
-
-        DB::update('reg_item_pag_web', [
-            'clave_txt' => $clave_txt
-        ], "item_pag_web_id=%i", $item_id);
 
         Flight::json(['status'=>'ok']);
     }catch(Exception $e){

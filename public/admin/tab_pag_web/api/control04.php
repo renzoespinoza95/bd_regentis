@@ -100,113 +100,40 @@ Flight::route('POST /xoxo/reg_img/crear_url', function(){
     Flight::json(['status'=>'ok']);
 });
 
-/* ==================================
-   🟢 CREAR IMAGEN DESDE URL (FLASK WORKER)
-   ================================== */
-Flight::route('POST /xoxo/reg_img/crear_desde_url', function () {
-
+// Actualizar imagen principal de Subcategoría
+Flight::route('POST /xoxo/reg_subcat/actualizar_url_img', function () {
     include DEFINITION;
     autentificar_administrador();
 
-    $data = json_decode(Flight::request()->getBody(), true);
+    $data = json_decode(Flight::request()->getBody(), true) ?: Flight::request()->data->getData();
+    $subcat_id = $data['subcat_pag_web_id'] ?? null;
+    $url_img   = $data['url_img'] ?? '';
 
-    $item_pag_web_id = $data['item_pag_web_id'] ?? null;
-    $url_img         = $data['url_img'] ?? null;
-    $neg_id          = $administrador_actual['neg_id']; // Seguridad multi-tenant
-
-    if (!$item_pag_web_id || !$url_img) {
-        Flight::json(['success' => false, 'error' => 'Faltan datos requeridos'], 400);
+    if (!$subcat_id) {
+        Flight::json(['success' => false, 'error' => 'ID requerido'], 400);
         return;
     }
 
     try {
-        // 🔥 PHP inserta formalmente en la base de datos usando MeekroDB
-        DB::insert('reg_pag_item_img', [
-            'item_pag_web_id' => $item_pag_web_id,
-            'url_img'         => $url_img,
-            'is_visible'      => 1,
-            'orden'           => 0 // O puedes calcular el max orden si lo requieres
-        ]);
+        DB::update('reg_subcat_pag_web', [
+            'url_img' => $url_img
+        ], "subcat_pag_web_id=%i", $subcat_id);
 
-        Flight::json([
-            'success'   => true,
-            'img_id'    => DB::insertId(),
-            'url_img'   => $url_img
-        ]);
-
+        Flight::json(['success' => true]);
     } catch (Exception $e) {
-        Flight::json([
-            'success' => false,
-            'error'   => $e->getMessage()
-        ], 500);
+        Flight::json(['success' => false, 'error' => $e->getMessage()], 500);
     }
 });
 
-/* ==========================================
-   🟢 RUTAS DE IMÁGENES PARA CATEGORÍAS
-   ========================================== */
-Flight::route('GET /xoxo/reg_cat_img/listar', function(){
-    $id = $_GET['id'];
-    $rows = DB::query("SELECT * FROM reg_cat_pag_img WHERE cat_pag_web_id=%i ORDER BY orden ASC", $id);
-    Flight::json(['status'=>'ok','data'=>$rows]);
-});
-
-Flight::route('POST /xoxo/reg_cat_img/crear_desde_url', function(){
-    include DEFINITION;
-    autentificar_administrador();
-    $data = json_decode(Flight::request()->getBody(), true);
-    
-    DB::insert('reg_cat_pag_img', [
-        'cat_pag_web_id' => $data['cat_pag_web_id'],
-        'url_img'        => $data['url_img'],
-        'is_visible'     => 1,
-        'orden'          => 0
-    ]);
-    Flight::json(['success' => true]);
-});
-
-Flight::route('POST /xoxo/reg_cat_img/crear_url', function(){
-    include DEFINITION;
-    autentificar_administrador();
-    $d = Flight::request()->data->getData();
-    
-    DB::insert('reg_cat_pag_img', [
-        'cat_pag_web_id' => $d['cat'],
-        'url_img'        => trim($d['url'])
-    ]);
-    Flight::json(['status'=>'ok']);
-});
-
-Flight::route('POST /xoxo/reg_cat_img/ordenar', function(){
-    include DEFINITION;
-    autentificar_administrador();
-    $data = json_decode(Flight::request()->getBody(), true);
-    foreach($data['orden'] as $item){
-        DB::update('reg_cat_pag_img', ['orden' => (int)$item['orden']], "cat_pag_img_id=%i", (int)$item['id']);
-    }
-    Flight::json(['status'=>'ok']);
-});
-
-Flight::route('POST /xoxo/reg_cat_img/eliminar', function(){
-    include DEFINITION;
-    autentificar_administrador();
-    $d = Flight::request()->data->getData();
-    $id = $d['id'] ?? null;
-    
-    $row = DB::queryFirstRow("SELECT url_img FROM reg_cat_pag_img WHERE cat_pag_img_id=%i", $id);
-    if ($row) bunnyDelete($row['url_img']);
-    
-    DB::delete('reg_cat_pag_img', "cat_pag_img_id=%i", $id);
-    Flight::json(['status'=>'ok']);
-});
-
-
-/* ==========================================
-   🟢 RUTAS DE IMÁGENES PARA SUBCATEGORÍAS
-   ========================================== */
 Flight::route('GET /xoxo/reg_subcat_img/listar', function(){
     $id = $_GET['id'];
-    $rows = DB::query("SELECT * FROM reg_subcat_pag_img WHERE subcat_pag_web_id=%i ORDER BY orden ASC", $id);
+    $row = DB::queryFirstRow("SELECT subcat_pag_web_id, url_img, is_visible, orden FROM reg_subcat_pag_web WHERE subcat_pag_web_id=%i", $id);
+    $rows = ($row && !empty($row['url_img'])) ? [[
+        'pag_item_img_id' => $row['subcat_pag_web_id'],
+        'url_img' => $row['url_img'],
+        'is_visible' => $row['is_visible'],
+        'orden' => $row['orden']
+    ]] : [];
     Flight::json(['status'=>'ok','data'=>$rows]);
 });
 
@@ -215,12 +142,12 @@ Flight::route('POST /xoxo/reg_subcat_img/crear_desde_url', function(){
     autentificar_administrador();
     $data = json_decode(Flight::request()->getBody(), true);
     
-    DB::insert('reg_subcat_pag_img', [
-        'subcat_pag_web_id' => $data['subcat_pag_web_id'],
-        'url_img'          => $data['url_img'],
-        'is_visible'       => 1,
-        'orden'            => 0
-    ]);
+    $subcat_id = $data['subcat_pag_web_id'] ?? null;
+    $url_img = $data['url_img'] ?? null;
+
+    if ($subcat_id && $url_img) {
+        DB::update('reg_subcat_pag_web', ['url_img' => $url_img], "subcat_pag_web_id=%i", $subcat_id);
+    }
     Flight::json(['success' => true]);
 });
 
@@ -229,20 +156,18 @@ Flight::route('POST /xoxo/reg_subcat_img/crear_url', function(){
     autentificar_administrador();
     $d = Flight::request()->data->getData();
     
-    DB::insert('reg_subcat_pag_img', [
-        'subcat_pag_web_id' => $d['subcat'],
-        'url_img'           => trim($d['url'])
-    ]);
+    $subcat_id = $d['subcat'] ?? null;
+    $url = trim($d['url'] ?? '');
+
+    if ($subcat_id) {
+        DB::update('reg_subcat_pag_web', ['url_img' => $url], "subcat_pag_web_id=%i", $subcat_id);
+    }
     Flight::json(['status'=>'ok']);
 });
 
 Flight::route('POST /xoxo/reg_subcat_img/ordenar', function(){
     include DEFINITION;
     autentificar_administrador();
-    $data = json_decode(Flight::request()->getBody(), true);
-    foreach($data['orden'] as $item){
-        DB::update('reg_subcat_pag_img', ['orden' => (int)$item['orden']], "subcat_pag_img_id=%i", (int)$item['id']);
-    }
     Flight::json(['status'=>'ok']);
 });
 
@@ -252,9 +177,12 @@ Flight::route('POST /xoxo/reg_subcat_img/eliminar', function(){
     $d = Flight::request()->data->getData();
     $id = $d['id'] ?? null;
     
-    $row = DB::queryFirstRow("SELECT url_img FROM reg_subcat_pag_img WHERE subcat_pag_img_id=%i", $id);
-    if ($row) bunnyDelete($row['url_img']);
-    
-    DB::delete('reg_subcat_pag_img', "subcat_pag_img_id=%i", $id);
+    if ($id) {
+        $row = DB::queryFirstRow("SELECT url_img FROM reg_subcat_pag_web WHERE subcat_pag_web_id=%i", $id);
+        if ($row && !empty($row['url_img'])) {
+            bunnyDelete($row['url_img']);
+        }
+        DB::update('reg_subcat_pag_web', ['url_img' => ''], "subcat_pag_web_id=%i", $id);
+    }
     Flight::json(['status'=>'ok']);
 });

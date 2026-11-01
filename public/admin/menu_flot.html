@@ -1,0 +1,98 @@
+<!-- Botón Flotante Superior Izquierdo con Perfil y Menú -->
+<div id="appMenuFlotante" style="position: fixed; top: 15px; left: 20px; z-index: 1050;">
+  <button class="btn btn-primary" @click="abrirModalMenuTree" title="Ver Menú del Sistema" style="border-radius: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); padding: 6px 14px; display: flex; align-items: center; gap: 8px;">
+    <img :src="usuario.img_perfil || 'https://barsi-img.b-cdn.net/recursos/7pyi.jpg'" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;" />
+    <span style="font-weight: bold; color: #fff;">[[ usuario.nombres_apellidos || 'Menú' ]]</span>
+  </button>
+
+  <!-- Modal con TreeView de Menús y Submenús (Tema Oscuro Forzado sin backdrop) -->
+  <div id="modalMenuTree" class="modal hide fade" tabindex="-1" data-backdrop="false" style="color: #ffffff !important; background-color: #2c3e50 !important; border: none;">
+    <div class="modal-header" style="background-color: #1a252f !important; border-bottom: 1px solid #34495e;">
+      <h3 style="color: #ffffff !important; margin: 0;"><i class="icon-sitemap"></i> Menú y Submenús del Sistema</h3>
+    </div>
+    <div class="modal-body" style="max-height: 450px; overflow-y: auto; background-color: #2c3e50 !important; color: #ffffff !important;">
+      
+      <!-- Tarjeta de Información de Usuario -->
+      <div style="background: #34495e; border: 1px solid #4e6d8c; padding: 12px; margin-bottom: 15px; border-radius: 6px; display: flex; align-items: center; gap: 12px;">
+        <img :src="usuario.img_perfil || 'https://barsi-img.b-cdn.net/recursos/7pyi.jpg'" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 1px solid #7f8c8d;" />
+        <div style="color: #ffffff !important; flex-grow: 1;">
+          <strong style="font-size: 14px; color: #ffffff !important;">[[ usuario.nombres_apellidos || 'Cargando...' ]]</strong><br>
+          <span style="font-size: 12px; color: #bdc3c7 !important;">Rol: <b style="color: #fff;">[[ usuario.rol_nombre || '-' ]]</b> | Negocio: <b style="color: #fff;">[[ usuario.negocio_nombre || '-' ]]</b></span>
+          
+          <!-- Botón Salir Pequeño Centrado -->
+          <div style="text-align: center; margin-top: 8px;">
+            <a :href="apphost + '/finAdmin'" class="btn btn-danger btn-mini" style="padding: 2px 10px; font-size: 11px; color: #fff; text-decoration: none;">
+              <i class="icon-off icon-white"></i> Salir
+            </a>
+          </div>
+        </div>
+      </div>
+      
+      <div v-if="listaMenus.length === 0" style="text-align: center; padding: 20px; color: #bdc3c7;">
+        Cargando menús...
+      </div>
+
+      <!-- Árbol de Menús y Submenús con corchetes dobles [[ ]] -->
+      <ul class="treeview-list" style="list-style: none; padding-left: 0; margin: 0;">
+        <li v-for="menu in listaMenus" :key="menu.menu_id" style="margin-bottom: 18px;">
+          <div style="font-weight: bold; color: #3498db !important; font-size: 15px; margin-bottom: 6px; border-bottom: 1px solid #34495e; padding-bottom: 4px;">
+            <i class="icon-folder-open"></i> <span style="color: #3498db !important;">[[ menu.titulo ]]</span>
+          </div>
+          <ul style="list-style: none; padding-left: 20px; border-left: 2px dashed #4e6d8c; margin-left: 5px;" v-if="menu.lista_submenu && menu.lista_submenu.length > 0">
+            <li v-for="sub in menu.lista_submenu" :key="sub.submenu_id" style="padding: 6px 0;">
+              <a :href="varhost + sub.url" style="color: #ffffff !important; text-decoration: none; display: inline-block; width: 100%; font-size: 14px;" :target="sub.target || '_self'" @mouseover="$event.target.style.color='#3498db'" @mouseout="$event.target.style.color='#ffffff'">
+                <i class="icon-file-alt" style="color: #95a5a6; margin-right: 5px;"></i> <span style="color: #ffffff !important;">[[ sub.titulo ]]</span>
+              </a>
+            </li>
+          </ul>
+          <div v-else style="padding-left: 20px; color: #7f8c8d; font-style: italic; font-size: 12px;">
+            Sin submenús
+          </div>
+        </li>
+      </ul>
+    </div>
+    <div class="modal-footer" style="text-align: left; background-color: #1a252f !important; border-top: 1px solid #34495e;">
+      <button class="btn" data-dismiss="modal">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Instancia de Vue independiente para el botón flotante y el modal de menús
+  new Vue({
+    el: '#appMenuFlotante',
+    data: {
+      apphost: typeof apphost !== 'undefined' ? apphost : '',
+      varhost: typeof varhost !== 'undefined' ? varhost : '',
+      usuario: {},
+      listaMenus: []
+    },
+    delimiters: ['[[', ']]'],
+    methods: {
+      obtenerUsuarioInfo() {
+        fetch(this.apphost + '/slider/usuario/info')
+          .then(r => r.json())
+          .then(res => {
+            if (res.ok && res.datos) {
+              this.usuario = res.datos;
+            }
+          })
+          .catch(err => console.error('Error al cargar datos de usuario:', err));
+      },
+      abrirModalMenuTree() {
+        fetch(this.apphost + '/menus/tree')
+          .then(r => r.json())
+          .then(data => {
+            this.listaMenus = Array.isArray(data) ? data : [];
+            $('#modalMenuTree').modal('show');
+          })
+          .catch(() => {
+            $('#modalMenuTree').modal('show');
+          });
+      }
+    },
+    mounted() {
+      this.obtenerUsuarioInfo();
+    }
+  });
+</script>

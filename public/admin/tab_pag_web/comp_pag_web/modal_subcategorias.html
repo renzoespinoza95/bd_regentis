@@ -43,7 +43,7 @@
         </div>
       </div>
 
-      <!-- PANEL DERECHO: BUSCADOR CON 'X' + TABLA DE SUBCATEGORÍAS (Sin estilo zebra) -->
+      <!-- PANEL DERECHO: BUSCADOR CON 'X' + TABLA DE SUBCATEGORÍAS -->
       <div class="span9" style="padding-left: 10px;">
         <div class="form-inline clearfix" style="margin-bottom: 12px;">
           <div class="input-append" style="float: left; position: relative;">
@@ -87,6 +87,9 @@
   </div>
 
   <div class="modal-footer" style="text-align: left;">
+    <button class="btn btn-warning" @click="abrirSubcategorias" title="Actualizar imágenes">
+      <i class="icon-refresh"></i> <span style="color: yellow; font-weight: bold;">imagen</span>
+    </button>
     <button class="btn" data-dismiss="modal">Cerrar</button>
   </div>
 </div>
