@@ -18,41 +18,62 @@ const negociosMethods = {
       });
   },
   abrirModalCrearNeg() {
-    this.nuevoNeg = { nombre: '', puesto: '', mercado_id: null, rubros: [] };
-    this.bloquear('Cargando datos...');
-    Promise.all([this.cargarRubros(), this.cargarMercadosParaCombo()])
-      .then(() => {
-        $('#modalCrearNeg').modal('show');
+    this.nuevoNeg = { nombre: '', slug: '', celular_yape: '' };
+    this.bloquear('Verificando cuenta...');
+    axios.post(`${this.apphost}/QQvN/verificarNegocioAdmin`)
+      .then(r => {
+        if(r.data.status === 'ok') {
+          this.adminTieneNegocio = r.data.tiene_negocio;
+          $('#modalCrearNeg').modal('show');
+          if (this.adminTieneNegocio) {
+            apprise('Esta cuenta ya administra un negocio');
+          }
+        } else {
+          apprise('Error al verificar negocio de la cuenta');
+        }
       })
-      .finally(() => $.unblockUI());
+      .catch(() => {
+        apprise('Error al conectar con el servidor');
+      })
+      .finally(() => {
+        $.unblockUI();
+      });
   },
   crearNeg(){
-    if (!this.nuevoNeg.nombre.trim()) { return apprise('Escribe el nombre'); }
-    if (!this.nuevoNeg.puesto.trim()) { return apprise('Escribe el puesto'); }
-    if (!this.nuevoNeg.mercado_id) { return apprise('Selecciona un mercado'); }
+    const nombre_negocio = this.nuevoNeg.nombre.trim();
+    const slug = this.nuevoNeg.slug.trim();
+    const celular_yape = this.nuevoNeg.celular_yape.trim();
 
-    const mercado_id = typeof this.nuevoNeg.mercado_id === 'object' ? this.nuevoNeg.mercado_id.mercado_id : this.nuevoNeg.mercado_id;
+    if (!nombre_negocio) { return apprise('Escribe el nombre del negocio'); }
+
     const payload = {
-      nombre: this.nuevoNeg.nombre.trim(),
-      puesto: this.nuevoNeg.puesto.trim(),
-      mercado_id: mercado_id,
-      rubros: (this.nuevoNeg.rubros || []).map(r => r.rubro_id)
+      nombre_negocio: nombre_negocio,
+      slug: slug,
+      celular_yape: celular_yape
     };
 
-    this.bloquear('Creando negocio...');
-    axios.post(`${this.apphost}/neg/crear`, payload)
-      .then(()=>{
-        $('#modalCrearNeg').modal('hide');
-        apprise('¡Creado!');
-        this.nuevoNeg = { nombre: '', puesto: '', mercado_id: null, rubros: [] };
+    this.bloquear('Creando tienda automática...');
+    axios.post(`${this.apphost}/SubhVF/negocioAutomatico`, payload)
+      .then(r => {
+        if(r.data.status === 'ok') {
+          $('#modalCrearNeg').modal('hide');
+          apprise(r.data.msg || '¡Tienda creada correctamente!');
+          this.nuevoNeg = { nombre: '', slug: '', celular_yape: '' };
+        } else {
+          apprise(r.data.msg || 'Error al crear la tienda');
+        }
       })
-      .finally(()=>{
+      .catch(err => {
+        const msg = err.response && err.response.data && err.response.data.msg ? err.response.data.msg : 'Error al conectar con el servidor';
+        apprise(msg);
+      })
+      .finally(() => {
         $.unblockUI();
         this.listarNeg();
       });
   },
   abrirModalEditarNeg(n) {
-    this.bloquear('Cargando categorías...');
+    this.bloquear('Cargando datos...');
     Promise.all([this.cargarRubros(), this.cargarMercadosParaCombo()])
     .then(()=>{
       this.formNeg = {
@@ -116,8 +137,6 @@ const negociosMethods = {
     const m = this.mercadosOptions.find(x => parseInt(x.mercado_id,10) === mid);
     return m ? m.nombre : '';
   },
-
-  // --- MÉTODOS DEL MODAL DE LOGO Y POLLING FLASK ---
   abrirModalLogo(n) {
     this.logoNeg = {
       neg_id: n.neg_id,
@@ -128,7 +147,6 @@ const negociosMethods = {
     };
     $('#modalLogoNeg').modal('show');
   },
-
   onFileChangeLogo(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -141,7 +159,6 @@ const negociosMethods = {
     };
     reader.readAsDataURL(file);
   },
-
   guardarLogoBunny() {
     if (!this.logoNeg.file) {
       return apprise('Selecciona una imagen primero');
@@ -170,7 +187,6 @@ const negociosMethods = {
       apprise('Error de conexión con el servicio de Flask');
     });
   },
-
   iniciarPollingJobParaGuardar(jobId, flaskHost) {
     this.bloquear('Procesando imagen en segundo plano...');
     
@@ -218,7 +234,6 @@ const negociosMethods = {
         });
     }, 2000);
   },
-
   eliminarLogoBunny() {
     apprise('¿Desea eliminar la imagen actual?', { confirm: true }, ok => {
       if (!ok) return;
@@ -237,7 +252,6 @@ const negociosMethods = {
         .finally(() => $.unblockUI());
     });
   },
-
   listarNeg() {
     this.bloquear('Cargando negocios…');
     this.cargarMercadosParaCombo()
@@ -289,7 +303,40 @@ const negociosMethods = {
           this.dtNeg.clear();
           this.negs.forEach(n => {
             const mercadoNombre = this.obtenerNombreMercado(n.mercado_id);
-            const fechaFinPremium = n.fecha_fin_premium || '<span class="text-muted">Sin fecha</span>';
+            
+            let fechaFinPremium = '<span class="text-muted">Sin fecha</span>';
+            if (n.fecha_fin_premium) {
+              const parts = n.fecha_fin_premium.substring(0, 10).split('-');
+              if (parts.length === 3) {
+                const yyyy = parseInt(parts[0], 10);
+                const mm = parseInt(parts[1], 10) - 1;
+                const dd = parseInt(parts[2], 10);
+                
+                const fechaFin = new Date(yyyy, mm, dd);
+                const hoy = new Date();
+                hoy.setHours(0,0,0,0);
+                
+                const diffTime = fechaFin - hoy;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                const fechaFormateada = `${String(dd).padStart(2,'0')}/${String(mm+1).padStart(2,'0')}/${yyyy}`;
+                
+                let badgeClass = 'badge-info';
+                let badgeText = `${diffDays} días`;
+                if (diffDays < 0) {
+                  badgeClass = 'badge-important';
+                  badgeText = `Vencido (${Math.abs(diffDays)}d)`;
+                } else if (diffDays === 0) {
+                  badgeClass = 'badge-warning';
+                  badgeText = 'Hoy';
+                }
+                
+                fechaFinPremium = `${fechaFormateada} <span class="badge ${badgeClass}" style="margin-left:5px;">${badgeText}</span>`;
+              } else {
+                fechaFinPremium = n.fecha_fin_premium;
+              }
+            }
+
             const activo = `
               <label class="switch-mini">
                 <input type="checkbox" class="toggle-activo-neg" data-id="${n.neg_id}" ${parseInt(n.is_activo,10) ? 'checked' : ''}>
@@ -322,7 +369,8 @@ const negociosMethods = {
             const logo = `
               <img src="${n.img_logo || 'https://barsi-img.b-cdn.net/recursos/sg3f.png'}" style="width:55px;height:55px;object-fit:cover;border-radius:14px;border:1px solid #ddd;background:#fff;">
             `;
-            this.dtNeg.row.add([n.neg_id, logo, n.nombre || '', n.puesto || '', mercadoNombre || '', fechaFinPremium, rubrosHtml, activo, actions]);
+            const propietarioInfo = n.cod_usu ? `<b>${n.cod_usu}</b> - ${n.nombres_apellidos || ''}` : '<span class="text-muted">Sin propietario</span>';
+            this.dtNeg.row.add([n.neg_id, logo, n.nombre || '', propietarioInfo, mercadoNombre || '', fechaFinPremium, rubrosHtml, activo, actions]);
           });
           this.dtNeg.draw(false);
         });

@@ -71,34 +71,3 @@ Flight::route('POST /usuario/buscar', function () {
     );
     Flight::json($rows);
 });
-
-Flight::route('POST /usuario/liquidar', function () {
-    DB::query("SET NAMES 'utf8mb4'");
-    $d = json_decode(Flight::request()->getBody(), true) ?: [];
-    $usu_id = intval($d['usu_id'] ?? 0);
-
-    if(!$usu_id){
-        Flight::json(['success' => false, 'msg' => 'usu_id requerido'], 400);
-        return;
-    }
-
-    DB::startTransaction();
-    try{
-        DB::update('reg_usu', ['borrado_el' => date('Y-m-d H:i:s')], 'usu_id=%i', $usu_id);
-        DB::update('reg_negxusu', ['is_activo' => 0, 'borrado_el' => date('Y-m-d H:i:s')], 'usu_id=%i', $usu_id);
-        DB::commit();
-        Flight::json(['success' => true, 'usu_id' => $usu_id, 'msg' => 'Usuario liquidado']);
-    }catch(Exception $e){
-        DB::rollback();
-        Flight::json(['success' => false, 'msg' => $e->getMessage()], 500);
-    }
-});
-
-Flight::route('GET /xico/negocios/validados', function() {
-    try {
-        $rows = DB::query("SELECT neg_id, nombre FROM reg_neg WHERE is_validado = 1 ORDER BY nombre ASC");
-        Flight::json($rows);
-    } catch (Exception $e) {
-        Flight::json(['success' => false, 'msg' => $e->getMessage()], 500);
-    }
-});

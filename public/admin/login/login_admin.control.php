@@ -393,3 +393,46 @@ Flight::route('GET /menus/tree', function () {
 
     Flight::json($menus);
 });
+
+Flight::route('GET /slider/usuario/info', function () {
+    include DEFINITION;
+    autentificar_administrador();
+    global $administrador_actual;
+
+    $usu_id = intval($administrador_actual['usu_id'] ?? 0);
+
+    // Obtenemos información adicional del negocio y mercado asignados al administrador actual
+    $info_adicional = DB::queryFirstRow("
+        SELECT 
+            nx.neg_id, 
+            n.cod_neg, 
+            n.nombre AS negocio_nombre, 
+            n.mercado_id, 
+            m.nombre AS mercado_nombre
+        FROM reg_negxusu nx
+        INNER JOIN reg_neg n ON n.neg_id = nx.neg_id
+        LEFT JOIN reg_mercado m ON m.mercado_id = n.mercado_id
+        WHERE nx.usu_id = %i AND nx.is_activo = 1 AND nx.borrado_el IS NULL AND n.borrado_el IS NULL
+        ORDER BY nx.negxusu_id DESC
+        LIMIT 1
+    ", $usu_id);
+
+    if ($info_adicional) {
+        $administrador_actual['neg_id'] = $info_adicional['neg_id'];
+        $administrador_actual['cod_neg'] = $info_adicional['cod_neg'];
+        $administrador_actual['negocio_nombre'] = $info_adicional['negocio_nombre'];
+        $administrador_actual['mercado_id'] = $info_adicional['mercado_id'];
+        $administrador_actual['mercado_nombre'] = $info_adicional['mercado_nombre'];
+    } else {
+        $administrador_actual['neg_id'] = '-';
+        $administrador_actual['cod_neg'] = '-';
+        $administrador_actual['negocio_nombre'] = '-';
+        $administrador_actual['mercado_id'] = '-';
+        $administrador_actual['mercado_nombre'] = '-';
+    }
+
+    Flight::json([
+        'ok' => true,
+        'datos' => $administrador_actual
+    ]);
+});

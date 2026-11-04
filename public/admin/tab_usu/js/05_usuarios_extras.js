@@ -66,18 +66,6 @@ const usuariosExtrasMixin = {
         }
       });
     },
-    crearNegocioFantasma(u){
-      apprise('¿Crear negocio fantasma para este usuario?', { 'verify': true }, async (r) => {
-        if(!r) return;
-        bloquearUI('Creando negocio fantasma...');
-        const res = await axios.post(this.apphost + '/Pfnf/tiendaFantasma', { usu_id: u.usu_id });
-        desbloquearUI();
-        if(res.data.status === 'ok'){
-          apprise('Negocio fantasma creado correctamente');
-          this.obtenerUsuarios();
-        }
-      });
-    },
     iniciarSesionUsuario(u){
       apprise('¿Iniciar sesión como este usuario?', { 'verify': true }, async (r) => {
         if(!r) return;

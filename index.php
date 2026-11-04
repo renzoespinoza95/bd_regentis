@@ -11,6 +11,7 @@ require_once VARPATH."/classes/Meekrodb2.class.php";
 require_once VARPATH."/classes/WkHtmlToPdf.php";    
 require_once VARPATH."/classes/Mustache.class.php";
 require_once VARPATH."/classes/perso.class.php";
+require_once VARPATH."/classes/Lorem.class.php";
 require_once VARPATH."/inc/config.inc.php";
 require 'flight/Flight.php';
 $version = 1;

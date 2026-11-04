@@ -133,7 +133,6 @@ Flight::route('POST /usuario/reiniciar', function(){
     DB::query("SET NAMES 'utf8mb4'");
     $d = json_decode(Flight::request()->getBody(), true) ?: [];
     $usu_id = intval($d['usu_id'] ?? 0);
-
     if(!$usu_id){
         Flight::json(['status' => 'error', 'msg' => 'usu_id requerido'], 400);
         return;
@@ -153,7 +152,7 @@ Flight::route('POST /usuario/reiniciar', function(){
         DB::update('reg_usu', [
             'nombres_apellidos' => $nombre_completo,
             'sobrenombre' => $nick,
-            'google_uid' => generarUID(),    
+            'google_uid' => strtoupper(substr(md5(uniqid('', true)), 0, 10)),    
             'celular' => $celular,
             'dni' => $dni,
             'tipoxusu_id' => 1,

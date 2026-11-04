@@ -10,15 +10,9 @@
         <label class="control-label">Nombres y Apellidos</label>
         <div class="controls"><input v-model="formulario.nombres_apellidos" class="input-xxlarge"></div>
       </div>   
-      <div class="control-group">
-        <label class="control-label">Asignar Negocio:</label>
-        <div class="controls">
-            <v-select :options="negociosValidados" label="nombre" v-model="negocioSeleccionado" placeholder="Seleccione un negocio..."></v-select>
-        </div>
-      </div>
     </form>
   </div>
-  <div class="modal-footer">
+  <div class="modal-footer" style="text-align: left;">
     <button class="btn btn-primary" @click="guardarEdicion"><i class="icon-ok icon-white"></i> Guardar</button>
     <button class="btn" data-dismiss="modal">Cancelar</button>
   </div>

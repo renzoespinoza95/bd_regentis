@@ -52,17 +52,6 @@ Flight::route('POST /xico/usu/editar', function () {
             'is_activo'         => isset($d['is_activo']) ? (int)$d['is_activo'] : 1
         ], "usu_id=%i", $usu_id);
 
-        if (!empty($d['neg_id'])) {
-            $neg_id = (int)$d['neg_id'];
-            $relacionExistente = DB::queryFirstRow("SELECT * FROM reg_negxusu WHERE usu_id = %i", $usu_id);
-
-            if ($relacionExistente) {
-                DB::update('reg_negxusu', ['neg_id' => $neg_id, 'is_activo' => 1], "usu_id=%i", $usu_id);
-            } else {
-                DB::insert('reg_negxusu', ['usu_id' => $usu_id, 'neg_id' => $neg_id, 'is_activo' => 1, 'fecha_creacion' => date('Y-m-d H:i:s')]);
-            }
-        }
-
         Flight::json(['success' => true]);
     } catch(Exception $e){
         Flight::json(['success' => false, 'msg' => $e->getMessage()], 500);

@@ -170,6 +170,11 @@ $admin_nombre = $administrador_actual['nombres_apellidos'];
       <table v-else class="table table-bordered">
 
         <tr>
+          <th>Cód. usuario</th>
+          <td>{{ misDatos.cod_usu }}</td>
+        </tr>
+
+        <tr>
           <th>Sobrenombre</th>
           <td>{{ misDatos.sobrenombre }}</td>
         </tr>

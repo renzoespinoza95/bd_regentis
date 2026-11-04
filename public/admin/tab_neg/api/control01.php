@@ -84,6 +84,17 @@ Flight::route('GET /neg/listar', function() {
             ", $r['neg_id']);
             $r['rubros_obj'] = $rubros;
             $r['rubros'] = implode(', ', array_map(fn($x)=>$x['nombre'], $rubros));
+
+            $prop = DB::queryFirstRow("
+                SELECT u.cod_usu, u.nombres_apellidos
+                FROM reg_negxusu nx
+                INNER JOIN reg_usu u ON u.usu_id = nx.usu_id
+                WHERE nx.neg_id = %i AND nx.is_activo = 1 AND nx.borrado_el IS NULL
+                ORDER BY nx.negxusu_id DESC
+                LIMIT 1
+            ", $r['neg_id']);
+            $r['cod_usu'] = $prop ? $prop['cod_usu'] : '';
+            $r['nombres_apellidos'] = $prop ? $prop['nombres_apellidos'] : '';
         }
         Flight::json(['status'=>'ok', 'data'=>$rows]);
     } catch (Exception $e) {

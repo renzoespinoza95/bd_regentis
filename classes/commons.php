@@ -238,7 +238,7 @@ function des_barsi(string $tokenB64): string {
         throw new RuntimeException('Token inválido');
     }
     $iv = substr($raw, 0, 12);
-    $tag = substr($raw, -16);                 // 128-bit tag al final
+    $tag = substr($raw, -16);                   // 128-bit tag al final
     $ciphertext = substr($raw, 12, -16);      // medio: solo ciphertext
     $cipher = 'aes-256-gcm';
     $plaintext = openssl_decrypt($ciphertext, $cipher, $key, OPENSSL_RAW_DATA, $iv, $tag);
@@ -378,39 +378,34 @@ function veri_membresia($usu_id){
     );
 
     /* =====================================
-       BUSCAR MEMBRESIA
+       BUSCAR MEMBRESIA EN REG_NEG
     ====================================== */
 
-    $membresia = DB::queryFirstRow("
+    $negocio = DB::queryFirstRow("
 
         SELECT
 
-            motivo,
-
-            is_aprobado,
+            is_activo,
 
             fecha_inicio_premium,
 
             fecha_fin_premium
 
-        FROM reg_neg_pago
+        FROM reg_neg
 
         WHERE neg_id = %i
-
-        AND borrado_el IS NULL
-
-        ORDER BY fecha_fin_premium DESC,
-                 neg_pago_id DESC
 
         LIMIT 1
 
     ", $neg_id);
 
-    if(!$membresia){
+    if(!$negocio){
 
         return null;
 
     }
+
+    $is_aprobado = (!empty($negocio['fecha_fin_premium']) && strtotime($negocio['fecha_fin_premium']) >= time()) ? 1 : 0;
 
     /* =====================================
        RESPONSE
@@ -418,23 +413,13 @@ function veri_membresia($usu_id){
 
     return [
 
-        'motivo' =>
+        'motivo' => 'ANUAL',
 
-            $membresia['motivo'],
+        'is_aprobado' => $is_aprobado,
 
-        'is_aprobado' =>
+        'fecha_inicio_premium' => $negocio['fecha_inicio_premium'] ?? null,
 
-            intval(
-                $membresia['is_aprobado']
-            ),
-
-        'fecha_inicio_premium' =>
-
-            $membresia['fecha_inicio_premium'],
-
-        'fecha_fin_premium' =>
-
-            $membresia['fecha_fin_premium']
+        'fecha_fin_premium' => $negocio['fecha_fin_premium'] ?? null
 
     ];
 
@@ -457,42 +442,34 @@ function veri_membresia_neg($neg_id){
     }
 
     /* =====================================
-       BUSCAR MEMBRESIA
+       BUSCAR MEMBRESIA EN REG_NEG
     ====================================== */
 
-    $membresia = DB::queryFirstRow("
+    $negocio = DB::queryFirstRow("
 
         SELECT
 
-            motivo,
-
-            is_aprobado,
+            is_activo,
 
             fecha_inicio_premium,
 
             fecha_fin_premium
 
-        FROM reg_neg_pago
+        FROM reg_neg
 
         WHERE neg_id = %i
-
-        AND borrado_el IS NULL
-
-        ORDER BY
-
-            fecha_fin_premium DESC,
-
-            neg_pago_id DESC
 
         LIMIT 1
 
     ", $neg_id);
 
-    if(!$membresia){
+    if(!$negocio){
 
         return null;
 
     }
+
+    $is_aprobado = (!empty($negocio['fecha_fin_premium']) && strtotime($negocio['fecha_fin_premium']) >= time()) ? 1 : 0;
 
     /* =====================================
        RESPONSE
@@ -500,25 +477,14 @@ function veri_membresia_neg($neg_id){
 
     return [
 
-        'motivo' =>
+        'motivo' => 'ANUAL',
 
-            $membresia['motivo'],
+        'is_aprobado' => $is_aprobado,
 
-        'is_aprobado' =>
+        'fecha_inicio_premium' => $negocio['fecha_inicio_premium'] ?? null,
 
-            intval(
-                $membresia['is_aprobado']
-            ),
-
-        'fecha_inicio_premium' =>
-
-            $membresia['fecha_inicio_premium'],
-
-        'fecha_fin_premium' =>
-
-            $membresia['fecha_fin_premium']
+        'fecha_fin_premium' => $negocio['fecha_fin_premium'] ?? null
 
     ];
 
 }
-

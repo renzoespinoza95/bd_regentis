@@ -63,29 +63,18 @@ const usuariosCrudMixin = {
     },
     abrirModalEditar(u) {
       this.formulario = { usu_id: u.usu_id, cod_usuario: u.cod_usu, dni: u.dni || '', sobrenombre: u.sobrenombre || '', nombres_apellidos: u.nombres_apellidos || '' };
-      this.negocioSeleccionado = this.negociosValidados.find(n => Number(n.neg_id) === Number(u.neg_id)) || null;
       $('#modalEditarUsuario').modal('show');
     },
     guardarEdicion() {
-      const idFinalNegocio = (this.negocioSeleccionado && typeof this.negocioSeleccionado === 'object') ? this.negocioSeleccionado.neg_id : this.negocioSeleccionado;
-      const payload = { ...this.formulario, neg_id: idFinalNegocio };
+      const payload = { ...this.formulario };
       axios.post(this.apphost + '/xico/usu/editar', payload).then(() => {
         $('#modalEditarUsuario').modal('hide');
         this.obtenerUsuarios();
       });
     },
-    eliminarUsuario(u) {
-      if(confirm(`Liquidar usuario ${u.usu_id}?`)){
-        axios.post(this.apphost + '/usuario/liquidar', { usu_id: u.usu_id }).then(() => { this.obtenerUsuarios(); });
-      }
-    },
     abrirModalBuscar() { this.resultados = []; $('#modalBuscarUsuario').modal('show'); },
     buscarUsuario() {
       axios.post(this.apphost + '/usuario/buscar', { sobrenombre: this.buscarSobrenombre }).then(r => { this.resultados = r.data; });
-    },
-    async cargarNegociosValidados() {
-      const r = await axios.get(this.apphost + '/xico/negocios/validados');
-      this.negociosValidados = r.data.map(n => ({ neg_id: Number(n.neg_id), nombre: n.nombre }));
     }
   }
 };

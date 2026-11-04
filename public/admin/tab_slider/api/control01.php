@@ -42,7 +42,7 @@ Flight::route('GET /slider/inicio', function () {
     $partials = [
         'head'           => file_get_contents($basePath . '/head.html'),
         'navbar_sliders' => file_get_contents($basePath . '/navbar_sliders.html'),
-        'menu_flot'      => file_get_contents($basePath . '/menu_flot.html'),
+        'menu_flot'      => file_get_contents(VARPATH . '/public/admin/menu_flot.html'),
         'modal_crear'    => file_get_contents($basePath . '/modal_crear.html'),
         'modal_editar'   => file_get_contents($basePath . '/modal_editar.html'),
         'modal_detalle'  => file_get_contents($basePath . '/modal_detalle.html'),
@@ -54,17 +54,6 @@ Flight::route('GET /slider/inicio', function () {
         $data,
         $partials
     );
-});
-
-Flight::route('GET /slider/usuario/info', function () {
-    include DEFINITION;
-    autentificar_administrador();
-    global $administrador_actual;
-
-    Flight::json([
-        'ok' => true,
-        'datos' => $administrador_actual
-    ]);
 });
 
 Flight::route('GET /menus/tree', function () {

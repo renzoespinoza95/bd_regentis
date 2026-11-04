@@ -2,39 +2,37 @@
 <div id="modalCrearNeg" class="modal hide fade" tabindex="-1">
   <div class="modal-header">
     <button type="button" class="close" data-dismiss="modal">×</button>
-    <h3>Nuevo Negocio</h3>
+    <h3>Nuevo Negocio (Automático)</h3>
   </div>
   <div class="modal-body">
-    <form class="form-horizontal">
+    <div v-if="adminTieneNegocio" class="alert alert-block alert-error" style="margin-bottom: 0;">
+      <h4>¡Aviso!</h4>
+      Esta cuenta ya administra un negocio. No se puede crear otro.
+    </div>
+    <form v-else class="form-horizontal">
       <div class="control-group">
-        <label class="control-label">Nombre</label>
+        <label class="control-label">Nombre del Negocio</label>
         <div class="controls">
           <input type="text" class="span12" v-model="nuevoNeg.nombre" placeholder="Nombre del negocio">
         </div>
       </div>
       <div class="control-group">
-        <label class="control-label">Puesto</label>
+        <label class="control-label">Slug</label>
         <div class="controls">
-          <input type="text" class="span12" v-model="nuevoNeg.puesto" placeholder="Número o nombre de puesto">
+          <input type="text" class="span12" v-model="nuevoNeg.slug" placeholder="Ej: mi-tienda-online">
         </div>
       </div>
       <div class="control-group">
-        <label class="control-label">Mercado</label>
+        <label class="control-label">Celular (Yape)</label>
         <div class="controls">
-          <v-select :options="mercadosOptions" label="nombre" v-model="nuevoNeg.mercado_id" placeholder="Seleccione mercado"></v-select>
-        </div>
-      </div>
-      <div class="control-group">
-        <label class="control-label">Rubros</label>
-        <div class="controls">
-          <v-select :options="rubrosOptions" label="nombre" multiple v-model="nuevoNeg.rubros" placeholder="Seleccione rubros"></v-select>
+          <input type="text" class="span12" v-model="nuevoNeg.celular_yape" placeholder="Número de celular Yape">
         </div>
       </div>
     </form>
   </div>
   <div class="modal-footer" style="text-align: left !important;">
-    <button class="btn btn-primary" @click="crearNeg">Crear Negocio</button>
-    <button class="btn" data-dismiss="modal">Cancelar</button>
+    <button v-if="!adminTieneNegocio" class="btn btn-primary" @click="crearNeg">Crear Negocio Automático</button>
+    <button class="btn" data-dismiss="modal">Cerrar</button>
   </div>
 </div>
 

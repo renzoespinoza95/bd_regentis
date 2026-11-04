@@ -34,12 +34,12 @@ const propietariosMethods = {
               <div class="well" style="margin-top:10px;">
                 <div style="display:flex; gap:12px;">
                   <img src="${p.img_perfil || 'https://barsi-img.b-cdn.net/recursos/sg3f.png'}" style="width:60px; height:60px; border-radius:14px; object-fit:cover;">
-                  <div style="flex:1;">
-                    <div style="font-weight:bold; font-size:14px; color:#333;">${p.nombres_apellidos || ''}</div>
-                    <div style="color:#666;">@${p.sobrenombre || ''}</div>
-                    <div style="color:#666;">${p.cod_usu || ''}</div>
-                    <div style="color:#666;">${p.celular || ''}</div>
-                    <div style="color:#666;">${p.email || ''}</div>
+                  <div style="flex:1; color:#fff !important;">
+                    <div style="font-weight:bold; font-size:14px; color:#fff !important;">${p.nombres_apellidos || ''}</div>
+                    <div style="color:#fff !important;">@${p.sobrenombre || ''}</div>
+                    <div style="color:#fff !important;">${p.cod_usu || ''}</div>
+                    <div style="color:#fff !important;">${p.celular || ''}</div>
+                    <div style="color:#fff !important;">${p.email || ''}</div>
                   </div>
                   <div>
                     <button class="btn btn-danger btn-mini btn-eliminar-prop" data-negxusuid="${p.negxusu_id}" type="button">Eliminar asignación</button>
@@ -69,6 +69,14 @@ $(document).ready(function() {
       .then(r => {
         if (r.data.status === 'ok') {
           foundUsuarioData = r.data.usuario;
+          
+          if (r.data.tiene_negocio) {
+            apprise(`Esta cuenta ya administra un negocio (${r.data.negocio_nombre})`);
+            $('#modal_card_usuario').hide();
+            foundUsuarioData = null;
+            return;
+          }
+
           $('#modal_usu_img').attr('src', foundUsuarioData.img_perfil || 'https://barsi-img.b-cdn.net/recursos/sg3f.png');
           $('#modal_usu_nombre').text(foundUsuarioData.nombres_apellidos || '');
           $('#modal_usu_sobrenombre').text('@' + (foundUsuarioData.sobrenombre || ''));
@@ -112,8 +120,7 @@ $(document).ready(function() {
         if (typeof appNeg !== 'undefined' && appNeg.listarPropietariosModal) {
           appNeg.listarPropietariosModal();
         } else {
-          // Disparar recarga manual si fuera necesario
-          $('#btn_modal_buscar_usu').trigger('click'); // o refrescar
+          $('#btn_modal_buscar_usu').trigger('click');
         }
       } else {
         apprise(r.data.msg || 'Error al asignar');

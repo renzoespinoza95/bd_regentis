@@ -6,6 +6,5 @@ new Vue({
   mounted() {
     this.obtenerUsuarios();
     this.obtenerTipousuarios();
-    this.cargarNegociosValidados();
   }
 });

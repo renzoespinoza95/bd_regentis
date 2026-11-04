@@ -2,7 +2,7 @@
 <div id="appMenuFlotante" style="position: fixed; top: 15px; left: 20px; z-index: 1050;">
   <button class="btn btn-primary" @click="abrirModalMenuTree" title="Ver Menú del Sistema" style="border-radius: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); padding: 6px 14px; display: flex; align-items: center; gap: 8px;">
     <img :src="usuario.img_perfil || 'https://barsi-img.b-cdn.net/recursos/7pyi.jpg'" style="width: 24px; height: 24px; border-radius: 50%; object-fit: cover;" />
-    <span style="font-weight: bold; color: #fff;">[[ usuario.nombres_apellidos || 'Menú' ]]</span>
+    <span style="font-weight: bold; color: #fff;">[[ usuario.nombres_apellidos || 'Menú' ]] <span v-if="usuario.cod_usu" style="font-weight: normal; opacity: 0.85;">([[ usuario.cod_usu ]])</span></span>
   </button>
 
   <!-- Modal con TreeView de Menús y Submenús (Tema Oscuro Forzado sin backdrop) -->
@@ -16,8 +16,12 @@
       <div style="background: #34495e; border: 1px solid #4e6d8c; padding: 12px; margin-bottom: 15px; border-radius: 6px; display: flex; align-items: center; gap: 12px;">
         <img :src="usuario.img_perfil || 'https://barsi-img.b-cdn.net/recursos/7pyi.jpg'" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 1px solid #7f8c8d;" />
         <div style="color: #ffffff !important; flex-grow: 1;">
-          <strong style="font-size: 14px; color: #ffffff !important;">[[ usuario.nombres_apellidos || 'Cargando...' ]]</strong><br>
-          <span style="font-size: 12px; color: #bdc3c7 !important;">Rol: <b style="color: #fff;">[[ usuario.rol_nombre || '-' ]]</b> | Negocio: <b style="color: #fff;">[[ usuario.negocio_nombre || '-' ]]</b></span>
+          <strong style="font-size: 14px; color: #ffffff !important;">[[ usuario.nombres_apellidos || 'Cargando...' ]] <span v-if="usuario.cod_usu" style="color: #3498db; font-weight: normal;">([[ usuario.cod_usu ]])</span></strong><br>
+          <span style="font-size: 12px; color: #bdc3c7 !important;">
+            Rol: <b style="color: #fff;">[[ usuario.rol_nombre || '-' ]]</b> | 
+            Mercado: <b style="color: #fff;">[[ usuario.mercado_id || '-' ]] → [[ usuario.mercado_nombre || '-' ]]</b> | 
+            Negocio: <b style="color: #fff;">[[ usuario.neg_id || '-' ]] → [[ usuario.cod_neg || '-' ]]</b>
+          </span>
           
           <!-- Botón Salir Pequeño Centrado -->
           <div style="text-align: center; margin-top: 8px;">

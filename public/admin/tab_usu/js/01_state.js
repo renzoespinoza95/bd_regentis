@@ -10,7 +10,5 @@ const usuState = {
     formulario: { dni: '', tipoxusu_obj: null },
     detalle: {},
     buscarSobrenombre: '',
-    resultados: [],
-    negociosValidados: [],
-    negocioSeleccionado: null
+    resultados: []
 };
