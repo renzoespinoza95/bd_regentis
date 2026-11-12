@@ -1,0 +1,107 @@
+<script type="text/x-template" id="tpl-categoria-form">
+  <div>
+    <div class="control-group">
+      <label>Nombre</label>
+      <div class="controls">
+        <input type="text" v-model="cat.name" maxlength="50" style="width: 100%; box-sizing: border-box;">
+      </div>
+    </div>
+
+    <div class="control-group">
+      <label style="cursor: pointer; display: flex; align-items: center; gap: 8px; margin: 0;">
+        <input type="checkbox" :checked="cat.is_activo !== 0 && cat.is_activo !== false" @change="cat.is_activo = $event.target.checked ? 1 : 0" style="margin: 0;">
+        <span>Categoría activa</span>
+      </label>
+      <div style="font-size: 12px; color: #999; margin-top: 2px;">Si se desactiva, se mostrará en gris y cursiva.</div>
+    </div>
+
+    <div class="control-group">
+      <label>
+        Ícono:
+        <span v-if="cat.icon" style="font-size: 22px; vertical-align: middle;" v-text="cat.icon"></span>
+        <span v-else style="color: #999; font-size: 12px;">(ninguno)</span>
+      </label>
+      <div class="controls">
+        <div style="max-height: 140px; overflow-y: auto; border: 1px solid #ccc; border-radius: 4px; padding: 6px; background: #fafafa; display: grid; grid-template-columns: repeat(auto-fill, minmax(36px, 1fr)); gap: 4px;">
+          <button type="button" v-for="e in emojis" :key="e"
+                  @click="cat.icon = (cat.icon === e ? '' : e)"
+                  :style="{ fontSize: '20px', lineHeight: '28px', padding: '0', margin: '0', cursor: 'pointer', borderRadius: '4px', border: cat.icon === e ? '2px solid #27ae60' : '1px solid transparent', background: cat.icon === e ? '#e8f8f0' : 'transparent' }"
+                  v-text="e"></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <label>Descripción breve</label>
+      <div class="controls">
+        <input type="text" v-model="cat.brief" maxlength="100" style="width: 100%; box-sizing: border-box;">
+      </div>
+    </div>
+
+    <div class="control-group">
+      <label>Imagen de la categoría</label>
+      <div class="controls">
+
+        <!-- ZONA IDÉNTICA A EDITAR SUBCATEGORÍA -->
+        <div @dragover.prevent @drop.prevent="soltarUrlsCat"
+             style="background: #1a252f; border: 2px dashed #e67e22; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+          <div style="font-weight: bold; font-size: 13px; color: #e67e22; margin-bottom: 6px;">Ingrese la URL de la imagen (o arrastra enlaces aquí):</div>
+          <div style="display: flex; gap: 10px; margin-bottom: 8px;">
+            <input type="text" v-model="cat.urlTmp" placeholder="https://ejemplo.com/imagen.jpg" style="flex: 1; margin: 0; background: #2c3e50; color: #fff; border: 1px solid #4e6d8c;">
+            <button class="btn btn-success" type="button" @click="aceptarUrl">Aceptar</button>
+          </div>
+
+          <div style="text-align: center; margin-top: 6px;">
+            <div style="font-size: 11px; color: #bdc3c7; margin-bottom: 4px;">También puedes pegar múltiples enlaces abajo (uno por línea):</div>
+            <textarea v-model="cat.urlsArrastradas" @input="actualizarPreviewUrlTextarea" placeholder="https://ejemplo.com/img1.jpg" rows="2" style="width: 100%; box-sizing: border-box; background: #2c3e50; color: #fff; border: 1px solid #4e6d8c; font-size: 11px; resize: vertical;"></textarea>
+            
+            <div v-if="cat.previewUrlList && cat.previewUrlList.length" style="display: flex; gap: 8px; justify-content: center; margin-top: 6px; flex-wrap: wrap;">
+              <div v-for="(u, idx) in cat.previewUrlList" :key="idx" style="position: relative; width: 60px; height: 60px; border-radius: 4px; overflow: hidden; border: 1px solid #4e6d8c;">
+                <img :src="u" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://barsi-img.b-cdn.net/regx/Wirr77.jpg';" />
+                <button type="button" @click="quitarUrlLista(idx)" style="position: absolute; top: 1px; right: 1px; background: rgba(231, 76, 60, 0.9); color: white; border: none; border-radius: 50%; width: 16px; height: 16px; line-height: 14px; text-align: center; font-size: 9px; cursor: pointer;">×</button>
+              </div>
+            </div>
+
+            <div style="text-align: right; margin-top: 6px;">
+              <button v-if="cat.previewUrlList && cat.previewUrlList.length" class="btn btn-primary btn-mini" type="button" @click="aplicarUrlsArrastradas">Usar URL</button>
+            </div>
+          </div>
+        </div>
+
+        <div @click="abrirSelector"
+             @dragover.prevent="hover = true"
+             @dragleave.prevent="hover = false"
+             @drop.prevent="soltarArchivo"
+             :style="{ border: '2px dashed ' + (hover ? '#f39c12' : '#27ae60'), background: '#1a252f', borderRadius: '8px', padding: '20px', textAlign: 'center', cursor: 'pointer', color: '#fff' }">
+          <input type="file" ref="input" accept="image/*" style="display: none;" @change="elegir">
+          <div v-if="!previewSrc">
+            <div style="font-size: 24px; margin-bottom: 8px;">📋</div>
+            <div style="font-weight: bold; font-size: 15px; margin-bottom: 4px;">Pegar / Arrastrar Archivo de PC</div>
+            <div style="font-size: 12px; color: #bdc3c7;">(Clic para seleccionar o suelta aquí)</div>
+          </div>
+          <div v-else style="position: relative; display: inline-block;">
+            <img :src="previewSrc" style="max-width: 100%; max-height: 150px; border-radius: 6px; border: 1px solid #4e6d8c; object-fit: cover;">
+            <button type="button" @click.stop="quitar" title="Quitar imagen"
+                    style="position: absolute; top: 4px; right: 4px; background: rgba(231, 76, 60, 0.9); color: white; border: none; border-radius: 50%; width: 22px; height: 22px; line-height: 20px; text-align: center; font-weight: bold; font-size: 12px; cursor: pointer;">×</button>
+          </div>
+        </div>
+
+        <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center;">
+          <button class="btn btn-success" type="button" @click="subirClick" :disabled="!cat.file">Subir archivo de PC</button>
+          <span v-if="cat.file" style="font-size: 12px; color: #e67e22;">Pendiente de subir</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- DANGER ZONE: solo al editar una categoría existente -->
+    <div v-if="cat.category_id" style="margin-top: 24px; border: 1px solid #c0392b; border-radius: 6px; background: #fdecea; padding: 12px;">
+      <div style="color: #c0392b; font-weight: bold; font-size: 14px; margin-bottom: 4px;">⚠ Danger zone</div>
+      <div style="font-size: 12px; color: #7b241c; margin-bottom: 10px;">
+        Eliminar esta categoría también elimina sus subcategorías y los productos que dependen de ella.
+      </div>
+      <button type="button" class="btn btn-danger" @click="$emit('eliminar')">
+        <i class="icon-trash icon-white"></i> Eliminar categoría
+      </button>
+    </div>
+  </div>
+</script>

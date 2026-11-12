@@ -139,8 +139,10 @@ Flight::route('POST /QQvN/verificarNegocioAdmin', function(){
 Flight::route('POST /QQvN/neg/propietarios', function(){
     autentificar_administrador();
     DB::query("SET NAMES 'utf8mb4'");
+    include DEFINITION;
     $data = Flight::request()->data->getData();
     $neg_id = intval($data['neg_id'] ?? 0);
+    $current_usu_id = intval($administrador_actual['usu_id'] ?? 0);
 
     $rows = DB::query("
         SELECT nx.negxusu_id, nx.neg_id, nx.usu_id, nx.is_activo, nx.fecha_creacion, u.cod_usu, u.nombres_apellidos, u.sobrenombre, u.celular, u.email, u.img_perfil, u.tipoxusu_id
@@ -149,7 +151,7 @@ Flight::route('POST /QQvN/neg/propietarios', function(){
         WHERE nx.neg_id = %i AND nx.borrado_el IS NULL
         ORDER BY nx.negxusu_id DESC
     ", $neg_id);
-    Flight::json(['status'=>'ok', 'rows'=>$rows]);
+    Flight::json(['status'=>'ok', 'rows'=>$rows, 'current_usu_id' => $current_usu_id]);
 });
 
 Flight::route('POST /QQvN/neg/propietario/eliminar', function(){

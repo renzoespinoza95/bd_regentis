@@ -10,7 +10,6 @@ if (!empty($ssa_id) && is_string($ssa_id)) {
 	        require_once VARPATH."/public/admin/tab_vari/control.php";
 			require_once VARPATH."/public/admin/mod_bot/bot.php";
 			require_once VARPATH."/public/admin/tab_prod/control.php";
-			require_once VARPATH."/public/admin/tab_cat/control.php";
 			require_once VARPATH."/public/admin/tab_order/control.php";
 			require_once VARPATH."/public/admin/tab_inventario/control.php";
 			require_once VARPATH."/public/admin/tab_proveedores/control.php";
@@ -27,7 +26,6 @@ if (!empty($ssa_id) && is_string($ssa_id)) {
 			require_once VARPATH."/public/admin/tab_prod_global/control.php";
 			require_once VARPATH."/public/admin/tab_tema/control.php";			
 			require_once VARPATH."/public/admin/tab_pag_web/control.php";
-
 	        break;
 
 	    case 'NEGOCIO':
@@ -77,13 +75,13 @@ if (!empty($ssa_id) && is_string($ssa_id)) {
 
 require_once VARPATH."/public/ofer/usu.php";
 require_once VARPATH."/public/ofer/neg.php";
-require_once VARPATH."/public/admin/tab_prod/app.php";
+require_once VARPATH."/public/ofer/prod.php";
+require_once VARPATH."/public/ofer/categoria.php";
 require_once VARPATH."/public/admin/login/app.php";
 require_once VARPATH."/public/admin/tab_chat/app.php";
 require_once VARPATH."/public/admin/tab_fav/app.php";
 require_once VARPATH."/public/admin/tab_order/app.php";
 require_once VARPATH."/public/admin/tab_trabajador/app.php";
 require_once VARPATH."/public/admin/tab_cliente/app.php";
-require_once VARPATH."/public/admin/tab_cat/app.php";
 require_once VARPATH."/public/admin/tab_mercado/app.php";
 require_once VARPATH."/public/ofer/slider.php";

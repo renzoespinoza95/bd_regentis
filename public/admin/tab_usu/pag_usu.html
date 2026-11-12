@@ -16,8 +16,8 @@
         <h2>{{ title }}</h2>
 
         <div class="form-actions">
-          <button class="btn btn-success" @click="abrirModalCrear">
-            <i class="icon-plus icon-white"></i> Nuevo Usuario
+          <button class="btn btn-warning" @click="crearUsuarioAutomatico">
+            <i class="icon-magic icon-white"></i> Automático
           </button>
           <button class="btn btn-info" @click="abrirModalBuscar">
             <i class="icon-search icon-white"></i> Buscar Usuario
@@ -31,7 +31,6 @@
     </div>
 
     <!-- Modales del sistema de usuarios -->
-    {{> modal_crear}}
     {{> modal_editar}}
     {{> modal_detalle}}
     {{> modal_buscar}}

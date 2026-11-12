@@ -3,6 +3,10 @@
 const pagWebState = {
   apphost: (typeof window.apphost !== 'undefined' ? window.apphost : ''),
   
+  // Datos del negocio para el título
+  negId: 0,
+  nombreNegocio: '',
+
   // Selección actual de columnas jerárquicas de la vista principal
   catSeleccionada: null,
   subcatSeleccionada: null,
@@ -10,12 +14,20 @@ const pagWebState = {
   // Filtro de categoría en el panel izquierdo del modal de subcategorías
   catModalSubcatFiltro: null,
 
+  // Entidad cuyas imágenes se están viendo en el modal Lista de Imágenes: 'item' | 'cat' | 'subcat'
+  entidadActual: 'item',
+
   videoFormEditar: {
     pag_item_vid_id: null,
     titulo: ''
   },
   items: [],
   urlImagenPegar: '',
+
+  // Zona "Ingrese la URL de la imagen" del modal Lista de Imágenes
+  urlImagenTmp: '',
+  urlsImagenTxt: '',
+  previewUrlList: [],
   categorias: [],
   subcategorias: [],
   videoActual: {},
@@ -64,8 +76,12 @@ const pagWebState = {
   preview: null,
   itemActual: 0,
 
-  // 🔥 NUEVAS PROPIEDADES REACTIVAS REQUERIDAS PARA LA SUBIDA MÚLTIPLE Y VISTA PREVIA
   previewsTemporales: [],
   archivosSeleccionados: [],
-  imagenModalUrl: ''
+  imagenModalUrl: '',
+
+  // 🔥 PROPIEDADES PARA EL ÁRBOL DE CONTENIDO (Web, POS y Sliders)
+  arbolWeb: [],
+  arbolPos: [],
+  arbolSliders: []
 };

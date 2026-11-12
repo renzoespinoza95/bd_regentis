@@ -16,16 +16,18 @@ const usuariosCrudMixin = {
     },
     initDataTable(sel) {
       this.$nextTick(() => {
-        if ($.fn.DataTable.isDataTable(sel)) { $(sel).DataTable().destroy(); }
+        // Destruir instancia previa si existe para forzar re-renderizado del nuevo DOM de Vue
+        if ($.fn.DataTable.isDataTable(sel)) { 
+          $(sel).DataTable().destroy(); 
+        }
         
         $(sel).DataTable({
           destroy: true,
-          retrieve: true,
           scrollX: true,
           dom: 'frtip',
-          order: [[1,'desc']],
+          order: [[1,'desc']], // Mantiene el usuario recién creado con mayor ID arriba
           rowCallback: (row, data) => {
-            // Vincular evento de copia dinámicamente con el formato requerido por el usuario
+            // Vincular evento de copia dinámicamente en cada renderizado de fila
             $(row).find('.btn-copiar-pin').off('click').on('click', function() {
               const textoACopiar = $(this).data('copiar');
               if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -49,16 +51,9 @@ const usuariosCrudMixin = {
           }
         });
         
-        agregarScrollBotones($(sel));
-      });
-    },
-    abrirModalCrear() {
-      $('#modalCrearUsuario').modal('show');
-    },
-    crearUsuario() {
-      axios.post(this.apphost + '/xico/usu/crear', this.nuevo).then(() => {
-        $('#modalCrearUsuario').modal('hide');
-        this.obtenerUsuarios();
+        if (typeof agregarScrollBotones === 'function') {
+          agregarScrollBotones($(sel));
+        }
       });
     },
     abrirModalEditar(u) {

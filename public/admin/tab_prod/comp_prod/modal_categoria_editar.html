@@ -1,0 +1,10 @@
+<div id="modalEditarCategoria" class="modal hide fade">
+  <div class="modal-header"><h3><i class="icon-pencil"></i> Editar Categoría</h3></div>
+  <div class="modal-body" style="max-height: 450px; overflow-y: auto;">
+    <categoria-form ref="formEditar" :cat="catEditar" :emojis="emojisComercio" @eliminar="eliminarCategoria" @img-guardada="cargarCategorias"></categoria-form>
+  </div>
+  <div class="modal-footer" style="text-align: left; display: flex; gap: 10px; align-items: center; justify-content: flex-start;">
+    <button class="btn btn-primary" type="button" @click="guardarCategoria">Guardar Cambios</button>
+    <button class="btn" data-dismiss="modal">Cancelar</button>
+  </div>
+</div>

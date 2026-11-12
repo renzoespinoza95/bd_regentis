@@ -1,0 +1,10 @@
+<div id="modalCrearCategoria" class="modal hide fade">
+  <div class="modal-header"><h3><i class="icon-plus-sign"></i> Nueva Categoría</h3></div>
+  <div class="modal-body" style="max-height: 450px; overflow-y: auto;">
+    <categoria-form ref="formNueva" :cat="catNueva" :emojis="emojisComercio"></categoria-form>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-primary" type="button" @click="crearCategoria">Crear</button>
+    <button class="btn" data-dismiss="modal">Cancelar</button>
+  </div>
+</div>

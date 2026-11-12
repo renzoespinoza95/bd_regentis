@@ -1,10 +1,12 @@
 let currentNegIdForProp = 0;
 let foundUsuarioData = null;
+let currentUserId = 0;
 
 const propietariosMethods = {
   abrirModalPropietario(n) {
     currentNegIdForProp = parseInt(n.neg_id, 10);
     foundUsuarioData = null;
+    currentUserId = 0;
 
     // Rellenar cabecera del negocio directamente con jQuery
     $('#modal_neg_nombre').text(n.nombre || '');
@@ -14,6 +16,7 @@ const propietariosMethods = {
     // Limpiar campos de búsqueda
     $('#modal_cod_usu').val('');
     $('#modal_card_usuario').hide();
+    $('#btn_asignar_usuario_actual').hide();
 
     this.listarPropietariosModal();
     $('#modalPropietario').modal('show');
@@ -25,6 +28,16 @@ const propietariosMethods = {
     axios.post(`${this.apphost}/QQvN/neg/propietarios`, { neg_id: currentNegIdForProp })
       .then(r => {
         const rows = r.data.rows || [];
+        currentUserId = parseInt(r.data.current_usu_id || 0, 10);
+        
+        // Verificar si el usuario actual está en la lista de propietarios
+        const userInList = rows.some(p => parseInt(p.usu_id, 10) === currentUserId);
+        if (currentUserId > 0 && !userInList) {
+          $('#btn_asignar_usuario_actual').show();
+        } else {
+          $('#btn_asignar_usuario_actual').hide();
+        }
+
         let html = '';
         if (rows.length === 0) {
           html = '<div class="alert">No hay propietarios asignados</div>';
@@ -41,8 +54,9 @@ const propietariosMethods = {
                     <div style="color:#fff !important;">${p.celular || ''}</div>
                     <div style="color:#fff !important;">${p.email || ''}</div>
                   </div>
-                  <div>
+                  <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
                     <button class="btn btn-danger btn-mini btn-eliminar-prop" data-negxusuid="${p.negxusu_id}" type="button">Eliminar asignación</button>
+                    <button class="btn btn-info btn-mini btn-iniciar-sesion-prop" data-usuid="${p.usu_id}" type="button">Iniciar sesión</button>
                   </div>
                 </div>
               </div>
@@ -129,16 +143,104 @@ $(document).ready(function() {
     .finally(() => $.unblockUI());
   });
 
-  // Eliminar asignación de propietario actual
-  $(document).on('click', '.btn-eliminar-prop', function() {
-    const negxusu_id = $(this).data('negxusuid');
-    if (!confirm('¿Eliminar asignación?')) return;
-    $.blockUI({ message: 'Eliminando asignación...' });
-    axios.post((typeof apphost !== 'undefined' ? apphost : '') + '/QQvN/neg/propietario/eliminar', { negxusu_id: negxusu_id })
-      .then(() => {
-        apprise('Asignación eliminada');
-        $(this).closest('.well').fadeOut(300, function() { $(this).remove(); });
+  // Asignar usuario actual consumiendo /QQvN/verificarNegocioAdmin antes del mensaje de confirmación
+  $(document).on('click', '#btn_asignar_usuario_actual', function() {
+    if (!currentUserId || !currentNegIdForProp) return;
+
+    $.blockUI({ message: 'Verificando cuenta...' });
+    axios.post((typeof apphost !== 'undefined' ? apphost : '') + '/QQvN/verificarNegocioAdmin')
+      .then(r => {
+        $.unblockUI();
+        if (r.data.status === 'ok') {
+          if (r.data.tiene_negocio) {
+            apprise(`Esta cuenta ya administra un negocio (${r.data.negocio_nombre})`);
+            return;
+          }
+
+          apprise('¿Asignar usuario actual como propietario?', { confirm: true }, ok => {
+            if (!ok) return;
+            $.blockUI({ message: 'Asignando usuario actual...' });
+            axios.post((typeof apphost !== 'undefined' ? apphost : '') + '/negxusu/asignar', {
+              neg_id: currentNegIdForProp,
+              usu_id: currentUserId
+            })
+            .then(resp => {
+              if (resp.data.status === 'ok') {
+                apprise('Usuario asignado correctamente');
+                if (typeof appNeg !== 'undefined' && appNeg.listarPropietariosModal) {
+                  appNeg.listarPropietariosModal();
+                }
+              } else {
+                apprise(resp.data.msg || 'Error al asignar usuario');
+              }
+            })
+            .catch(() => {
+              apprise('Error al conectar con el servidor');
+            })
+            .finally(() => $.unblockUI());
+          });
+        } else {
+          apprise('Error al verificar negocio de la cuenta');
+        }
       })
-      .finally(() => $.unblockUI());
+      .catch(() => {
+        $.unblockUI();
+        apprise('Error al conectar con el servidor');
+      });
+  });
+
+  // Eliminar asignación de propietario actual con apprise de confirmación
+  $(document).on('click', '.btn-eliminar-prop', function() {
+    const btn = $(this);
+    const negxusu_id = btn.data('negxusuid');
+    apprise('¿Eliminar asignación?', { confirm: true }, ok => {
+      if (!ok) return;
+      $.blockUI({ message: 'Eliminando asignación...' });
+      axios.post((typeof apphost !== 'undefined' ? apphost : '') + '/QQvN/neg/propietario/eliminar', { negxusu_id: negxusu_id })
+        .then(() => {
+          apprise('Asignación eliminada');
+          btn.closest('.well').fadeOut(300, function() { 
+            $(this).remove(); 
+            // Recargar lista para actualizar estado del botón "Asignar usuario actual"
+            if (typeof appNeg !== 'undefined' && appNeg.listarPropietariosModal) {
+              appNeg.listarPropietariosModal();
+            }
+          });
+        })
+        .finally(() => $.unblockUI());
+    });
+  });
+
+  // Iniciar sesión como este usuario (propietario)
+  $(document).on('click', '.btn-iniciar-sesion-prop', function() {
+    const usu_id = $(this).data('usuid');
+    apprise('¿Iniciar sesión como este usuario?', { confirm: true }, async (r) => {
+      if(!r) return;
+      
+      const host = (typeof apphost !== 'undefined' ? apphost : '');
+      
+      if (typeof $.blockUI === 'function') {
+        $.blockUI({ message: 'Iniciando sesión...' });
+      }
+      
+      try {
+        const res = await axios.post(host + '/YfrW/loginNeg', { usu_id: usu_id });
+        
+        if (typeof $.unblockUI === 'function') {
+          $.unblockUI();
+        }
+        
+        if (res.data.res === 'ok'){
+          window.location.href = host + '/admin/dash';
+        } else {
+          apprise(res.data.msg || 'No se pudo iniciar sesión');
+        }
+      } catch (error) {
+        if (typeof $.unblockUI === 'function') {
+          $.unblockUI();
+        }
+        apprise('Error al conectar con el servidor');
+      }
+    });
   });
 });

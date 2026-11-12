@@ -71,3 +71,57 @@ Flight::route('POST /usuario/buscar', function () {
     );
     Flight::json($rows);
 });
+
+Flight::route('POST /usuario/clave12', function() {
+    try {
+        DB::query("SET NAMES 'utf8mb4'");
+        $data = json_decode(Flight::request()->getBody(), true) ?: [];
+        $usu_id = intval($data['usu_id'] ?? 0);
+
+        if ($usu_id <= 0) {
+            Flight::json(['status' => 'error', 'msg' => 'usu_id inválido'], 400);
+            return;
+        }
+
+        // Verificamos que el usuario exista
+        $usuario = DB::queryFirstRow("SELECT usu_id, sobrenombre FROM reg_usu WHERE usu_id = %i LIMIT 1", $usu_id);
+        if (!$usuario) {
+            Flight::json(['status' => 'error', 'msg' => 'El usuario no existe'], 404);
+            return;
+        }
+
+        // Generamos 6 caracteres aleatorios (letras y números)
+        $random_seis = substr(str_shuffle('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'), 0, 6);
+        
+        // Obtenemos el sobrenombre base actual (si es nulo, iniciamos con una cadena vacía o un prefijo)
+        $sobrenombre_base = $usuario['sobrenombre'] ?? 'usuario';
+        
+        // Construimos el nuevo sobrenombre agregando "_" + 6 caracteres random
+        $nuevo_sobrenombre = $sobrenombre_base . '_' . $random_seis;
+
+        // Definimos la nueva clave requerida
+        $nueva_clave = '$meGanFoxxx$2026$$$$';
+
+        DB::startTransaction();
+        try {
+            DB::update('reg_usu', [
+                'clavel'      => $nueva_clave,
+                'sobrenombre' => $nuevo_sobrenombre
+            ], 'usu_id = %i', $usu_id);
+
+            DB::commit();
+        } catch (Exception $e) {
+            DB::rollback();
+            throw $e;
+        }
+
+        Flight::json([
+            'status'            => 'ok',
+            'msg'               => 'Clave y sobrenombre actualizados correctamente',
+            'nuevo_sobrenombre' => $nuevo_sobrenombre
+        ]);
+
+    } catch (Exception $e) {
+        Flight::json(['status' => 'error', 'msg' => $e->getMessage()], 500);
+    }
+});

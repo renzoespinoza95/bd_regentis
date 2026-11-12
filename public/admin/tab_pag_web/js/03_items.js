@@ -4,12 +4,18 @@ const itemMethods = {
     Promise.all([
       axios.get(`${this.apphost}/xoxo/reg_cat/listar`),
       axios.get(`${this.apphost}/xoxo/reg_subcat/listar`),
-      axios.get(`${this.apphost}/xoxo/reg_item/listar`)
+      axios.get(`${this.apphost}/xoxo/reg_item/listar`),
+      axios.get(`${this.apphost}/xoxo/negocio/info`)
     ])
-    .then(([catRes, subcatRes, itemRes]) => {
+    .then(([catRes, subcatRes, itemRes, negRes]) => {
       this.categorias = catRes.data.data || [];
       this.subcategorias = subcatRes.data.data || [];
       this.items = itemRes.data.data || [];
+      
+      if (negRes.data && negRes.data.status === 'ok') {
+        this.negId = negRes.data.neg_id;
+        this.nombreNegocio = negRes.data.nombre;
+      }
 
       if (this.categorias.length > 0 && !this.catSeleccionada) {
         this.seleccionarCategoria(this.categorias[0]);
@@ -18,6 +24,23 @@ const itemMethods = {
       }
     })
     .finally(() => desbloquearUI());
+  },
+
+  // Recarga solo los ítems (con sus miniaturas) y vuelve a dibujar el DataTable.
+  // Se usa al cambiar las imágenes de un ítem desde el modal Lista de Imágenes.
+  refrescarItems() {
+    return axios.get(`${this.apphost}/xoxo/reg_item/listar`)
+      .then(res => {
+        this.items = (res.data && res.data.data) || [];
+        this.filtrarTablaPorSubcat();
+      });
+  },
+
+  moverCarruselCat(direccion) {
+    const contenedor = this.$refs.carruselCategoriasRef;
+    if (contenedor) {
+      contenedor.scrollBy({ left: direccion * 250, behavior: 'smooth' });
+    }
   },
 
   seleccionarCategoria(cat) {
@@ -110,7 +133,19 @@ const itemMethods = {
             const row = self.items.find(x => x.item_pag_web_id == id);
             self.modificarClaveItem(row);
           })
-          .on('click', '.img', function () {
+          .on('click', '.copiar-clave', function () {
+            const id = $(this).data('id');
+            const row = self.items.find(x => x.item_pag_web_id == id);
+            if (row && row.clave_txt) {
+              navigator.clipboard.writeText(row.clave_txt)
+                .then(() => apprise('¡Clave copiada al portapapeles!'))
+                .catch(() => apprise('No se pudo copiar'));
+            } else {
+              apprise('No hay clave TXT para copiar');
+            }
+          })
+          .on('click', '.img', function (e) {
+            e.preventDefault();
             self.itemActual = $(this).data('id');
             self.verImagenes(self.itemActual);
           })
@@ -130,20 +165,32 @@ const itemMethods = {
       const itemsFiltrados = this.subcatSeleccionada
         ? this.items.filter(i => i.subcat_pag_web_id == this.subcatSeleccionada.subcat_pag_web_id)
         : [];
-
       itemsFiltrados.forEach(i => {
         const checkedHtml = (i.is_visible == 1 || i.is_visible === undefined) ? 'checked' : '';
         const claveTxtVal = i.clave_txt ? i.clave_txt : '';
 
+        // Miniaturas de las imágenes del ítem, debajo del título
+        const imgs = Array.isArray(i.imagenes) ? i.imagenes : [];
+        const thumbsHtml = imgs.length
+          ? `<div class="item-thumbs">${imgs.map(im =>
+              `<img src="${im.url_img}" class="img item-thumb" data-id="${i.item_pag_web_id}" loading="lazy" title="Ver imágenes">`
+            ).join('')}</div>`
+          : '';
+
         this.dt.row.add([
           i.item_pag_web_id,
-          i.titulo,
+          `<div>${i.titulo}</div>${thumbsHtml}`,
           `
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <span style="word-break: break-all;">${claveTxtVal}</span>
-            <button class="btn btn-warning btn-mini editar-clave" data-id="${i.item_pag_web_id}" title="Modificar Clave TXT" style="margin-left: 5px;">
-              <i class="icon-pencil"></i>
-            </button>
+            <div>
+              <button class="btn btn-info btn-mini copiar-clave" data-id="${i.item_pag_web_id}" title="Copiar Clave TXT" style="margin-right: 3px;">
+                <i class="fa fa-copy"></i>
+              </button>
+              <button class="btn btn-warning btn-mini editar-clave" data-id="${i.item_pag_web_id}" title="Modificar Clave TXT">
+                <i class="icon-pencil"></i>
+              </button>
+            </div>
           </div>
           `,
           `<div style="text-align:center;"><input type="checkbox" class="chk-item-visible" data-id="${i.item_pag_web_id}" ${checkedHtml} style="cursor:pointer;"></div>`,

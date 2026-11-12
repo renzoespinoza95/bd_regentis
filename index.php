@@ -129,6 +129,7 @@ if (!empty($ssa_id) && is_string($ssa_id)) {
                 LEFT JOIN reg_negxusu nxu
                     ON u.usu_id = nxu.usu_id
                     AND nxu.is_activo = 1
+                    AND nxu.borrado_el IS NULL
 
                 LEFT JOIN reg_neg n
                     ON nxu.neg_id = n.neg_id

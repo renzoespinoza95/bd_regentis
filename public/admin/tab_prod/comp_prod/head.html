@@ -1,0 +1,202 @@
+<style>
+  .cat-card-box {
+    background: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+  .cat-card-box:hover {
+    border-color: #3498db;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  }
+  .cat-card-box.active {
+    background: #27ae60 !important;
+    border-color: #27ae60 !important;
+    color: #fff !important;
+  }
+  .cat-card-box.active .cat-title,
+  .cat-card-box.active .cat-brief {
+    color: #fff !important;
+  }
+  .cat-badge {
+    background: #2c3e50;
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: bold;
+    float: right;
+  }
+  .cat-card-box.active .cat-badge {
+    background: #ffffff;
+    color: #27ae60;
+  }
+  .cat-title {
+    font-weight: bold;
+    font-size: 14px;
+    color: #333;
+    margin-bottom: 3px;
+  }
+  .cat-brief {
+    font-size: 12px;
+    color: #7f8c8d;
+  }
+
+  /* ---------- Elementos inactivos (is_activo = 0): gris + cursiva ---------- */
+  .cat-card-box.inactivo .cat-title,
+  .cat-card-box.inactivo .cat-brief {
+    font-style: italic;
+  }
+  .cat-card-box.inactivo:not(.active) .cat-title,
+  .cat-card-box.inactivo:not(.active) .cat-brief {
+    color: #95a5a6;
+  }
+  .cat-card-box.inactivo img {
+    opacity: 0.55;
+  }
+  .txt-inactivo {
+    color: #95a5a6 !important;
+    font-style: italic;
+  }
+  .sub-badge.txt-inactivo {
+    background: #95a5a6 !important;
+    color: #fff !important;
+  }
+
+  /* ---------- Productos no visibles (is_visible = 0) en el DataTable: gris + cursiva ---------- */
+  #tablaProduct tbody tr.fila-inactiva td {
+    color: #95a5a6;
+    font-style: italic;
+  }
+  #tablaProduct tbody tr.fila-inactiva td img {
+    opacity: 0.55;
+  }
+  #tablaProduct tbody tr.fila-inactiva td .btn {
+    font-style: normal;
+  }
+  #tablaProduct input.chk-visible {
+    cursor: pointer;
+    margin: 0;
+  }
+
+  /* ---------- Carrusel de subcategorías ---------- */
+  .sub-carousel-wrap {
+    position: relative;
+    margin-bottom: 18px;
+    padding: 12px 34px;
+    background: linear-gradient(180deg, #f8f9fa 0%, #eef2f5 100%);
+    border: 1px solid #dde3e8;
+    border-radius: 12px;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .sub-carousel {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scroll-behavior: smooth;
+    padding: 6px 4px 4px 4px;
+    scrollbar-width: none;
+  }
+  .sub-carousel::-webkit-scrollbar {
+    display: none;
+  }
+  .sub-item {
+    flex: 0 0 auto;
+    width: 84px;
+    text-align: center;
+    cursor: pointer;
+    scroll-snap-align: start;
+    user-select: none;
+  }
+  .sub-thumb {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 6px auto;
+    border-radius: 50%;
+    border: 3px solid #fff;
+    box-shadow: 0 0 0 2px #cfd8dc, 0 3px 8px rgba(0,0,0,0.18);
+    overflow: hidden;
+    background: #ecf0f1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .sub-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .sub-item:hover .sub-thumb {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 0 0 2px #3498db, 0 6px 12px rgba(0,0,0,0.22);
+  }
+  .sub-item.active .sub-thumb {
+    box-shadow: 0 0 0 3px #27ae60, 0 6px 14px rgba(39,174,96,0.45);
+    transform: translateY(-2px);
+  }
+  .sub-name {
+    font-size: 12px;
+    font-weight: bold;
+    color: #34495e;
+    line-height: 1.2;
+    max-width: 84px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .sub-item.active .sub-name {
+    color: #27ae60;
+  }
+  .sub-item.inactivo .sub-thumb img {
+    opacity: 0.55;
+  }
+  .sub-item.inactivo .sub-name,
+  .sub-item.inactivo.active .sub-name {
+    color: #95a5a6;
+    font-style: italic;
+  }
+  .sub-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: #2c3e50;
+    color: #fff;
+    font-size: 18px;
+    line-height: 24px;
+    text-align: center;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.25);
+    z-index: 2;
+  }
+  .sub-nav:hover {
+    background: #27ae60;
+  }
+  .sub-nav-prev { left: 4px; }
+  .sub-nav-next { right: 4px; }
+
+  /* ---------- Título con subcategoría ---------- */
+  .sub-arrow {
+    margin: 0 6px;
+    color: #7f8c8d;
+    font-weight: bold;
+  }
+  .sub-badge {
+    font-size: 14px !important;
+    padding: 4px 12px !important;
+    border-radius: 12px !important;
+    vertical-align: middle;
+  }
+</style>

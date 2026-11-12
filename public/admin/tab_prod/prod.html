@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{title}}</title>
+    {{{assets_head}}}
+    {{> head}}
+</head>
+<body>
+  {{> menu_flot}}
+  
+  <div class="container" id="appProduct">
+    {{> navbar_prod}}
+    {{> modal_detalle}}
+    {{> modal_crear}}
+    {{> modal_editar}}
+    {{> modal_categoria_nueva}}
+    {{> modal_categoria_editar}}
+    {{> modal_subcategoria_nueva}}
+    {{> modal_subcategoria_editar}}
+    {{> modal_foto}}
+    {{> modal_reporte}}
+  </div>
+
+  {{{footer_html}}}
+  {{> categoria_form}}
+  {{> scripts}}
+</body>
+</html>

@@ -102,7 +102,7 @@
   </div>
   <div class="modal-body">
     <input v-model="catForm.cat_pag_web_id" type="hidden">
-    
+
     <div class="row-fluid">
       <div class="span8">
         <label><b>Título</b></label>
@@ -110,10 +110,10 @@
       </div>
       <div class="span4">
         <label><b>Visible</b></label>
-        <select v-model.number="catForm.is_visible" class="input-small" style="width:100%;">
-          <option :value="1">Sí</option>
-          <option :value="0">No</option>
-        </select>
+        <label class="checkbox" style="margin-top: 6px;">
+          <input type="checkbox" v-model="catForm.is_visible" :true-value="1" :false-value="0">
+          <span v-text="catForm.is_visible == 1 ? 'Visible en la web' : 'Oculta'"></span>
+        </label>
       </div>
     </div>
 
@@ -150,6 +150,19 @@
         <label><b>Texto 02 (HTML)</b></label>
         <textarea id="txtCatEditarTexto02"></textarea>
       </div>
+    </div>
+
+    <!-- ZONA DE PELIGRO -->
+    <div style="margin-top: 30px; border: 1px solid #d9534f; border-radius: 6px; padding: 14px; background: #fff5f5;">
+      <h5 style="margin: 0 0 6px 0; color: #b94a48; text-transform: uppercase;">
+        <i class="icon-warning-sign"></i> Zona de peligro
+      </h5>
+      <p style="margin: 0 0 10px 0; color: #7a3a38; font-size: 12px;">
+        Eliminar esta categoría es una acción permanente y no se puede deshacer.
+      </p>
+      <button type="button" class="btn btn-danger" @click="eliminarCategoriaDesdeEditar">
+        <i class="icon-trash icon-white"></i> Eliminar esta categoría
+      </button>
     </div>
   </div>
   <div class="modal-footer" style="text-align: left;">

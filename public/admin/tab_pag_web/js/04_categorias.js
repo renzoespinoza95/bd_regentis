@@ -202,5 +202,34 @@ const categoriaMethods = {
         })
         .finally(() => desbloquearUI());
     });
+  },
+
+  // Zona de peligro del modal "Editar Categoría"
+  eliminarCategoriaDesdeEditar() {
+    const id = this.catForm.cat_pag_web_id;
+    if (!id) return;
+
+    apprise('¿Eliminar definitivamente esta categoría? Esta acción no se puede deshacer.', { confirm: true }, ok => {
+      if (!ok) return;
+      bloquearUI('Eliminando categoría...');
+      axios.post(`${this.apphost}/xoxo/reg_cat/eliminar`, { cat_pag_web_id: id })
+        .then(() => {
+          $('#modalEditarCategoria').modal('hide');
+
+          // Si la categoría eliminada era la seleccionada, se limpia la selección
+          if (this.catSeleccionada && this.catSeleccionada.cat_pag_web_id == id) {
+            this.catSeleccionada = null;
+            this.subcatSeleccionada = null;
+            this.filtrarTablaPorSubcat();
+          }
+
+          this.cargarTodo();
+          setTimeout(() => {
+            this.abrirCategorias();
+          }, 300);
+        })
+        .catch(() => apprise('Error al eliminar la categoría'))
+        .finally(() => desbloquearUI());
+    });
   }
 };

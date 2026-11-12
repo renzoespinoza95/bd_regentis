@@ -27,6 +27,7 @@ const imagenMethods = {
     axios.get(urlEndpoint, { params })
       .then(r => {
         this.imagenes = r.data.data || [];
+        this.limpiarPanelUrlsImagen();
         this.$nextTick(() => {
           if (this.entidadActual === 'item') {
             this.activarDragImagenes();
@@ -58,6 +59,7 @@ const imagenMethods = {
         })
         .then(r => r.json())
         .then(() => {
+          vm.refrescarItems();
           vm.verImagenes(vm.itemActual);
         });
       }
@@ -196,6 +198,7 @@ const imagenMethods = {
           if (this.dtSubcat) this.renderTablaSubcatModal();
           this.verImagenesSubcategoria(this.itemActual);
         } else {
+          this.refrescarItems();
           this.verImagenes(this.itemActual);
         }
 
@@ -242,7 +245,6 @@ const imagenMethods = {
             if (urlImagenCDN) {
               let urlPhpCrear = `${this.apphost}/xoxo/reg_img/crear_desde_url`;
               let payload = { item_pag_web_id: this.itemActual, url_img: urlImagenCDN };
-
               if (this.entidadActual === 'cat') {
                 urlPhpCrear = `${this.apphost}/xoxo/reg_cat/actualizar_url_img`;
                 payload = { cat_pag_web_id: this.itemActual, url_img: urlImagenCDN };
@@ -313,11 +315,122 @@ const imagenMethods = {
             if (this.dtSubcat) this.renderTablaSubcatModal();
             this.verImagenesSubcategoria(this.itemActual);
           } else {
+            this.refrescarItems();
             this.verImagenes(this.itemActual);
           }
         }, 200);
       })
       .finally(() => desbloquearUI());
+  },
+
+  // ==========================================
+  // ZONA "INGRESE LA URL DE LA IMAGEN" (debajo de la lista)
+  // ==========================================
+  limpiarPanelUrlsImagen() {
+    this.urlImagenTmp = '';
+    this.urlsImagenTxt = '';
+    this.previewUrlList = [];
+  },
+
+  soltarUrlsImagen(e) {
+    const text = e.dataTransfer && e.dataTransfer.getData('text');
+    if (text) {
+      this.urlsImagenTxt = (this.urlsImagenTxt ? this.urlsImagenTxt + '\n' : '') + text;
+      this.actualizarPreviewUrlsImagen();
+    }
+  },
+
+  actualizarPreviewUrlsImagen() {
+    const texto = this.urlsImagenTxt || '';
+    this.previewUrlList = texto
+      .split('\n')
+      .map(l => l.trim())
+      .filter(l => l.length > 0 && /^https?:\/\//i.test(l));
+  },
+
+  quitarUrlImagenLista(index) {
+    const lineas = [...this.previewUrlList];
+    lineas.splice(index, 1);
+    this.urlsImagenTxt = lineas.join('\n');
+    this.actualizarPreviewUrlsImagen();
+  },
+
+  // Botón "Aceptar": una sola URL del input
+  aceptarUrlImagen() {
+    const url = (this.urlImagenTmp || '').trim();
+    if (!/^https?:\/\//i.test(url)) {
+      return apprise('Ingrese una URL válida (http o https)');
+    }
+    this.guardarUrlsImagen([url], () => { this.urlImagenTmp = ''; });
+  },
+
+  // Botón "Agregar URLs" (ítem) / "Usar URL" (categoría y subcategoría)
+  aplicarUrlsImagen() {
+    if (!this.previewUrlList.length) return;
+    const urls = (this.entidadActual === 'item')
+      ? [...this.previewUrlList]
+      : [this.previewUrlList[0]];
+    this.guardarUrlsImagen(urls, () => {
+      this.urlsImagenTxt = '';
+      this.previewUrlList = [];
+    });
+  },
+
+  // Guarda una o varias URLs según la entidad:
+  //  - item: agrega cada URL como imagen nueva de la galería
+  //  - cat / subcat: reemplaza la imagen única (url_img) con la primera URL
+  guardarUrlsImagen(urls, alExito) {
+    if (!urls || !urls.length) return;
+
+    const entidad = this.entidadActual;
+    const idActual = this.itemActual;
+    const guardarUna = (url) => {
+      if (entidad === 'cat') {
+        return axios.post(`${this.apphost}/xoxo/reg_cat/actualizar_url_img`, { cat_pag_web_id: idActual, url_img: url })
+          .then(r => r.data && r.data.success !== false);
+      }
+      if (entidad === 'subcat') {
+        return axios.post(`${this.apphost}/xoxo/reg_subcat/actualizar_url_img`, { subcat_pag_web_id: idActual, url_img: url })
+          .then(r => r.data && r.data.success !== false);
+      }
+      return axios.post(`${this.apphost}/xoxo/reg_img/crear_url`, { url: url, item: idActual })
+        .then(r => r.data && r.data.status !== 'error');
+    };
+
+    bloquearUI('Guardando URL...');
+
+    let cadena = Promise.resolve(0);
+    urls.forEach(url => {
+      cadena = cadena.then(ok => guardarUna(url).then(r => ok + (r ? 1 : 0)));
+    });
+
+    cadena
+      .then(ok => {
+        desbloquearUI();
+        if (ok === 0) {
+          apprise('No se pudo guardar la URL');
+          return;
+        }
+        if (alExito) alExito();
+        apprise(entidad === 'item' ? `${ok} imagen(es) agregada(s)` : 'Imagen actualizada correctamente');
+
+        if (entidad === 'cat') {
+          this.cargarTodo();
+          if (this.dtCat) this.renderTablaCat();
+          this.verImagenesCategoria(idActual);
+        } else if (entidad === 'subcat') {
+          this.cargarTodo();
+          if (this.dtSubcat) this.renderTablaSubcatModal();
+          this.verImagenesSubcategoria(idActual);
+        } else {
+          this.refrescarItems();
+          this.verImagenes(idActual);
+        }
+      })
+      .catch(() => {
+        desbloquearUI();
+        apprise('Error al guardar la URL de la imagen');
+      });
   },
 
   copiarImagen(img) {
@@ -356,6 +469,7 @@ const imagenMethods = {
 
       axios.post(`${self.apphost}/xoxo/reg_img/eliminar`, { id: imgId })
         .then(() => {
+          self.refrescarItems();
           self.verImagenes(self.itemActual);
         })
         .catch(() => apprise('Error al eliminar'))

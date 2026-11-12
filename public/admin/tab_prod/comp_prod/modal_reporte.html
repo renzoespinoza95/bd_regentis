@@ -1,0 +1,18 @@
+<div id="modalReporteCategoria" class="modal hide fade">
+  <div class="modal-header">
+    <h3>Reporte por Categoría</h3>
+  </div>
+  <div class="modal-body">
+    <div class="control-group">
+      <label>Categorías</label>
+      <v-select multiple :options="categorias" label="descripcion" v-model="reporteCategorias" class="input-xxlarge"></v-select>
+      <p class="help-block">Si no seleccionas ninguna, se incluirán <b>todas</b>.</p>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-primary" @click="generarReporteCategoria">
+      <i class="icon-print icon-white"></i> PDF
+    </button>
+    <button class="btn" data-dismiss="modal">Cancelar</button>
+  </div>
+</div>

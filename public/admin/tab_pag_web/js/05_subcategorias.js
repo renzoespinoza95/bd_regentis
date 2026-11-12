@@ -268,5 +268,44 @@ const subcategoriaMethods = {
         })
         .finally(() => desbloquearUI());
     });
+  },
+
+  // Zona de peligro del modal "Editar Subcategoría"
+  eliminarSubcatDesdeEditar() {
+    const id = this.subcatForm.subcat_pag_web_id;
+    if (!id) return;
+
+    apprise('¿Eliminar definitivamente esta subcategoría? Esta acción no se puede deshacer.', { confirm: true }, ok => {
+      if (!ok) return;
+      bloquearUI('Eliminando subcategoría...');
+      axios.post(`${this.apphost}/xoxo/reg_subcat/eliminar`, { subcat_pag_web_id: id })
+        .then(() => {
+          $('#modalEditarSubcat').modal('hide');
+
+          // Actualización local inmediata
+          this.subcategorias = this.subcategorias.filter(s => s.subcat_pag_web_id != id);
+          this.items = this.items.filter(i => i.subcat_pag_web_id != id);
+
+          // Si era la subcategoría seleccionada, se elige otra de la misma categoría
+          if (this.subcatSeleccionada && this.subcatSeleccionada.subcat_pag_web_id == id) {
+            const subs = this.catSeleccionada
+              ? this.subcategorias.filter(s => s.cat_pag_web_id == this.catSeleccionada.cat_pag_web_id)
+              : [];
+            if (subs.length > 0) {
+              this.seleccionarSubcategoria(subs[0]);
+            } else {
+              this.subcatSeleccionada = null;
+              this.filtrarTablaPorSubcat();
+            }
+          }
+
+          this.cargarTodo();
+          setTimeout(() => {
+            this.abrirSubcategorias();
+          }, 300);
+        })
+        .catch(() => apprise('Error al eliminar la subcategoría'))
+        .finally(() => desbloquearUI());
+    });
   }
 };

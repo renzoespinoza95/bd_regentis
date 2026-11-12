@@ -1,0 +1,26 @@
+<div id="modalCrearSubcategoria" class="modal hide fade" tabindex="-1" style="background-color: #2c3e50; color: #ffffff;">
+  <div class="modal-header" style="background-color: #1a252f; border-bottom: 1px solid #34495e;">
+    <h3 style="color: #2ecc71; margin: 0;"><i class="icon-folder-open"></i> Nueva Subcategoría</h3>
+  </div>
+  <div class="modal-body" style="max-height: 450px; overflow-y: auto;">
+    <div style="text-align: center; margin-bottom: 15px;">
+      <img :src="imgSubDefecto" alt="" style="width: 96px; height: 96px; border-radius: 50%; object-fit: cover; border: 3px solid #27ae60; box-shadow: 0 2px 8px rgba(0,0,0,0.4);">
+      <div style="font-size: 12px; color: #bdc3c7; margin-top: 6px;">Imagen por defecto</div>
+    </div>
+
+    <div style="margin-bottom: 12px; color: #bdc3c7;">
+      Categoría: <span class="badge badge-success" style="font-size: 13px; padding: 4px 10px;" v-text="nombreCategoriaActiva"></span>
+    </div>
+
+    <div class="control-group">
+      <label style="color: #bdc3c7;">Nombre de la subcategoría</label>
+      <div class="controls">
+        <input type="text" v-model="subNueva.nombre" maxlength="200" @keyup.enter="crearSubcategoria" placeholder="Ej: Gorras, Polos..." style="width: 100%; box-sizing: border-box; background: #1a252f; color: #fff; border: 1px solid #4e6d8c;">
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer" style="background-color: #1a252f; border-top: 1px solid #34495e; text-align: left; display: flex; gap: 10px; align-items: center; justify-content: flex-start;">
+    <button class="btn btn-success" type="button" @click="crearSubcategoria">Crear</button>
+    <button class="btn" data-dismiss="modal">Cancelar</button>
+  </div>
+</div>

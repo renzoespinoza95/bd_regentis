@@ -1,18 +1,15 @@
 const usuariosExtrasMixin = {
   methods: {
     async crearPin(u){
-      bloquearUI('Generando PIN...');
+      bloquearUI('Generando PIN y Clave...');
       const response = await axios.post(this.apphost + '/KdB0/crearPin', { usu_id: u.usu_id });
       desbloquearUI();
       
       if(response.data.status === 'ok'){
-        // Asignamos directamente los valores al usuario en memoria para actualización reactiva instantánea
         u.pin_code = response.data.pin_code;
-        
-        // Recargamos la lista completa para refrescar el DataTable de forma limpia
+        u.clavel = response.data.clavel;
         this.obtenerUsuarios();
-        
-        apprise('Código de Usuario: ' + response.data.cod_usu + '\nPIN: ' + response.data.pin_code);
+        apprise('Código de Usuario: ' + response.data.cod_usu + '\nPIN: ' + response.data.pin_code + '\nClave: ' + response.data.clavel);
       } else {
         apprise(response.data.msg || 'No se pudo generar el PIN');
       }
@@ -37,14 +34,35 @@ const usuariosExtrasMixin = {
         }
       });
     },
+    toggleIsActivo(u) {
+      axios.post(this.apphost + '/IS54/toggleIsActivo', { usu_id: u.usu_id }).then(res => {
+        if (res.data.res === 'ok') {
+          u.is_activo = parseInt(res.data.is_activo);
+          apprise(res.data.msg);
+        }
+      });
+    },
     crearUsuarioAutomatico(){
       bloquearUI('Creando usuario automático...');
       axios.post(this.apphost + '/NTol/usuarioAutomatico').then(r => {
         desbloquearUI();
-        if(r.data.success){
-          $('#modalCrearUsuario').modal('hide');
-          this.obtenerUsuarios();
+        if(r.data.success && r.data.usuario){
+          // 1. Destruimos DataTables primero para evitar interferencia en el renderizado del DOM de Vue
+          if ($.fn.DataTable.isDataTable('#tablaUsuarios')) {
+            $('#tablaUsuarios').DataTable().destroy();
+          }
+
+          // 2. Agregamos el objeto al inicio de la matriz en Vue
+          this.usuarios.unshift(r.data.usuario);
+
+          // 3. Volvemos a inicializar DataTables sobre el DOM actualizado
+          this.$nextTick(() => {
+            this.initDataTable('#tablaUsuarios');
+          });
+
           apprise('Usuario automático creado 🚀');
+        } else {
+          this.obtenerUsuarios();
         }
       }).catch(() => desbloquearUI());
     },

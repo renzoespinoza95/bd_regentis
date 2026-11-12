@@ -39,6 +39,30 @@ const negociosMethods = {
         $.unblockUI();
       });
   },
+  llenarRandomNegocio() {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let randStr = '';
+    for (let i = 0; i < 6; i++) {
+      randStr += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    const nombresDemo = ['Tienda Express', 'Market Central', 'Bodega Don Jose', 'Comercial El Rado', 'Super Ahorro'];
+    const nombreAleatorio = nombresDemo[Math.floor(Math.random() * nombresDemo.length)] + ' ' + randStr.toUpperCase();
+    
+    // Generar slug limpio
+    const slugAleatorio = nombreAleatorio.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
+    
+    // Generar celular aleatorio (9 dígitos empezando con 9)
+    let celularAleatorio = '9';
+    for (let i = 0; i < 8; i++) {
+      celularAleatorio += Math.floor(Math.random() * 10);
+    }
+
+    this.nuevoNeg = {
+      nombre: nombreAleatorio,
+      slug: slugAleatorio,
+      celular_yape: celularAleatorio
+    };
+  },
   crearNeg(){
     const nombre_negocio = this.nuevoNeg.nombre.trim();
     const slug = this.nuevoNeg.slug.trim();

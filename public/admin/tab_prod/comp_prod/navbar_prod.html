@@ -1,0 +1,142 @@
+<div class="row-fluid" style="margin-top: 15px;">
+  <!-- TÍTULO SUPERIOR CENTRADO -->
+  <div class="span12" style="margin-bottom: 20px; text-align: center;">
+    <h2 style="margin:0; text-align: center;">Productos {{neg_id}} &rarr; {{nombre_negocio}}</h2>
+  </div>
+
+  <div class="row-fluid">
+    <!-- COLUMNA IZQUIERDA: CATEGORÍAS -->
+    <div class="span3">
+      <div style="background: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 8px; display: flex; flex-direction: column; max-height: calc(100vh - 20px); position: sticky; top: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 2px solid #ddd; padding-bottom: 8px; flex-shrink: 0;">
+          <h4 style="margin: 0; font-size: 15px; font-weight: bold;">2. CATEGORÍAS</h4>
+          <button class="btn btn-success btn-small" @click="abrirModalCrearCategoria" title="Agregar Categoría">
+            <i class="icon-plus icon-white"></i>
+          </button>
+        </div>
+
+        <!-- Buscador de categorías -->
+        <div style="flex-shrink: 0; margin-bottom: 10px; position: relative;">
+          <input type="text" ref="buscadorCategorias" v-model="busquedaCategorias" @keyup.esc="busquedaCategorias = ''" placeholder="🔍 Buscar categoría..." style="width: 100%; box-sizing: border-box; margin: 0; padding-right: 28px;">
+          <button v-if="busquedaCategorias" type="button" title="Limpiar búsqueda (Esc)" @click="busquedaCategorias = ''; $refs.buscadorCategorias.focus()" style="position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; padding: 0; border: none; border-radius: 50%; background: #bdc3c7; color: #fff; font-size: 14px; font-weight: bold; line-height: 20px; text-align: center; cursor: pointer;">&times;</button>
+        </div>
+
+        <!-- Lista con scroll -->
+        <div style="flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-right: 4px;">
+
+          <!-- Item Todos -->
+          <div class="cat-card-box" :class="{ active: categoriaSeleccionada === null }" @click="seleccionarCategoria(null)">
+            <span class="cat-badge" v-text="totalProductosGeneral"></span>
+            <div class="cat-title">Todas las Categorías</div>
+            <div class="cat-brief">Ver todos los productos</div>
+          </div>
+
+          <!-- Lista Dinámica de Categorías -->
+          <div v-for="c in categoriasFiltradasPanel" :key="c.category_id" class="cat-card-box" :class="{ active: categoriaSeleccionada === c.category_id, inactivo: c.is_activo === 0 }" @click="seleccionarCategoria(c.category_id)">
+            <span class="cat-badge" v-text="c.total_productos"></span>
+            <div style="display: flex; align-items: flex-start; gap: 10px;">
+              <!-- Miniatura cuadrada -->
+              <img v-if="c.img" :src="c.img" alt="" style="width: 44px; height: 44px; flex-shrink: 0; object-fit: cover; border-radius: 4px; border: 1px solid rgba(0,0,0,0.15); background: #fff;">
+              <div v-else style="width: 44px; height: 44px; flex-shrink: 0; border-radius: 4px; border: 1px dashed #bdc3c7; background: #ecf0f1;"></div>
+
+              <div style="min-width: 0;">
+                <div class="cat-title">
+                  <span v-if="esEmoji(c.icon)" v-text="c.icon + ' '"></span><span v-text="c.descripcion"></span>
+                </div>
+                <div class="cat-brief" v-text="c.brief || 'Sin descripción'"></div>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="categorias.length === 0" style="text-align: center; color: #7f8c8d; padding: 15px; font-style: italic;">
+            No hay categorías creadas
+          </div>
+          <div v-else-if="categoriasFiltradasPanel.length === 0" style="text-align: center; color: #7f8c8d; padding: 15px; font-style: italic;">
+            No se encontraron categorías
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLUMNA DERECHA: SUBCATEGORÍAS + DATATABLE DE PRODUCTOS -->
+    <div class="span9">
+
+      <!-- CARRUSEL DE SUBCATEGORÍAS (solo cuando hay una categoría seleccionada con subcategorías) -->
+      <div v-if="categoriaSeleccionada !== null && subcategoriasActivas.length > 0" class="sub-carousel-wrap">
+        <button type="button" class="sub-nav sub-nav-prev" title="Anterior" @click="desplazarCarrusel(-1)">&lsaquo;</button>
+
+        <div class="sub-carousel" ref="carruselSub">
+          <!-- Item: toda la categoría -->
+          <div class="sub-item" :class="{ active: subcategoriaSeleccionada === null }" @click="seleccionarSubcategoria(null)" title="Ver todos los productos de la categoría">
+            <div class="sub-thumb">
+              <img v-if="categoriaActiva && categoriaActiva.img" :src="categoriaActiva.img" alt="">
+              <span v-else>📁</span>
+            </div>
+            <div class="sub-name">Todos</div>
+          </div>
+
+          <!-- Subcategorías -->
+          <div v-for="s in subcategoriasActivas" :key="s.subcategoria_id" class="sub-item" :class="{ active: subcategoriaSeleccionada === s.subcategoria_id, inactivo: s.is_activo === 0 }" @click="seleccionarSubcategoria(s.subcategoria_id)" :title="s.nombre + ' (' + s.total_productos + ')'">
+            <div class="sub-thumb">
+              <img :src="s.img || imgSubDefecto" alt="">
+            </div>
+            <div class="sub-name" v-text="s.nombre"></div>
+          </div>
+        </div>
+
+        <button type="button" class="sub-nav sub-nav-next" title="Siguiente" @click="desplazarCarrusel(1)">&rsaquo;</button>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3 style="margin: 0; font-size: 18px;">
+          Productos de:
+          <span style="color: #2980b9;" :class="{ 'txt-inactivo': catActivaEsInactiva() }" v-text="nombreCategoriaActiva"></span>
+          <button v-if="categoriaSeleccionada !== null" type="button" class="btn btn-mini" style="margin-left: 6px; vertical-align: middle;" title="Editar categoría" @click="abrirModalEditarCategoria">
+            <i class="icon-pencil"></i>
+          </button>
+          <span v-if="subcategoriaSeleccionada !== null">
+            <span class="sub-arrow">&rarr;</span><span class="badge badge-info sub-badge" :class="{ 'txt-inactivo': subActivaEsInactiva() }" v-text="nombreSubcategoriaActiva"></span>
+            <button type="button" class="btn btn-mini" style="margin-left: 6px; vertical-align: middle;" title="Editar subcategoría" @click="abrirModalEditarSubcategoria">
+              <i class="icon-pencil"></i>
+            </button>
+          </span>
+        </h3>
+        <div class="btn-group">
+          <button class="btn btn-primary" @click="abrirModalCrear">
+            <i class="icon-plus icon-white"></i> Nuevo Producto
+          </button>
+          <button class="btn btn-info dropdown-toggle" data-toggle="dropdown">
+            <span class="caret"></span>
+          </button>
+          <ul class="dropdown-menu pull-right">
+            <li>
+              <a href="#" @click.prevent="crearFantasmas">
+                <i class="icon-magic"></i> 5 fantasmas
+              </a>
+            </li>
+            <li>
+              <a href="#" @click.prevent="abrirModalCrearSubcategoria">
+                <i class="icon-folder-open"></i> Nueva subcategoría
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="span12" style="margin-left:0;">
+        <table id="tablaProduct" class="table table-bordered table-striped" style="width:100%;">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nombre</th>
+              <th>Precio</th>
+              <th>Stock</th>
+              <th>Visible</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

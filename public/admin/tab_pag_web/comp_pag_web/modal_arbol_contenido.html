@@ -1,0 +1,244 @@
+<!-- MODAL ARBOL DE CONTENIDO -->
+<div id="modalArbolContenido" class="modal hide fade fullscreen" style="width: 90%; left: 5%; margin-left: 0; top: 5%; max-height: 90vh;">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal">×</button>
+    <h3><i class="icon-sitemap"></i> Árbol de Contenido General (Web, POS & Sliders)</h3>
+  </div>
+
+  <div class="modal-body" style="max-height: 70vh; overflow-y: auto; background: #000000; color: #ffffff; padding: 20px;">
+    
+    <!-- NAV TABS DE BOOTSTRAP 2.3.2 -->
+    <ul class="nav nav-tabs" style="border-bottom: 1px solid #444; margin-bottom: 15px;">
+      <li class="active">
+        <a href="#tabArbolVisual" data-toggle="tab" style="background: #111; color: #00d0ff; border: 1px solid #333; border-bottom-color: transparent;">
+          <i class="icon-sitemap"></i> Vista de Árbol
+        </a>
+      </li>
+      <li>
+        <a href="#tabArbolJson" data-toggle="tab" style="background: #111; color: #ff9800; border: 1px solid #333; border-bottom-color: transparent;">
+          <i class="icon-code"></i> Formato JSON
+        </a>
+      </li>
+      <li>
+        <a href="#tabArbolImportacion" data-toggle="tab" style="background: #111; color: #5bb75b; border: 1px solid #333; border-bottom-color: transparent;">
+          <i class="icon-upload-alt"></i> Importación
+        </a>
+      </li>
+    </ul>
+
+    <!-- CONTENIDO DE LAS TABS -->
+    <div class="tab-content" style="overflow: visible;">
+      
+      <!-- TAB 1: TREEVIEW VISUAL -->
+      <div class="tab-pane active" id="tabArbolVisual">
+        <div style="margin-bottom: 15px;">
+          <button class="btn btn-mini btn-info" @click="cargarArbolCompleto">
+            <i class="icon-refresh"></i> Actualizar Árbol
+          </button>
+        </div>
+
+        <div class="arbol-container" style="font-family: monospace; font-size: 13px;">
+          
+          <!-- SECCIÓN 1: MÓDULO WEB (reg_cat_pag_web) -->
+          <div class="arbol-nodo-raiz" style="margin-bottom: 20px;">
+            <div style="font-weight: bold; color: #00d0ff; font-size: 15px; border-bottom: 2px solid #0088cc; padding-bottom: 5px;">
+              📁 MÓDULO WEB (reg_cat_pag_web)
+            </div>
+            
+            <div v-if="arbolWeb.length === 0" style="padding: 10px; color: #aaa;">Cargando o sin registros web para este negocio...</div>
+
+            <ul style="list-style: none; padding-left: 15px; margin-top: 10px;">
+              <li v-for="cat in arbolWeb" :key="'web_cat_' + cat.cat_pag_web_id" style="margin-bottom: 10px;">
+                <div style="background: #111111; padding: 6px 10px; border-radius: 4px; border-left: 4px solid #0088cc; border: 1px solid #333;">
+                  <strong>[Categoría Web ID: <span v-text="cat.cat_pag_web_id"></span> | Clave: <span v-text="cat.clave_txt || 'N/A'"></span>]</strong> <span v-text="cat.titulo"></span>
+                </div>
+
+                <!-- Subcategorías Web -->
+                <ul style="list-style: none; padding-left: 20px; margin-top: 5px;">
+                  <li v-for="sub in cat.subcategorias" :key="'web_sub_' + sub.subcat_pag_web_id" style="margin-bottom: 8px;">
+                    <div style="background: #111111; padding: 5px 8px; border-radius: 4px; border-left: 4px solid #5bb75b; border: 1px solid #333;">
+                      <strong>↳ [Subcat Web ID: <span v-text="sub.subcat_pag_web_id"></span> | Clave: <span v-text="sub.clave_txt || 'N/A'"></span>]</strong> <span v-text="sub.titulo"></span>
+                    </div>
+
+                    <!-- Ítems Web (reg_item_pag_web) -->
+                    <ul style="list-style: none; padding-left: 20px; margin-top: 4px;">
+                      <li v-for="item in sub.items" :key="'web_item_' + item.item_pag_web_id" style="margin-bottom: 6px; background: #1a1a1a; padding: 6px; border: 1px solid #333; border-radius: 4px;">
+                        <div>
+                          <strong>📦 [Item ID: <span v-text="item.item_pag_web_id"></span> | Clave: <span v-text="item.clave_txt || 'N/A'"></span>]</strong> <span v-text="item.titulo"></span>
+                        </div>
+
+                        <!-- Relación 1..n: reg_pag_item_img -->
+                        <div style="margin-top: 4px; padding-left: 15px; font-size: 11px; color: #ccc;">
+                          <span style="color: #ff5722; font-weight: bold;">🖼️ Imágenes (reg_pag_item_img):</span>
+                          <span v-if="!item.imagenes || item.imagenes.length === 0" style="color: #777;"> Ninguna</span>
+                          <ul style="margin: 2px 0 0 15px; padding: 0;">
+                            <li v-for="img in item.imagenes" :key="img.pag_item_img_id">
+                              <a :href="img.url_img" target="_blank" style="color: #00d0ff;" v-text="img.url_img"></a> (Visible: <span v-text="img.is_visible"></span>, Orden: <span v-text="img.orden"></span>)
+                            </li>
+                          </ul>
+                        </div>
+
+                        <!-- Relación 1..n: reg_pag_item_vid -->
+                        <div style="margin-top: 4px; padding-left: 15px; font-size: 11px; color: #ccc;">
+                          <span style="color: #ff5722; font-weight: bold;">🎬 Vídeos (reg_pag_item_vid):</span>
+                          <span v-if="!item.videos || item.videos.length === 0" style="color: #777;"> Ninguno</span>
+                          <ul style="margin: 2px 0 0 15px; padding: 0;">
+                            <li v-for="vid in item.videos" :key="vid.pag_item_vid_id">
+                              <span v-text="vid.titulo"></span> - <a :href="vid.codigo_web" target="_blank" style="color: #00d0ff;" v-text="vid.codigo_web"></a>
+                            </li>
+                          </ul>
+                        </div>
+
+                      </li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </div>
+
+          <hr style="border-top: 1px solid #444; margin: 30px 0;">
+
+          <!-- SECCIÓN 2: MÓDULO POS (pos_category) -->
+          <div class="arbol-nodo-raiz" style="margin-bottom: 20px;">
+            <div style="font-weight: bold; color: #ff9800; font-size: 15px; border-bottom: 2px solid #f89406; padding-bottom: 5px;">
+              🛒 MÓDULO POS (pos_category)
+            </div>
+
+            <div v-if="arbolPos.length === 0" style="padding: 10px; color: #aaa;">Cargando o sin registros POS para este negocio...</div>
+
+            <ul style="list-style: none; padding-left: 15px; margin-top: 10px;">
+              <li v-for="pcat in arbolPos" :key="'pos_cat_' + pcat.category_id" style="margin-bottom: 10px;">
+                <div style="background: #111111; padding: 6px 10px; border-radius: 4px; border-left: 4px solid #f89406; border: 1px solid #333;">
+                  <strong>[Cat POS ID: <span v-text="pcat.category_id"></span> | Clave: <span v-text="pcat.clave_txt || 'N/A'"></span>]</strong> <span v-text="pcat.name"></span> 
+                  <span style="color: #aaa;">(Negocio ID: <span v-text="pcat.neg_id"></span>)</span>
+                </div>
+
+                <!-- Subcategorías POS y sus productos anidados -->
+                <ul style="list-style: none; padding-left: 20px; margin-top: 5px;">
+                  
+                  <!-- Iterar sobre las subcategorías de la categoría POS -->
+                  <li v-for="sub in pcat.subcategorias" :key="'pos_sub_' + sub.subcategoria_id" style="margin-bottom: 8px;">
+                    <div style="background: #111111; padding: 5px 8px; border-radius: 4px; border-left: 4px solid #5bb75b; border: 1px solid #333;">
+                      <strong>↳ [Subcat POS ID: <span v-text="sub.subcategoria_id"></span>]</strong> <span v-text="sub.nombre"></span>
+                    </div>
+
+                    <!-- Productos POS filtrados por subcategoria_id -->
+                    <ul style="list-style: none; padding-left: 20px; margin-top: 4px;">
+                      <li v-for="prod in pcat.productos.filter(p => p.subcategoria_id == sub.subcategoria_id)" :key="'pos_prod_' + prod.product_id" style="margin-bottom: 6px; background: #1a1a1a; padding: 6px; border: 1px solid #333; border-radius: 4px;">
+                        <div>
+                          <strong>🏷️ [Producto ID: <span v-text="prod.product_id"></span> | Cod: <span v-text="prod.cod_producto || 'N/A'"></span>]</strong> <span v-text="prod.name"></span> - 
+                          <span style="color: #5bb75b; font-weight: bold;">S/. <span v-text="prod.price"></span></span> (Marca: <span v-text="prod.marca_des"></span>)
+                        </div>
+
+                        <!-- Relación 1..n: pos_product_image -->
+                        <div style="margin-top: 4px; padding-left: 15px; font-size: 11px; color: #ccc;">
+                          <span style="color: #ff5722; font-weight: bold;">🖼️ Imágenes de Producto (pos_product_image):</span>
+                          <span v-if="!prod.imagenes || prod.imagenes.length === 0" style="color: #777;"> Ninguna</span>
+                          <ul style="margin: 2px 0 0 15px; padding: 0;">
+                            <li v-for="pimg in prod.imagenes" :key="pimg.product_image_id">
+                              <a :href="pimg.img" target="_blank" style="color: #ff9800;" v-text="pimg.img"></a> (Orden: <span v-text="pimg.orden"></span>)
+                            </li>
+                          </ul>
+                        </div>
+                      </li>
+                    </ul>
+                  </li>
+
+                  <!-- Productos sin subcategoría asignada (si existieran) -->
+                  <li v-if="pcat.productos.filter(p => !p.subcategoria_id).length > 0" style="margin-bottom: 8px;">
+                    <div style="background: #111111; padding: 5px 8px; border-radius: 4px; border-left: 4px solid #777; border: 1px solid #333; color: #aaa;">
+                      <strong>↳ [Sin Subcategoría]</strong>
+                    </div>
+                    <ul style="list-style: none; padding-left: 20px; margin-top: 4px;">
+                      <li v-for="prod in pcat.productos.filter(p => !p.subcategoria_id)" :key="'pos_prod_nosub_' + prod.product_id" style="margin-bottom: 6px; background: #1a1a1a; padding: 6px; border: 1px solid #333; border-radius: 4px;">
+                        <div>
+                          <strong>🏷️ [Producto ID: <span v-text="prod.product_id"></span> | Cod: <span v-text="prod.cod_producto || 'N/A'"></span>]</strong> <span v-text="prod.name"></span> - 
+                          <span style="color: #5bb75b; font-weight: bold;">S/. <span v-text="prod.price"></span></span> (Marca: <span v-text="prod.marca_des"></span>)
+                        </div>
+                        <div style="margin-top: 4px; padding-left: 15px; font-size: 11px; color: #ccc;">
+                          <span style="color: #ff5722; font-weight: bold;">🖼️ Imágenes de Producto (pos_product_image):</span>
+                          <span v-if="!prod.imagenes || prod.imagenes.length === 0" style="color: #777;"> Ninguna</span>
+                          <ul style="margin: 2px 0 0 15px; padding: 0;">
+                            <li v-for="pimg in prod.imagenes" :key="pimg.product_image_id">
+                              <a :href="pimg.img" target="_blank" style="color: #ff9800;" v-text="pimg.img"></a> (Orden: <span v-text="pimg.orden"></span>)
+                            </li>
+                          </ul>
+                        </div>
+                      </li>
+                    </ul>
+                  </li>
+
+                </ul>
+              </li>
+            </ul>
+          </div>
+
+          <hr style="border-top: 1px solid #444; margin: 30px 0;">
+
+          <!-- SECCIÓN 3: MÓDULO SLIDER (reg_slider) -->
+          <div class="arbol-nodo-raiz">
+            <div style="font-weight: bold; color: #5bb75b; font-size: 15px; border-bottom: 2px solid #5bb75b; padding-bottom: 5px;">
+              🖼️ MÓDULO SLIDER (reg_slider)
+            </div>
+
+            <div v-if="arbolSliders.length === 0" style="padding: 10px; color: #aaa;">Cargando o sin sliders para este negocio...</div>
+
+            <ul style="list-style: none; padding-left: 15px; margin-top: 10px;">
+              <li v-for="slider in arbolSliders" :key="'slider_' + slider.slider_id" style="margin-bottom: 10px; background: #1a1a1a; padding: 8px; border: 1px solid #333; border-radius: 4px;">
+                <div>
+                  <strong>[Slider ID: <span v-text="slider.slider_id"></span> | Grupo: <span v-text="slider.grupo || 'N/A'"></span>]</strong> <span v-text="slider.titulo_superior"></span>
+                </div>
+                <div style="margin-top: 4px; font-size: 11px; color: #ccc;">
+                  <span>Imagen: <a :href="slider.img" target="_blank" style="color: #5bb75b;" v-text="slider.img"></a></span>
+                  <span style="margin-left: 15px;">Orden: <span v-text="slider.orden"></span></span>
+                  <span style="margin-left: 15px;">Visible: <span v-text="slider.is_visible"></span></span>
+                </div>
+              </li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- TAB 2: VISOR JSON LIMPIO CON BOTÓN DE COPIA Y DESCARGA -->
+      <div class="tab-pane" id="tabArbolJson">
+        <div style="margin-bottom: 10px; text-align: right;">
+          <button class="btn btn-warning btn-small" @click="copiarJsonArbol" style="margin-right: 5px;">
+            <i class="icon-copy"></i> Copiar JSON al Portapapeles
+          </button>
+          <button class="btn btn-success btn-small" @click="descargarJsonArbol">
+            <i class="icon-download-alt"></i> Descargar JSON
+          </button>
+        </div>
+        <textarea id="txtJsonArbolViewer" readonly style="width: 100%; height: 400px; background: #111; color: #00ff00; font-family: monospace; font-size: 12px; border: 1px solid #333; resize: vertical;" v-text="arbolJsonLimpio"></textarea>
+      </div>
+
+      <!-- TAB 3: IMPORTACIÓN DE JSON -->
+      <div class="tab-pane" id="tabArbolImportacion">
+        <div style="background: #111; padding: 20px; border: 1px solid #333; border-radius: 6px;">
+          <h4 style="color: #5bb75b; margin-top: 0;"><i class="icon-upload-alt"></i> Importar y Sincronizar Árbol de Contenido</h4>
+          <p style="color: #bbb; font-size: 12px;">Selecciona un archivo JSON generado previamente para actualizar registros existentes por coincidencia de claves y registrar elementos nuevos.</p>
+          
+          <div style="margin: 15px 0;">
+            <input type="file" id="archivoJsonInput" accept=".json" @change="onFileSelected" style="color: #fff;" />
+          </div>
+
+          <div v-if="archivoSeleccionadoNombre" style="margin-bottom: 15px; color: #00d0ff; font-size: 12px;">
+            Archivo seleccionado: <strong v-text="archivoSeleccionadoNombre"></strong>
+          </div>
+
+          <button class="btn btn-success" :disabled="!archivoJsonContenido" @click="procesarImportacionJson">
+            <i class="icon-ok"></i> Procesar e Importar JSON
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="modal-footer" style="text-align: left;">
+    <button class="btn" data-dismiss="modal">Cerrar</button>
+  </div>
+</div>

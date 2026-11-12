@@ -13,25 +13,26 @@
       <div class="control-group">
         <label class="control-label">Nombre del Negocio</label>
         <div class="controls">
-          <input type="text" class="span12" v-model="nuevoNeg.nombre" placeholder="Nombre del negocio">
+          <input type="text" class="span3" v-model="nuevoNeg.nombre" placeholder="Nombre del negocio">
         </div>
       </div>
       <div class="control-group">
         <label class="control-label">Slug</label>
         <div class="controls">
-          <input type="text" class="span12" v-model="nuevoNeg.slug" placeholder="Ej: mi-tienda-online">
+          <input type="text" class="span3" v-model="nuevoNeg.slug" placeholder="Ej: mi-tienda-online">
         </div>
       </div>
       <div class="control-group">
         <label class="control-label">Celular (Yape)</label>
         <div class="controls">
-          <input type="text" class="span12" v-model="nuevoNeg.celular_yape" placeholder="Número de celular Yape">
+          <input type="text" class="span3" v-model="nuevoNeg.celular_yape" placeholder="Número de celular Yape">
         </div>
       </div>
     </form>
   </div>
-  <div class="modal-footer" style="text-align: left !important;">
+  <div class="modal-footer" style="text-align: left !important; display: flex; gap: 10px; align-items: center;">
     <button v-if="!adminTieneNegocio" class="btn btn-primary" @click="crearNeg">Crear Negocio Automático</button>
+    <button v-if="!adminTieneNegocio" class="btn btn-warning" @click="llenarRandomNegocio" style="background-color: #f89406; color: #fff;">Random</button>
     <button class="btn" data-dismiss="modal">Cerrar</button>
   </div>
 </div>
@@ -47,49 +48,49 @@
       <div class="control-group">
         <label class="control-label">Nombre</label>
         <div class="controls">
-          <input type="text" class="span12" v-model="formNeg.nombre" placeholder="Nombre del negocio">
+          <input type="text" class="span3" v-model="formNeg.nombre" placeholder="Nombre del negocio">
         </div>
       </div>
       <div class="control-group">
         <label class="control-label">Puesto</label>
         <div class="controls">
-          <input type="text" class="span12" v-model="formNeg.puesto" placeholder="Número o nombre de puesto">
+          <input type="text" class="span3" v-model="formNeg.puesto" placeholder="Número o nombre de puesto">
         </div>
       </div>
       <div class="control-group">
         <label class="control-label">URL del Logo</label>
         <div class="controls">
-          <input type="text" class="span12" v-model="formNeg.img_logo" placeholder="https://...">
+          <input type="text" class="span3" v-model="formNeg.img_logo" placeholder="https://...">
         </div>
       </div>
       <div class="control-group">
         <label class="control-label">Celular Informes</label>
         <div class="controls">
-          <input type="text" class="span12" v-model="formNeg.celular_informes" placeholder="Celular de contacto">
+          <input type="text" class="span3" v-model="formNeg.celular_informes" placeholder="Celular de contacto">
         </div>
       </div>
       <div class="control-group">
         <label class="control-label">Dirección</label>
         <div class="controls">
-          <input type="text" class="span12" v-model="formNeg.direccion" placeholder="Dirección exacta">
+          <input type="text" class="span3" v-model="formNeg.direccion" placeholder="Dirección exacta">
         </div>
       </div>
       <div class="control-group">
         <label class="control-label">Fin Premium</label>
         <div class="controls">
-          <input type="date" class="span12" v-model="formNeg.fecha_fin_premium">
+          <input type="date" class="span3" v-model="formNeg.fecha_fin_premium">
         </div>
       </div>
       <div class="control-group">
         <label class="control-label">Mercado</label>
         <div class="controls">
-          <v-select :options="mercadosOptions" label="nombre" v-model="formNeg.mercado_id" placeholder="Seleccione mercado"></v-select>
+          <v-select :options="mercadosOptions" label="nombre" v-model="formNeg.mercado_id" placeholder="Seleccione mercado" style="width: 280px;"></v-select>
         </div>
       </div>
       <div class="control-group">
         <label class="control-label">Rubros</label>
         <div class="controls">
-          <v-select :options="rubrosOptions" label="nombre" multiple v-model="formNeg.rubros" placeholder="Seleccione rubros"></v-select>
+          <v-select :options="rubrosOptions" label="nombre" multiple v-model="formNeg.rubros" placeholder="Seleccione rubros" style="width: 280px;"></v-select>
         </div>
       </div>
     </form>

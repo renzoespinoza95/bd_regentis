@@ -62,7 +62,7 @@ Flight::route('GET /admin/dash', function() {
         exit;
     }
 
-    Flight::redirect($apphost . $info_admin['url']);
+    Flight::redirect($apphost . "/neg/inicio");
 
 });
 
@@ -338,6 +338,7 @@ Flight::route('GET /api/usuario/mis-datos', function(){
         LEFT JOIN reg_negxusu nxu
             ON u.usu_id = nxu.usu_id
             AND nxu.is_activo = 1
+            AND nxu.borrado_el IS NULL
 
         LEFT JOIN reg_neg n
             ON nxu.neg_id = n.neg_id
