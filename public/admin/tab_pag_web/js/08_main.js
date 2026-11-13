@@ -5,8 +5,17 @@ new Vue({
     archivoSeleccionadoNombre: ''
   }),
   computed: {
+    categoriasConTodos() {
+      return [{ cat_pag_web_id: 'todos', titulo: 'Todos', clave_txt: '', url_img: '', is_visible: 1 }, ...this.categorias];
+    },
     subcatsVisibles() {
       if (!this.catSeleccionada) return [];
+      if (this.catSeleccionada.cat_pag_web_id === 'todos') {
+        return [
+          { subcat_pag_web_id: 'todos', titulo: 'Todos', is_visible: 1 },
+          { subcat_pag_web_id: 'videos', titulo: 'Videos', is_visible: 1 }
+        ];
+      }
       return this.subcategorias.filter(s => s.cat_pag_web_id == this.catSeleccionada.cat_pag_web_id);
     },
     subcatsFiltradas() {

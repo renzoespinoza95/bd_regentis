@@ -5,13 +5,34 @@
       <div class="control-group">
         <label class="control-label">Imagen</label>
         <div class="controls">
-          <input type="file" @change="onFileChange($event, 'editar')">
-          <div v-if="formulario.imgPreview" style="margin-top: 10px; position: relative; display: inline-block;">
-            <!-- Botón superior para eliminar la imagen solo si contiene barsi-img.b-cdn.net -->
-            <button type="button" v-if="formulario.imgPreview.includes('barsi-img.b-cdn.net')" @click="confirmarEliminarImagen" class="btn btn-danger btn-mini" style="position: absolute; top: 5px; right: 5px; z-index: 10;" title="Eliminar imagen de Bunny">
-              <i class="icon-trash icon-white"></i>
-            </button>
-            <img :src="formulario.imgPreview" style="max-width:200px; max-height:100px; display: block;" />
+          <input type="file" accept="image/*" ref="fileEditar" @change="onFileChange($event, 'editar')">
+
+          <div class="zona-img"
+               :class="{ arrastrando: formulario.arrastrando }"
+               @dragover.prevent="zonaDragOver('editar')"
+               @dragleave.prevent="zonaDragLeave('editar')"
+               @drop.prevent="zonaDrop($event, 'editar')">
+
+            <div v-if="formulario.imgPreview" class="zona-img-thumb">
+              <img :src="formulario.imgPreview" alt="">
+              <button type="button" class="zona-img-quitar" title="Quitar imagen" @click="quitarImagen('editar')">
+                <i class="fa fa-times"></i>
+              </button>
+            </div>
+
+            <div class="zona-img-titulo">Ingrese la URL de la imagen (o arrastre enlaces aquí):</div>
+            <div class="zona-img-nota">Esta entidad tiene una sola imagen: la nueva URL reemplazará a la actual.</div>
+            <div class="zona-img-fila">
+              <input type="text" v-model.trim="formulario.urlInput" placeholder="https://ejemplo.com/imagen.jpg" @keyup.enter="aceptarUrl('editar')">
+              <button type="button" class="btn btn-success" @click="aceptarUrl('editar')">Aceptar</button>
+            </div>
+
+            <div class="zona-img-drop">
+              <strong>Arrastra o pega enlaces URL de archivos aquí</strong>
+              <small>(Escribe o pega una URL por línea)</small>
+              <textarea rows="3" v-model="formulario.urlsTexto" @paste="pegarUrls('editar')" placeholder="https://ejemplo.com/img1.jpg&#10;https://ejemplo.com/img2.jpg"></textarea>
+              <button type="button" class="btn btn-warning btn-small" @click="usarUrl('editar')">Usar URL</button>
+            </div>
           </div>
         </div>
       </div>

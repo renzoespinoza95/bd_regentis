@@ -1,0 +1,6 @@
+<div v-if="imagenGrande" class="visor-imagen" @click.self="cerrarImagen">
+  <button type="button" class="visor-cerrar" @click="cerrarImagen" title="Cerrar">
+    <i class="fa fa-times"></i>
+  </button>
+  <img :src="imagenGrande" alt="Imagen del slider">
+</div>

@@ -1,5 +1,5 @@
 <?php
-// Backend parte 2: Detalle, Ordenamiento, Actualización de descripción y Creación automática
+// Backend parte 2: Detalle, Ordenamiento, Visibilidad, Actualización de descripción y Creación automática
 
 Flight::route('GET /slider/detalle/@id', function ($id) {
     include DEFINITION;
@@ -19,7 +19,8 @@ Flight::route('GET /slider/detalle/@id', function ($id) {
             neg_id
          FROM reg_slider
          WHERE slider_id = %i
-         AND neg_id = %i",
+         AND neg_id = %i
+         AND borrado_el IS NULL",
         $id,
         $administrador_actual['neg_id']
     );
@@ -49,6 +50,32 @@ Flight::route('POST /slider/ordenar', function () {
     } catch (Exception $e) {
         DB::rollback();
         Flight::json(['success' => false]);
+    }
+});
+
+// Cambia solo el estado is_visible (check del DataTable)
+Flight::route('POST /slider/visible', function () {
+    include DEFINITION;
+    autentificar_administrador();
+
+    $d          = json_decode(Flight::request()->getBody(), true);
+    $slider_id  = $d['slider_id'] ?? null;
+    $is_visible = !empty($d['is_visible']) ? 1 : 0;
+    $neg_id     = $administrador_actual['neg_id'];
+
+    if (!$slider_id) {
+        Flight::json(['success' => false, 'error' => 'slider_id requerido']);
+        return;
+    }
+
+    try {
+        DB::update('reg_slider', [
+            'is_visible' => $is_visible
+        ], 'slider_id = %i AND neg_id = %i AND borrado_el IS NULL', $slider_id, $neg_id);
+
+        Flight::json(['success' => true, 'is_visible' => $is_visible]);
+    } catch (Exception $e) {
+        Flight::json(['success' => false, 'error' => $e->getMessage()]);
     }
 });
 
@@ -93,8 +120,12 @@ Flight::route('POST /GcVL/slider/automatico', function () {
                 SELECT IFNULL(MAX(orden),0)
                 FROM reg_slider
                 WHERE neg_id = %i
+                AND borrado_el IS NULL
             ", $neg_id)
         );
+
+        // Descripción genérica de 6 palabras (lorem ipsum)
+        $descripcion = 'Lorem ipsum dolor sit amet consectetur';
 
         DB::insert('reg_slider', [
             'img'            => $img,
@@ -102,15 +133,16 @@ Flight::route('POST /GcVL/slider/automatico', function () {
             'is_visible'     => 1,
             'fecha_creacion' => date('Y-m-d H:i:s'),
             'fecha_fin'      => date('Y-m-d H:i:s', strtotime('+30 days')),
-            'descripcion'    => '',
+            'descripcion'    => $descripcion,
             'grupo'          => 'A',
             'neg_id'         => $neg_id
         ]);
 
         Flight::json([
-            'success'   => true,
-            'slider_id' => DB::insertId(),
-            'img'       => $img
+            'success'     => true,
+            'slider_id'   => DB::insertId(),
+            'img'         => $img,
+            'descripcion' => $descripcion
         ]);
     } catch(Exception $e) {
         Flight::json(['success' => false, 'error' => $e->getMessage()], 500);

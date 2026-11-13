@@ -10,7 +10,7 @@ const negState = {
   dtCat: null,
   nuevoNeg: { nombre: '', slug: '', celular_yape: '' },
   adminTieneNegocio: false,
-  formNeg: { neg_id: 0, nombre: '', puesto: '', celular_informes: '', direccion: '', img_logo: '', mercado_id: null, rubros: [] },
+  formNeg: { neg_id: 0, cod_neg: '', nombre: '', puesto: '', celular_informes: '', direccion: '', img_logo: '', mercado_id: null, rubros: [] },
   categorias: [],
   categoriasOptions: [],
   mercados: [],

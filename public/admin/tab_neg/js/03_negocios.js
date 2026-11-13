@@ -48,10 +48,8 @@ const negociosMethods = {
     const nombresDemo = ['Tienda Express', 'Market Central', 'Bodega Don Jose', 'Comercial El Rado', 'Super Ahorro'];
     const nombreAleatorio = nombresDemo[Math.floor(Math.random() * nombresDemo.length)] + ' ' + randStr.toUpperCase();
     
-    // Generar slug limpio
     const slugAleatorio = nombreAleatorio.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
     
-    // Generar celular aleatorio (9 dígitos empezando con 9)
     let celularAleatorio = '9';
     for (let i = 0; i < 8; i++) {
       celularAleatorio += Math.floor(Math.random() * 10);
@@ -98,10 +96,11 @@ const negociosMethods = {
   },
   abrirModalEditarNeg(n) {
     this.bloquear('Cargando datos...');
-    Promise.all([this.cargarRubros(), this.cargarMercadosParaCombo()])
+    Promise.all([this.cargarRubros(), this.cargarMercadosForCombo ? Promise.resolve() : this.cargarMercadosParaCombo()])
     .then(()=>{
       this.formNeg = {
         neg_id: n.neg_id,
+        cod_neg: n.cod_neg || '',
         nombre: n.nombre,
         puesto: n.puesto,
         img_logo: n.img_logo || '',
@@ -123,6 +122,7 @@ const negociosMethods = {
     const mercado_id = typeof this.formNeg.mercado_id === 'object' ? this.formNeg.mercado_id.mercado_id : this.formNeg.mercado_id;
     const payload = {
       neg_id: this.formNeg.neg_id,
+      cod_neg: (this.formNeg.cod_neg || '').trim(),
       nombre: this.formNeg.nombre.trim(),
       puesto: this.formNeg.puesto.trim(),
       img_logo: (this.formNeg.img_logo || '').trim(),
@@ -156,125 +156,31 @@ const negociosMethods = {
         });
     });
   },
+  reiniciarNegocio(n) {
+    apprise(`¿Estás seguro de reiniciar el negocio <b>${n.nombre}</b>?<br><br>Esto aplicará soft delete a todos sus sliders, páginas web (categorías, subcategorías, ítems) y productos POS.`, { confirm: true }, ok => {
+      if (!ok) return;
+      this.bloquear('Reiniciando registros...');
+      axios.post(`${this.apphost}/neg/reiniciar`, { neg_id: n.neg_id })
+        .then(r => {
+          if (r.data.status === 'ok') {
+            apprise('Negocio reiniciado correctamente.');
+            this.listarNeg();
+          } else {
+            apprise(r.data.msg || 'Error al reiniciar negocio');
+          }
+        })
+        .catch(() => {
+          apprise('Error de conexión al reiniciar negocio');
+        })
+        .finally(() => {
+          $.unblockUI();
+        });
+    });
+  },
   obtenerNombreMercado(mercado_id) {
     const mid = parseInt(mercado_id, 10);
     const m = this.mercadosOptions.find(x => parseInt(x.mercado_id,10) === mid);
     return m ? m.nombre : '';
-  },
-  abrirModalLogo(n) {
-    this.logoNeg = {
-      neg_id: n.neg_id,
-      nombre: n.nombre,
-      preview: n.img_logo || '',
-      nueva_preview: '',
-      file: null
-    };
-    $('#modalLogoNeg').modal('show');
-  },
-  onFileChangeLogo(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    this.logoNeg.file = file;
-
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      this.logoNeg.nueva_preview = evt.target.result;
-    };
-    reader.readAsDataURL(file);
-  },
-  guardarLogoBunny() {
-    if (!this.logoNeg.file) {
-      return apprise('Selecciona una imagen primero');
-    }
-
-    const formData = new FormData();
-    formData.append('file', this.logoNeg.file);
-
-    const flaskHost = typeof url_flask !== 'undefined' ? url_flask : 'http://localhost:5000';
-
-    this.bloquear('Enviando imagen a Flask...');
-    axios.post(`${flaskHost}/tk_guardar_img`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
-    .then(r => {
-      if (r.data.ok) {
-        const jobId = r.data.job_id;
-        this.iniciarPollingJobParaGuardar(jobId, flaskHost);
-      } else {
-        $.unblockUI();
-        apprise(r.data.error || 'No se pudo procesar la imagen');
-      }
-    })
-    .catch(() => {
-      $.unblockUI();
-      apprise('Error de conexión con el servicio de Flask');
-    });
-  },
-  iniciarPollingJobParaGuardar(jobId, flaskHost) {
-    this.bloquear('Procesando imagen en segundo plano...');
-    
-    const interval = setInterval(() => {
-      axios.get(`${flaskHost}/jobs/result?job_id=${jobId}`)
-        .then(r => {
-          const data = r.data;
-          
-          if (data.status === 'finished') {
-            clearInterval(interval);
-            
-            if (data.result && data.result.url) {
-              const urlFinal = data.result.url;
-              this.logoNeg.nueva_preview = urlFinal;
-              
-              axios.post(`${this.apphost}/neg/logo/actualizar`, {
-                neg_id: this.logoNeg.neg_id,
-                img_logo: urlFinal
-              })
-              .then(() => {
-                $.unblockUI();
-                $('#modalLogoNeg').modal('hide');
-                apprise('¡Logo actualizado correctamente!');
-                this.listarNeg();
-              })
-              .catch(() => {
-                $.unblockUI();
-                apprise('Error al actualizar el logo en la base de datos');
-              });
-
-            } else {
-              $.unblockUI();
-              apprise('El proceso finalizó pero no devolvió la URL de la imagen.');
-            }
-          } else if (data.status === 'failed') {
-            clearInterval(interval);
-            $.unblockUI();
-            apprise('El worker de Flask falló al procesar la imagen.');
-          }
-        })
-        .catch(() => {
-          clearInterval(interval);
-          $.unblockUI();
-          apprise('Error al consultar el estado de la tarea en Flask');
-        });
-    }, 2000);
-  },
-  eliminarLogoBunny() {
-    apprise('¿Desea eliminar la imagen actual?', { confirm: true }, ok => {
-      if (!ok) return;
-      
-      this.bloquear('Eliminando imagen...');
-      axios.post(`${this.apphost}/QQvN/neg/logo/defecto`, { neg_id: this.logoNeg.neg_id })
-        .then(r => {
-          if (r.data.status === 'ok') {
-            this.logoNeg.preview = r.data.img_logo;
-            this.logoNeg.nueva_preview = '';
-            this.logoNeg.file = null;
-            apprise('Imagen eliminada / restablecida por defecto');
-            this.listarNeg();
-          }
-        })
-        .finally(() => $.unblockUI());
-    });
   },
   listarNeg() {
     this.bloquear('Cargando negocios…');
@@ -316,6 +222,12 @@ const negociosMethods = {
                 const id = $(this).data('id');
                 const row = self.negs.find(x => parseInt(x.neg_id,10) === parseInt(id,10));
                 if (row) { self.abrirModalLogo(row); }
+              })
+              .on('click', 'a.reiniciar-neg', function(e){
+                e.preventDefault();
+                const id = $(this).data('id');
+                const row = self.negs.find(x => parseInt(x.neg_id,10) === parseInt(id,10));
+                if (row) { self.reiniciarNegocio(row); }
               })
               .on('click', 'a.propietario-neg', function(e){
                 e.preventDefault();
@@ -387,6 +299,7 @@ const negociosMethods = {
                   <li class="divider"></li>
                   <li><a href="#" class="propietario-neg" data-id="${n.neg_id}">Propietario</a></li>
                   <li><a href="#" class="logo-neg" data-id="${n.neg_id}">Subir logo</a></li>
+                  <li><a href="#" class="reiniciar-neg" data-id="${n.neg_id}">Reiniciar Neg</a></li>
                 </ul>
               </div>
             `;
@@ -394,7 +307,22 @@ const negociosMethods = {
               <img src="${n.img_logo || 'https://barsi-img.b-cdn.net/recursos/sg3f.png'}" style="width:55px;height:55px;object-fit:cover;border-radius:14px;border:1px solid #ddd;background:#fff;">
             `;
             const propietarioInfo = n.cod_usu ? `<b>${n.cod_usu}</b> - ${n.nombres_apellidos || ''}` : '<span class="text-muted">Sin propietario</span>';
-            this.dtNeg.row.add([n.neg_id, logo, n.nombre || '', propietarioInfo, mercadoNombre || '', fechaFinPremium, rubrosHtml, activo, actions]);
+            
+            const contadoresHtml = `
+              <div style="font-size: 11px; color: #f1c40f !important; margin-top: 4px; line-height: 1.3;">
+                <div><b>Sliders:</b> ${n.total_sliders}</div>
+                <div><b>Web (Cat/Sub/Item):</b> ${n.total_cat_web} / ${n.total_subcat_web} / ${n.total_items_web}</div>
+                <div><b>POS (Cat/Sub/Item):</b> ${n.total_cat_pos} / ${n.total_subcat_pos} / ${n.total_items_pos}</div>
+              </div>
+            `;
+            const codNegBadge = `<span class="badge badge-info" style="background-color: #5bc0de; color: #fff; margin-bottom: 4px; display: inline-block;">${n.cod_neg || '0'}</span>`;
+            const nombreConDetalles = `
+              <div>${codNegBadge}</div>
+              <div><b>${n.nombre || ''}</b></div>
+              ${contadoresHtml}
+            `;
+
+            this.dtNeg.row.add([n.neg_id, logo, nombreConDetalles, propietarioInfo, mercadoNombre || '', fechaFinPremium, rubrosHtml, activo, actions]);
           });
           this.dtNeg.draw(false);
         });

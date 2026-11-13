@@ -46,6 +46,7 @@ Flight::route('GET /slider/inicio', function () {
         'modal_crear'    => file_get_contents($basePath . '/modal_crear.html'),
         'modal_editar'   => file_get_contents($basePath . '/modal_editar.html'),
         'modal_detalle'  => file_get_contents($basePath . '/modal_detalle.html'),
+        'modal_imagen'   => file_get_contents($basePath . '/modal_imagen.html'),
         'scripts'        => file_get_contents($basePath . '/scripts.html'),
     ];
 
@@ -112,6 +113,7 @@ Flight::route('GET /slider/listar', function () {
             neg_id
         FROM reg_slider
         WHERE neg_id = %i
+        AND borrado_el IS NULL
         ORDER BY orden ASC
     ", $neg_id);
 
@@ -219,19 +221,54 @@ Flight::route('POST /slider/editar', function () {
         $update['img'] = '';
     }
 
-    DB::update('reg_slider', $update, 'slider_id = %i AND neg_id = %i', $slider_id, $neg_id);
+    DB::update('reg_slider', $update, 'slider_id = %i AND neg_id = %i AND borrado_el IS NULL', $slider_id, $neg_id);
     Flight::json(['success' => true]);
 });
 
-Flight::route('POST /slider/eliminar', function () {
-    $d = json_decode(Flight::request()->getBody(), true);
+// Actualiza solo la imagen (botón "Usar URL" del modal Editar)
+Flight::route('POST /slider/actualizar-imagen', function () {
+    include DEFINITION;
+    autentificar_administrador();
+
+    $d         = json_decode(Flight::request()->getBody(), true);
     $slider_id = $d['slider_id'] ?? null;
+    $img       = trim($d['img'] ?? '');
+    $neg_id    = $administrador_actual['neg_id'];
 
     if (!$slider_id) {
         Flight::json(['success' => false, 'error' => 'slider_id requerido']);
         return;
     }
 
-    DB::delete('reg_slider', 'slider_id = %i', $slider_id);
+    if (!preg_match('#^https?://\S+$#i', $img) || !filter_var($img, FILTER_VALIDATE_URL)) {
+        Flight::json(['success' => false, 'error' => 'URL de imagen no válida']);
+        return;
+    }
+
+    DB::update('reg_slider', [
+        'img' => $img
+    ], 'slider_id = %i AND neg_id = %i AND borrado_el IS NULL', $slider_id, $neg_id);
+
+    Flight::json(['success' => true, 'img' => $img]);
+});
+
+// Soft delete: no borra el registro, solo marca borrado_el
+Flight::route('POST /slider/eliminar', function () {
+    include DEFINITION;
+    autentificar_administrador();
+
+    $d         = json_decode(Flight::request()->getBody(), true);
+    $slider_id = $d['slider_id'] ?? null;
+    $neg_id    = $administrador_actual['neg_id'];
+
+    if (!$slider_id) {
+        Flight::json(['success' => false, 'error' => 'slider_id requerido']);
+        return;
+    }
+
+    DB::update('reg_slider', [
+        'borrado_el' => date('Y-m-d H:i:s')
+    ], 'slider_id = %i AND neg_id = %i AND borrado_el IS NULL', $slider_id, $neg_id);
+
     Flight::json(['success' => true]);
 });

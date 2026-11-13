@@ -62,6 +62,7 @@ Flight::route('GET /neg/listar', function() {
         $rows = DB::query("
             SELECT 
                 n.neg_id, 
+                n.cod_neg,
                 n.nombre, 
                 n.puesto, 
                 n.img_logo, 
@@ -69,7 +70,14 @@ Flight::route('GET /neg/listar', function() {
                 n.is_activo,
                 n.celular_informes,
                 n.direccion,
-                n.fecha_fin_premium
+                n.fecha_fin_premium,
+                (SELECT COUNT(*) FROM reg_slider s WHERE s.neg_id = n.neg_id AND s.borrado_el IS NULL) AS total_sliders,
+                (SELECT COUNT(*) FROM reg_cat_pag_web cp WHERE cp.neg_id = n.neg_id AND cp.borrado_el IS NULL) AS total_cat_web,
+                (SELECT COUNT(*) FROM reg_subcat_pag_web sp INNER JOIN reg_cat_pag_web cp ON cp.cat_pag_web_id = sp.cat_pag_web_id WHERE cp.neg_id = n.neg_id AND sp.borrado_el IS NULL AND cp.borrado_el IS NULL) AS total_subcat_web,
+                (SELECT COUNT(*) FROM reg_item_pag_web ip INNER JOIN reg_subcat_pag_web sp ON sp.subcat_pag_web_id = ip.subcat_pag_web_id INNER JOIN reg_cat_pag_web cp ON cp.cat_pag_web_id = sp.cat_pag_web_id WHERE cp.neg_id = n.neg_id AND ip.borrado_el IS NULL AND sp.borrado_el IS NULL AND cp.borrado_el IS NULL) AS total_items_web,
+                (SELECT COUNT(*) FROM pos_category pc WHERE pc.neg_id = n.neg_id AND pc.borrado_el IS NULL) AS total_cat_pos,
+                (SELECT COUNT(*) FROM pos_subcategoria ps INNER JOIN pos_category c ON c.category_id = ps.category_id WHERE c.neg_id = n.neg_id AND ps.borrado_el IS NULL AND c.borrado_el IS NULL) AS total_subcat_pos,
+                (SELECT COUNT(*) FROM pos_product p WHERE p.neg_id = n.neg_id AND p.borrado_el IS NULL) AS total_items_pos
             FROM reg_neg n
             WHERE n.borrado_el IS NULL
             ORDER BY n.neg_id DESC
@@ -99,6 +107,74 @@ Flight::route('GET /neg/listar', function() {
         Flight::json(['status'=>'ok', 'data'=>$rows]);
     } catch (Exception $e) {
         Flight::json(['status'=>'error', 'msg'=>$e->getMessage()],500);
+    }
+});
+
+Flight::route('POST /neg/reiniciar', function() {
+    autentificar_administrador();
+    try {
+        DB::query("SET NAMES 'utf8mb4'");
+        $data = Flight::request()->data->getData();
+        $neg_id = intval($data['neg_id'] ?? 0);
+
+        if ($neg_id <= 0) {
+            Flight::json(['status' => 'error', 'msg' => 'neg_id inválido'], 400);
+            return;
+        }
+
+        $now = date('Y-m-d H:i:s');
+        $fecha_fin_premium_nuevo = date('Y-m-d', strtotime('+1 year'));
+        $logo_defecto = 'https://barsi-img.b-cdn.net/recursos/logo-regentis.png';
+
+        DB::startTransaction();
+        try {
+            // Actualizar logo y fecha fin premium a 1 año en la tabla reg_neg
+            DB::update('reg_neg', [
+                'img_logo' => $logo_defecto,
+                'fecha_fin_premium' => $fecha_fin_premium_nuevo
+            ], "neg_id = %i", $neg_id);
+
+            // 1. Sliders del negocio
+            DB::update('reg_slider', ['borrado_el' => $now], "neg_id = %i AND borrado_el IS NULL", $neg_id);
+
+            // 2. Elementos Web (Items, Subcategorías, Categorías)
+            $itemWebIds = DB::queryFirstColumn("SELECT ip.item_pag_web_id FROM reg_item_pag_web ip INNER JOIN reg_subcat_pag_web sp ON sp.subcat_pag_web_id = ip.subcat_pag_web_id INNER JOIN reg_cat_pag_web cp ON cp.cat_pag_web_id = sp.cat_pag_web_id WHERE cp.neg_id = %i AND ip.borrado_el IS NULL AND sp.borrado_el IS NULL AND cp.borrado_el IS NULL", $neg_id);
+            if (!empty($itemWebIds)) {
+                DB::update('reg_item_pag_web', ['borrado_el' => $now], "item_pag_web_id IN %li AND borrado_el IS NULL", $itemWebIds);
+            }
+            
+            $subcatWebIds = DB::queryFirstColumn("SELECT sp.subcat_pag_web_id FROM reg_subcat_pag_web sp INNER JOIN reg_cat_pag_web cp ON cp.cat_pag_web_id = sp.cat_pag_web_id WHERE cp.neg_id = %i AND sp.borrado_el IS NULL AND cp.borrado_el IS NULL", $neg_id);
+            if (!empty($subcatWebIds)) {
+                DB::update('reg_subcat_pag_web', ['borrado_el' => $now], "subcat_pag_web_id IN %li AND borrado_el IS NULL", $subcatWebIds);
+            }
+            
+            $catWebIds = DB::queryFirstColumn("SELECT cat_pag_web_id FROM reg_cat_pag_web WHERE neg_id = %i AND borrado_el IS NULL", $neg_id);
+            if (!empty($catWebIds)) {
+                DB::update('reg_cat_pag_web', ['borrado_el' => $now], "cat_pag_web_id IN %li AND borrado_el IS NULL", $catWebIds);
+            }
+
+            // 3. Elementos POS (Productos, Subcategorías, Categorías)
+            $prodIds = DB::queryFirstColumn("SELECT product_id FROM pos_product WHERE neg_id = %i AND borrado_el IS NULL", $neg_id);
+            if (!empty($prodIds)) {
+                DB::update('pos_product', ['borrado_el' => $now], "product_id IN %li AND borrado_el IS NULL", $prodIds);
+                DB::update('pos_product_image', ['borrado_el' => $now], "product_id IN %li AND borrado_el IS NULL", $prodIds);
+                DB::update('pos_product_category', ['borrado_el' => $now], "product_id IN %li AND borrado_el IS NULL", $prodIds);
+            }
+
+            $catPosIds = DB::queryFirstColumn("SELECT category_id FROM pos_category WHERE neg_id = %i AND borrado_el IS NULL", $neg_id);
+            if (!empty($catPosIds)) {
+                DB::update('pos_subcategoria', ['borrado_el' => $now], "category_id IN %li AND borrado_el IS NULL", $catPosIds);
+                DB::update('pos_category', ['borrado_el' => $now], "category_id IN %li AND borrado_el IS NULL", $catPosIds);
+            }
+
+            DB::commit();
+            Flight::json(['status' => 'ok', 'msg' => 'Negocio reiniciado correctamente.']);
+        } catch (Exception $e) {
+            DB::rollback();
+            throw $e;
+        }
+    } catch (Exception $e) {
+        Flight::json(['status' => 'error', 'msg' => $e->getMessage()], 500);
     }
 });
 
@@ -153,6 +229,7 @@ Flight::route('POST /neg/editar', function() {
         DB::query("SET NAMES 'utf8mb4'");
         $data = Flight::request()->data->getData();
         $neg_id = intval($data['neg_id'] ?? 0);
+        $cod_neg = trim($data['cod_neg'] ?? '');
         $nombre = trim($data['nombre'] ?? '');
         $puesto = trim($data['puesto'] ?? '');
         $mercado_id = intval($data['mercado_id'] ?? 0);
@@ -169,6 +246,7 @@ Flight::route('POST /neg/editar', function() {
         DB::startTransaction();
         try {
             DB::update('reg_neg',[
+                'cod_neg' => ($cod_neg === '' ? '0' : $cod_neg),
                 'nombre' => $nombre,
                 'puesto' => $puesto,
                 'mercado_id' => $mercado_id,

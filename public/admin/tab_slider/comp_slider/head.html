@@ -1,1 +1,147 @@
-<!-- Metadatos y estilos específicos del módulo si se requieren -->
+<!-- Estilos específicos del módulo Sliders -->
+<style>
+  /* ===== DataTable: letras en negro (incluye la cabecera clonada por scrollX) ===== */
+  #tablaSliders th,
+  #tablaSliders td,
+  #tablaSliders td *,
+  #appSlider .dataTables_wrapper table th,
+  #appSlider .dataTables_wrapper table td,
+  #appSlider .dataTables_wrapper table td * {
+    color: #000 !important;
+  }
+  #tablaSliders .drag-handle,
+  #appSlider .dataTables_wrapper table .drag-handle {
+    background: #d9edf7;
+    text-shadow: none;
+  }
+  #tablaSliders .img-miniatura {
+    cursor: zoom-in;
+  }
+
+  /* ===== Filas con is_visible = 0: texto gris y en cursiva ===== */
+  #tablaSliders tr.fila-oculta td,
+  #tablaSliders tr.fila-oculta td *,
+  #appSlider .dataTables_wrapper table tr.fila-oculta td,
+  #appSlider .dataTables_wrapper table tr.fila-oculta td * {
+    color: #888 !important;
+    font-style: italic;
+  }
+
+  /* ===== Zona de imagen (modales Nuevo / Editar) ===== */
+  .zona-img {
+    margin-top: 10px;
+    max-width: 700px;
+  }
+  .zona-img-thumb {
+    position: relative;
+    display: inline-block;
+    width: 110px;
+    height: 110px;
+    margin-bottom: 10px;
+    border: 1px solid #556;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #111;
+  }
+  .zona-img-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .zona-img-quitar {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: #e74c3c;
+    color: #fff;
+    font-size: 12px;
+    line-height: 20px;
+    text-align: center;
+    cursor: pointer;
+  }
+  .zona-img-quitar:hover {
+    background: #c0392b;
+  }
+  .zona-img-titulo {
+    color: #e67e22;
+    font-weight: bold;
+    margin-bottom: 6px;
+  }
+  .zona-img-nota {
+    font-size: 11px;
+    opacity: .8;
+    margin-bottom: 6px;
+  }
+  .zona-img-fila {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .zona-img-fila input {
+    flex: 1;
+    margin: 0;
+  }
+  .zona-img-drop {
+    border: 2px dashed #e67e22;
+    border-radius: 6px;
+    padding: 12px;
+    text-align: center;
+    transition: background .15s, border-color .15s;
+  }
+  .zona-img.arrastrando .zona-img-drop {
+    background: rgba(230, 126, 34, .18);
+    border-color: #f1c40f;
+  }
+  .zona-img-drop small {
+    display: block;
+    margin: 2px 0 8px;
+    opacity: .85;
+  }
+  .zona-img-drop textarea {
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0 0 8px 0;
+    resize: vertical;
+  }
+
+  /* ===== Visor de imagen a pantalla completa ===== */
+  .visor-imagen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 3000;
+    background: rgba(0, 0, 0, .95);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .visor-imagen img {
+    max-width: 100vw;
+    max-height: 100vh;
+    object-fit: contain;
+  }
+  .visor-cerrar {
+    position: absolute;
+    top: 15px;
+    right: 25px;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 36px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: .85;
+  }
+  .visor-cerrar:hover {
+    opacity: 1;
+  }
+</style>

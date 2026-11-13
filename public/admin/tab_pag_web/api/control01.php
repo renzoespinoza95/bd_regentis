@@ -226,14 +226,12 @@ Flight::route('GET /pagweb/inicio', function () {
     );
 });
 
-// 2. Listar Ítems (incluye las imágenes de cada ítem para mostrar miniaturas)
+// 2. Listar Ítems (incluye las imágenes y los videos de cada ítem)
 Flight::route('GET /xoxo/reg_item/listar', function(){
     try{
         include DEFINITION;
         autentificar_administrador();
 
-        // Ya no se filtra por visibilidad de subcategoría / categoría:
-        // las ocultas se siguen mostrando (en gris) en el panel.
         $rows = DB::query("
           SELECT 
             i.*,
@@ -248,12 +246,13 @@ Flight::route('GET /xoxo/reg_item/listar', function(){
           ORDER BY i.item_pag_web_id DESC
         ");
 
-        // Imágenes de todos los ítems en una sola consulta
+        // Obtener IDs de todos los ítems listados
         $ids = [];
         foreach ($rows as $r) {
             $ids[] = (int)$r['item_pag_web_id'];
         }
 
+        // Imágenes de todos los ítems en una sola consulta
         $imgsPorItem = [];
         if (count($ids) > 0) {
             $imgs = DB::query("
@@ -271,8 +270,34 @@ Flight::route('GET /xoxo/reg_item/listar', function(){
             }
         }
 
+        // 🎬 Videos de todos los ítems en una sola consulta
+        $vidsPorItem = [];
+        if (count($ids) > 0) {
+            $vids = DB::query("
+              SELECT pag_item_vid_id, item_pag_web_id, titulo, codigo_web, url_img, is_visible, orden
+              FROM reg_pag_item_vid
+              WHERE item_pag_web_id IN %li
+              ORDER BY orden ASC, pag_item_vid_id ASC
+            ", $ids);
+
+            foreach ($vids as $vi) {
+                $vidsPorItem[(int)$vi['item_pag_web_id']][] = [
+                    'pag_item_vid_id' => (int)$vi['pag_item_vid_id'],
+                    'item_pag_web_id' => (int)$vi['item_pag_web_id'],
+                    'titulo'          => $vi['titulo'],
+                    'codigo_web'      => $vi['codigo_web'],
+                    'url_img'         => $vi['url_img'],
+                    'is_visible'      => isset($vi['is_visible']) ? (int)$vi['is_visible'] : 1,
+                    'orden'           => isset($vi['orden']) ? (int)$vi['orden'] : 0
+                ];
+            }
+        }
+
+        // Adjuntar colecciones a cada fila de ítems
         foreach ($rows as $k => $r) {
-            $rows[$k]['imagenes'] = $imgsPorItem[(int)$r['item_pag_web_id']] ?? [];
+            $itemId = (int)$r['item_pag_web_id'];
+            $rows[$k]['imagenes'] = $imgsPorItem[$itemId] ?? [];
+            $rows[$k]['videos']   = $vidsPorItem[$itemId] ?? [];
         }
 
         Flight::json(['status'=>'ok','data'=>$rows]);

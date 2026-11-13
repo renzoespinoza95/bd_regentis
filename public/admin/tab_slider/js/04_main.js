@@ -9,6 +9,13 @@ new Vue({
     this.obtenerUsuarioInfo();
     this.obtenerSliders();
 
+    // Esc cierra el visor de imagen a pantalla completa
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && this.imagenGrande) {
+        this.cerrarImagen();
+      }
+    });
+
     this.$nextTick(() => {
       this.activarDrag();
 

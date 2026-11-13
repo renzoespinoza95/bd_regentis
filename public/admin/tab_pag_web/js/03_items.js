@@ -17,8 +17,8 @@ const itemMethods = {
         this.nombreNegocio = negRes.data.nombre;
       }
 
-      if (this.categorias.length > 0 && !this.catSeleccionada) {
-        this.seleccionarCategoria(this.categorias[0]);
+      if (!this.catSeleccionada) {
+        this.seleccionarCategoria({ cat_pag_web_id: 'todos', titulo: 'Todos', is_visible: 1 });
       } else if (this.subcatSeleccionada) {
         this.filtrarTablaPorSubcat();
       }
@@ -26,8 +26,7 @@ const itemMethods = {
     .finally(() => desbloquearUI());
   },
 
-  // Recarga solo los ítems (con sus miniaturas) y vuelve a dibujar el DataTable.
-  // Se usa al cambiar las imágenes de un ítem desde el modal Lista de Imágenes.
+  // Recarga solo los ítems y vuelve a dibujar el DataTable.
   refrescarItems() {
     return axios.get(`${this.apphost}/xoxo/reg_item/listar`)
       .then(res => {
@@ -45,6 +44,10 @@ const itemMethods = {
 
   seleccionarCategoria(cat) {
     this.catSeleccionada = cat;
+    if (cat.cat_pag_web_id === 'todos') {
+      this.seleccionarSubcategoria({ subcat_pag_web_id: 'todos', titulo: 'Todos', is_visible: 1 });
+      return;
+    }
     const subs = this.subcategorias.filter(s => s.cat_pag_web_id == cat.cat_pag_web_id);
     if (subs.length > 0) {
       this.seleccionarSubcategoria(subs[0]);
@@ -149,7 +152,8 @@ const itemMethods = {
             self.itemActual = $(this).data('id');
             self.verImagenes(self.itemActual);
           })
-          .on('click', '.vid', function () {
+          .on('click', '.vid', function (e) {
+            e.preventDefault();
             self.itemActual = $(this).data('id');
             self.verVideos(self.itemActual);
           })
@@ -162,14 +166,32 @@ const itemMethods = {
 
       this.dt.clear();
 
-      const itemsFiltrados = this.subcatSeleccionada
-        ? this.items.filter(i => i.subcat_pag_web_id == this.subcatSeleccionada.subcat_pag_web_id)
-        : [];
+      let itemsFiltrados = [];
+      const catIdsNegocio = this.categorias.map(c => c.cat_pag_web_id);
+      const subcatIdsNegocio = this.subcategorias
+        .filter(s => catIdsNegocio.includes(s.cat_pag_web_id))
+        .map(s => s.subcat_pag_web_id);
+
+      if (this.subcatSeleccionada) {
+        if (this.subcatSeleccionada.subcat_pag_web_id === 'todos') {
+          itemsFiltrados = this.items.filter(i => subcatIdsNegocio.includes(i.subcat_pag_web_id));
+        } else if (this.subcatSeleccionada.subcat_pag_web_id === 'videos') {
+          itemsFiltrados = this.items.filter(i => 
+            subcatIdsNegocio.includes(i.subcat_pag_web_id) && 
+            Array.isArray(i.videos) && 
+            i.videos.length > 0
+          );
+        } else {
+          itemsFiltrados = this.items.filter(i => i.subcat_pag_web_id == this.subcatSeleccionada.subcat_pag_web_id);
+        }
+      }
+
       itemsFiltrados.forEach(i => {
         const checkedHtml = (i.is_visible == 1 || i.is_visible === undefined) ? 'checked' : '';
         const claveTxtVal = i.clave_txt ? i.clave_txt : '';
+        const contenidoVal = i.contenido ? i.contenido : '';
 
-        // Miniaturas de las imágenes del ítem, debajo del título
+        // Miniaturas de imágenes
         const imgs = Array.isArray(i.imagenes) ? i.imagenes : [];
         const thumbsHtml = imgs.length
           ? `<div class="item-thumbs">${imgs.map(im =>
@@ -193,6 +215,7 @@ const itemMethods = {
             </div>
           </div>
           `,
+          `<div style="max-height: 80px; overflow-y: auto; font-size: 12px;">${contenidoVal}</div>`,
           `<div style="text-align:center;"><input type="checkbox" class="chk-item-visible" data-id="${i.item_pag_web_id}" ${checkedHtml} style="cursor:pointer;"></div>`,
           `
           <div class="btn-group">
@@ -227,8 +250,8 @@ const itemMethods = {
       html02: '',
       is_visible: 1,
       clave_txt: '',
-      cat: this.catSeleccionada,
-      subcat: this.subcatSeleccionada
+      cat: this.catSeleccionada && this.catSeleccionada.cat_pag_web_id !== 'todos' ? this.catSeleccionada : null,
+      subcat: this.subcatSeleccionada && this.subcatSeleccionada.subcat_pag_web_id !== 'todos' ? this.subcatSeleccionada : null
     };
 
     $('#modalItem').modal('show');
@@ -258,8 +281,8 @@ const itemMethods = {
       html02: '',
       is_visible: 1,
       clave_txt: '',
-      cat: this.catSeleccionada || null,
-      subcat: this.subcatSeleccionada || null
+      cat: this.catSeleccionada && this.catSeleccionada.cat_pag_web_id !== 'todos' ? this.catSeleccionada : null,
+      subcat: this.subcatSeleccionada && this.subcatSeleccionada.subcat_pag_web_id !== 'todos' ? this.subcatSeleccionada : null
     };
 
     $('#modalItem').modal('show');

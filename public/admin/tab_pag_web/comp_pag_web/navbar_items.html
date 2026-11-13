@@ -1,4 +1,3 @@
-
 <!-- CABECERA CENTRADA: Contenidos neg_id → Nombre_del_negocio + Botón Cog a un costado -->
 <div style="display: flex; justify-content: center; align-items: center; position: relative; margin-bottom: 20px; padding: 10px 0;">
   <h2 style="margin: 0; font-weight: bold; text-align: center;">
@@ -38,7 +37,7 @@
     <!-- Contenedor Scrollable Horizontal -->
     <div ref="carruselCategoriasRef" class="cat-carousel-track hide-scrollbar">
       <a href="#"
-         v-for="c in categorias"
+         v-for="c in categoriasConTodos"
          :key="c.cat_pag_web_id"
          class="cat-card"
          :class="{
@@ -54,7 +53,7 @@
             <img v-if="c.url_img" :src="c.url_img" class="cc-img">
           </div>
 
-          <span class="badge cc-badge" v-text="contarSubcats(c.cat_pag_web_id)"></span>
+          <span class="badge cc-badge" v-text="c.cat_pag_web_id === 'todos' ? items.filter(i => { const catIds = categorias.map(cat => cat.cat_pag_web_id); const subIds = subcategorias.filter(s => catIds.includes(s.cat_pag_web_id)).map(s => s.subcat_pag_web_id); return subIds.includes(i.subcat_pag_web_id); }).length : contarSubcats(c.cat_pag_web_id)"></span>
         </div>
       </a>
 
@@ -69,19 +68,17 @@
 </div>
 
 <!-- =========================================================
-     DISTRIBUCIÓN EN 2 COLUMNAS RESTANTES: SUBCAT -> ITEMS
+     SECCIÓN 2: SUBCATEGORÍAS (ANCHO COMPLETO ARRIBA)
 ========================================================= -->
 <div class="row-fluid" style="margin-top: 15px;">
-
-  <!-- COLUMNA 1: SUBCATEGORÍAS (las de is_visible = 0 se muestran en gris y cursiva) -->
-  <div class="span4">
+  <div class="span12">
     <div class="well well-small" style="padding: 10px; background: #ffffff; border: 1px solid #dcdcdc; border-radius: 6px;">
       <div class="clearfix" style="margin-bottom: 8px;">
         <div style="float: left;">
           <strong style="font-size: 14px; text-transform: uppercase; color: #333333; display: block;">2. Subcategorías</strong>
           <div v-if="catSeleccionada" style="font-size: 12px; margin-top: 2px; display: flex; align-items: center; gap: 5px;">
             <span style="color: #2c3e50; font-weight: bold;" v-text="catSeleccionada.titulo"></span>
-            <span style="display: inline-flex; gap: 3px;">
+            <span style="display: inline-flex; gap: 3px;" v-if="catSeleccionada.cat_pag_web_id !== 'todos'">
               <button class="btn btn-mini btn-warning" @click="abrirEditarCategoria(catSeleccionada)" title="Editar Categoría">
                 <i class="icon-pencil"></i>
               </button>
@@ -92,18 +89,19 @@
           </div>
         </div>
         <button class="btn btn-mini btn-success pull-right"
-                :disabled="!catSeleccionada"
+                :disabled="!catSeleccionada || catSeleccionada.cat_pag_web_id === 'todos'"
                 @click="abrirCrearSubcatDirecta"
                 title="Nueva subcategoría en esta categoría" style="margin-top: 2px;">
           <i class="fa fa-plus"></i>
         </button>
       </div>
 
-      <div class="subcat-list">
+      <div class="subcat-list" style="display: flex; flex-wrap: wrap; gap: 8px;">
         <a href="#"
            v-for="s in subcatsVisibles"
            :key="s.subcat_pag_web_id"
            class="subcat-card clearfix"
+           style="min-width: 180px; margin-bottom: 0;"
            :class="{
              activa: subcatSeleccionada && subcatSeleccionada.subcat_pag_web_id == s.subcat_pag_web_id,
              'invisible-gris': String(s.is_visible) === '0'
@@ -117,27 +115,37 @@
               <img v-if="s.url_img" :src="s.url_img" class="cc-img">
             </div>
 
-            <span class="badge cc-badge" v-text="contarItems(s.subcat_pag_web_id)"></span>
+            <span class="badge cc-badge" v-text="
+              s.subcat_pag_web_id === 'todos' 
+                ? items.filter(i => { const catIds = categorias.map(cat => cat.cat_pag_web_id); const subIds = subcategorias.filter(sub => catIds.includes(sub.cat_pag_web_id)).map(sub => sub.subcat_pag_web_id); return subIds.includes(i.subcat_pag_web_id); }).length 
+                : (s.subcat_pag_web_id === 'videos' 
+                    ? items.filter(i => { const catIds = categorias.map(cat => cat.cat_pag_web_id); const subIds = subcategorias.filter(sub => catIds.includes(sub.cat_pag_web_id)).map(sub => sub.subcat_pag_web_id); return subIds.includes(i.subcat_pag_web_id) && (Array.isArray(i.videos) && i.videos.length > 0); }).length 
+                    : contarItems(s.subcat_pag_web_id))
+            "></span>
           </div>
         </a>
 
-        <div v-if="!catSeleccionada" class="muted text-center" style="padding: 15px; color: #777777;">
+        <div v-if="!catSeleccionada" class="muted text-center" style="padding: 15px; color: #777777; width: 100%;">
           Selecciona una categoría primero.
         </div>
 
-        <div v-else-if="subcatsVisibles.length === 0" class="muted text-center" style="padding: 15px; color: #777777;">
+        <div v-else-if="subcatsVisibles.length === 0" class="muted text-center" style="padding: 15px; color: #777777; width: 100%;">
           No hay subcategorías.
         </div>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- COLUMNA 2: GRID DATATABLE DE ITEMS -->
-  <div class="span8">
+<!-- =========================================================
+     SECCIÓN 3: GRID DATATABLE DE ITEMS (DEBAJO Y ANCHO COMPLETO)
+========================================================= -->
+<div class="row-fluid" style="margin-top: 15px;">
+  <div class="span12">
     <div class="clearfix" style="margin-bottom: 8px;">
       <h4 style="margin: 0; float: left; color: #ffffff; display: flex; align-items: center; gap: 8px;">
         <span>Items de: <span class="text-info" style="color: #00d0ff; font-weight: bold;" v-text="subcatSeleccionada ? subcatSeleccionada.titulo : '(Seleccione una subcategoría)'"></span></span>
-        <span v-if="subcatSeleccionada" style="display: inline-flex; gap: 4px; margin-left: 5px;">
+        <span v-if="subcatSeleccionada && subcatSeleccionada.subcat_pag_web_id !== 'todos' && subcatSeleccionada.subcat_pag_web_id !== 'videos'" style="display: inline-flex; gap: 4px; margin-left: 5px;">
           <button class="btn btn-mini btn-warning" @click="abrirEditarSubcat(subcatSeleccionada)" title="Editar Subcategoría">
             <i class="icon-pencil"></i>
           </button>
@@ -147,7 +155,7 @@
         </span>
       </h4>
       <button class="btn btn-small btn-primary pull-right"
-              :disabled="!subcatSeleccionada"
+              :disabled="!subcatSeleccionada || subcatSeleccionada.subcat_pag_web_id === 'todos' || subcatSeleccionada.subcat_pag_web_id === 'videos'"
               @click="abrirNuevoItemDirecto">
         <i class="fa fa-plus"></i> Nuevo Item
       </button>
@@ -159,6 +167,7 @@
           <th>ID</th>
           <th>Título</th>
           <th>Clave TXT</th>
+          <th>Contenido</th>
           <th style="width: 60px; text-align: center;">Visible</th>
           <th>Acciones</th>
         </tr>
@@ -166,7 +175,6 @@
       <tbody></tbody>
     </table>
   </div>
-
 </div>
 
 <!-- INCLUSIÓN DEL MODAL DEL ÁRBOL DE CONTENIDO -->

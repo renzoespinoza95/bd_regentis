@@ -66,11 +66,11 @@ const productosMethods = {
 
       self.dt = $('#tablaProduct').DataTable({
         dom: 'frtip',
-        order: [[0, 'desc']],
-        columnDefs: [{ orderable: false, targets: [4, 5] }],
+        order: [[1, 'desc']],
+        columnDefs: [{ orderable: false, targets: [0, 5] }],
         // Los productos con is_visible = 0 se ven en gris y cursiva
         createdRow: function(row, data){
-          const p = self.productos.find(x => x.product_id == data[0]);
+          const p = self.productos.find(x => x.product_id == data[1]);
           if (p && Number(p.is_visible) === 0) {
             $(row).addClass('fila-inactiva');
           }
@@ -131,10 +131,10 @@ const productosMethods = {
       productosFiltrados.forEach(p => {
         const actions = `
             <div class="btn-group">
-              <button class="btn btn-mini btn-primary dropdown-toggle" data-toggle="dropdown">
-                Acciones <span class="caret"></span>
+              <button class="btn btn-mini btn-primary dropdown-toggle" data-toggle="dropdown" title="Acciones">
+                <i class="icon-cog"></i> <span class="caret"></span>
               </button>
-              <ul class="dropdown-menu pull-right">
+              <ul class="dropdown-menu">
                 <li><a href="#" class="detalle" data-id="${p.product_id}"><i class="icon-eye-open"></i> Detalle</a></li>
                 <li><a href="#" class="editar" data-id="${p.product_id}"><i class="icon-pencil"></i> Editar</a></li>
                 <li><a href="#" class="eliminar" data-id="${p.product_id}"><i class="icon-trash"></i> Eliminar</a></li>
@@ -166,12 +166,12 @@ const productosMethods = {
         `;
 
         self.dt.row.add([
+          actions,
           p.product_id,
           nombreConFotos,
           'S/ ' + parseFloat(p.price).toFixed(2),
           p.stock,
-          visibleHtml,
-          actions
+          visibleHtml
         ]);
       });
       self.dt.draw(false);

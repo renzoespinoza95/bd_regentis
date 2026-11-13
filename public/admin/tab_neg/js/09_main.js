@@ -4,6 +4,7 @@ const appNeg = new Vue({
   methods: {
     ...uiHelpersMethods,
     ...negociosMethods,
+    ...negociosLogoMethods,
     ...mercadosMethods,
     ...catMercadosMethods,
     ...propietariosMethods,
