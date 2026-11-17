@@ -1,21 +1,17 @@
 <?php
-Flight::route('POST /MpIH/product/listar', function () {
-
+Flight::route("POST /MpIH/product/listar", function () {
     include DEFINITION;
 
     DB::query("SET NAMES 'utf8mb4'");
 
-    $data = json_decode(
-        Flight::request()->getBody(),
-        true
-    ) ?: [];
+    $data = json_decode(Flight::request()->getBody(), true) ?: [];
 
     /* =========================================
        FIRMA
     ========================================= */
 
-    $xin  = $data['xin'] ?? '';
-    $yuan = $data['yuan'] ?? '';
+    $xin = $data["xin"] ?? "";
+    $yuan = $data["yuan"] ?? "";
 
     firma($xin, $yuan);
 
@@ -23,20 +19,22 @@ Flight::route('POST /MpIH/product/listar', function () {
        PAYLOAD
     ========================================= */
 
-    $neg_id = intval($data['neg_id'] ?? 0);
+    $neg_id = intval($data["neg_id"] ?? 0);
 
-    $usu_id = intval($data['usu_id'] ?? 0);
+    $usu_id = intval($data["usu_id"] ?? 0);
 
     /* =========================================
        VALIDAR
     ========================================= */
 
-    if(!$neg_id){
-
-        Flight::json([
-            'status'=>'error',
-            'msg'=>'neg_id requerido'
-        ],400);
+    if (!$neg_id) {
+        Flight::json(
+            [
+                "status" => "error",
+                "msg" => "neg_id requerido",
+            ],
+            400
+        );
 
         return;
     }
@@ -45,7 +43,8 @@ Flight::route('POST /MpIH/product/listar', function () {
        PRODUCTOS
     ========================================= */
 
-    $rows = DB::query("
+    $rows = DB::query(
+        "
 
         SELECT
 
@@ -82,92 +81,75 @@ Flight::route('POST /MpIH/product/listar', function () {
 
         ORDER BY p.product_id DESC
 
-    ", $neg_id);
+    ",
+        $neg_id
+    );
 
     /* =========================================
        NORMALIZAR categories_ids
     ========================================= */
 
     foreach ($rows as &$r) {
-
-        $r['categories_ids'] = $r['categories_ids']
-
-            ? array_map(
-                'intval',
-                explode(',', $r['categories_ids'])
-            )
-
+        $r["categories_ids"] = $r["categories_ids"]
+            ? array_map("intval", explode(",", $r["categories_ids"]))
             : [];
-
     }
 
     /* =========================================
        RESPONSE
     ========================================= */
 
-    Flight::json([
+    Flight::json(
+        [
+            "status" => "ok",
 
-        'status'=>'ok',
+            "data" => $rows,
 
-        'data'=>$rows,
+            "neg_id" => $neg_id,
 
-        'neg_id'=>$neg_id,
-
-        'usu_id'=>$usu_id
-
-    ], 200, JSON_UNESCAPED_UNICODE);
-
+            "usu_id" => $usu_id,
+        ],
+        200,
+        JSON_UNESCAPED_UNICODE
+    );
 });
 
-Flight::route('POST /MylW/listar_categorias', function () {
-
+Flight::route("POST /MylW/listar_categorias", function () {
     include DEFINITION;
 
     DB::query("SET NAMES 'utf8mb4'");
 
-    $d = json_decode(
-        Flight::request()->getBody(),
-        true
-    ) ?: [];
+    $d = json_decode(Flight::request()->getBody(), true) ?: [];
 
     /* ======================================
        CAMPOS
     ====================================== */
 
-    $neg_id = intval(
-        $d['neg_id'] ?? 0
-    );
+    $neg_id = intval($d["neg_id"] ?? 0);
 
-    $xin = trim(
-        $d['xin'] ?? ''
-    );
+    $xin = trim($d["xin"] ?? "");
 
-    $yuan = trim(
-        $d['yuan'] ?? ''
-    );
+    $yuan = trim($d["yuan"] ?? "");
 
     /* ======================================
        FIRMA
     ====================================== */
 
-    firma(
-        $xin,
-        $yuan
-    );
+    firma($xin, $yuan);
 
     /* ======================================
        VALIDAR
     ====================================== */
 
-    if(!$neg_id){
+    if (!$neg_id) {
+        Flight::json(
+            [
+                "status" => "error",
 
-        Flight::json([
-
-            'status'=>'error',
-
-            'msg'=>'neg_id requerido'
-
-        ],400);
+                "msg" => "neg_id requerido",
+            ],
+            400
+        );
 
         return;
     }
@@ -176,7 +158,8 @@ Flight::route('POST /MylW/listar_categorias', function () {
        PUBLICO GENERAL
     ====================================== */
 
-    $publico_general_id = DB::queryFirstField("
+    $publico_general_id = DB::queryFirstField(
+        "
 
         SELECT
 
@@ -192,17 +175,18 @@ Flight::route('POST /MylW/listar_categorias', function () {
 
         LIMIT 1
 
-    ", $neg_id);
-
-    $publico_general_id = intval(
-        $publico_general_id
+    ",
+        $neg_id
     );
+
+    $publico_general_id = intval($publico_general_id);
 
     /* ======================================
        CATEGORÍAS
     ====================================== */
 
-    $categorias = DB::query("
+    $categorias = DB::query(
+        "
 
         SELECT 
 
@@ -220,13 +204,16 @@ Flight::route('POST /MylW/listar_categorias', function () {
 
         ORDER BY c.name ASC
 
-    ", $neg_id);
+    ",
+        $neg_id
+    );
 
     /* ======================================
        PRODUCTOS + STOCK
     ====================================== */
 
-    $productos = DB::query("
+    $productos = DB::query(
+        "
 
         SELECT 
 
@@ -269,7 +256,9 @@ p.variantes_json,
             p.product_id,
             pc.category_id
 
-    ", $neg_id);
+    ",
+        $neg_id
+    );
 
     /* ======================================
        MAPEAR POR CATEGORÍA
@@ -277,51 +266,32 @@ p.variantes_json,
 
     $map = [];
 
-    foreach($productos as $p){
-
-        $cid = intval(
-            $p['category_id']
-        );
+    foreach ($productos as $p) {
+        $cid = intval($p["category_id"]);
 
         $variantes = [
-            'atributo' => '',
-            'opciones' => []
+            "atributo" => "",
+            "opciones" => [],
         ];
 
-        if(
-            !empty(
-                $p['variantes_json']
-            )
-        ){
+        if (!empty($p["variantes_json"])) {
+            $variantes_decoded = json_decode($p["variantes_json"], true);
 
-            $variantes_decoded = json_decode(
-                $p['variantes_json'],
-                true
-            );
-
-            if(
-                is_array(
-                    $variantes_decoded
-                )
-            ){
-
+            if (is_array($variantes_decoded)) {
                 $variantes = $variantes_decoded;
-
             }
-
         }
 
-        if(!isset($map[$cid])){
-
+        if (!isset($map[$cid])) {
             $map[$cid] = [];
-
         }
 
         /* ======================================
            IMAGENES
         ====================================== */
 
-        $imagenes = DB::query("
+        $imagenes = DB::query(
+            "
 
             SELECT
 
@@ -342,144 +312,83 @@ p.variantes_json,
             ORDER BY orden ASC
 
         ",
-            $p['product_id']
+            $p["product_id"]
         );
 
-        foreach($imagenes as &$img){
+        foreach ($imagenes as &$img) {
+            $img["product_image_id"] = intval($img["product_image_id"]);
 
-            $img['product_image_id'] = intval(
-                $img['product_image_id']
-            );
+            $img["orden"] = intval($img["orden"]);
 
-            $img['orden'] = intval(
-                $img['orden']
-            );
-
-            $img['is_visible'] = intval(
-                $img['is_visible']
-            );
-
+            $img["is_visible"] = intval($img["is_visible"]);
         }
 
         $precio_volumen = [];
 
-        if(
-            !empty(
-                $p['precio_volumen_json']
-            )
-        ){
-
+        if (!empty($p["precio_volumen_json"])) {
             $precio_volumen = json_decode(
-
-                $p['precio_volumen_json'],
+                $p["precio_volumen_json"],
 
                 true
-
             );
 
-            if(
-                !is_array(
-                    $precio_volumen
-                )
-            ){
+            if (!is_array($precio_volumen)) {
                 $precio_volumen = [];
             }
         }
 
-
         $variantes = [
+            "atributo" => "",
 
-                'atributo' => '',
+            "opciones" => [],
+        ];
 
-                'opciones' => []
+        if (!empty($p["variantes_json"])) {
+            $variantes = json_decode(
+                $p["variantes_json"],
 
-            ];
+                true
+            );
 
-            if(
-                !empty(
-                    $p['variantes_json']
-                )
-            ){
+            if (!is_array($variantes)) {
+                $variantes = [
+                    "atributo" => "",
 
-                $variantes = json_decode(
-
-                    $p['variantes_json'],
-
-                    true
-
-                );
-
-                if(
-                    !is_array(
-                        $variantes
-                    )
-                ){
-
-                    $variantes = [
-
-                        'atributo' => '',
-
-                        'opciones' => []
-
-                    ];
-
-                }
-
+                    "opciones" => [],
+                ];
             }
+        }
 
         $map[$cid][] = [
+            "product_id" => intval($p["product_id"]),
 
-            'product_id' => intval(
-                $p['product_id']
-            ),
+            "cod_producto" => $p["cod_producto"],
 
-            'cod_producto' =>
-                $p['cod_producto'],
+            "variantes_json" => $p["variantes_json"],
 
-            'variantes_json' =>
-                $p['variantes_json'],
+            "variantes" => $variantes,
 
-            'variantes' =>
-                $variantes,                
+            "is_visible" => intval($p["is_visible"]),
 
-            'is_visible' => intval(
-                $p['is_visible']
-            ),
+            "name" => $p["name"],
 
-            'name' =>
-                $p['name'],
+            "description" => $p["description"],
 
-            'description' =>
-                $p['description'],
+            "price" => floatval($p["price"]),
 
-            'price' => floatval(
-                $p['price']
-            ),
+            "compra_total" => floatval($p["compra_total"]),
 
-            'compra_total' => floatval(
-                $p['compra_total']
-            ),
+            "cantidad_comprada" => intval($p["cantidad_comprada"]),
 
-            'cantidad_comprada' => intval(
-                $p['cantidad_comprada']
-            ),
+            "precio_volumen" => $precio_volumen,
 
-            'precio_volumen' =>
-                $precio_volumen,
+            "variantes_json" => $p["variantes_json"],
 
-            'variantes_json' =>
-                $p['variantes_json'],
+            "variantes" => $variantes,
 
-            'variantes' =>
-                $variantes,                
+            "stock" => intval($p["stock"]),
 
-            'stock' => intval(
-                $p['stock']
-            ),
-
-            'imagenes' =>
-                $imagenes
-
+            "imagenes" => $imagenes,
         ];
     }
 
@@ -487,15 +396,10 @@ p.variantes_json,
        ASIGNAR PRODUCTOS
     ====================================== */
 
-    foreach($categorias as &$c){
+    foreach ($categorias as &$c) {
+        $cid = intval($c["category_id"]);
 
-        $cid = intval(
-            $c['category_id']
-        );
-
-        $c['productos'] =
-            $map[$cid] ?? [];
-
+        $c["productos"] = $map[$cid] ?? [];
     }
 
     /* ======================================
@@ -503,194 +407,135 @@ p.variantes_json,
     ====================================== */
 
     Flight::json([
+        "status" => "ok",
 
-        'status'=>'ok',
+        "neg_id" => $neg_id,
 
-        'neg_id'=>$neg_id,
+        "publico_general_id" => $publico_general_id,
 
-        'publico_general_id' =>
-            $publico_general_id,
-
-        'data'=>$categorias
-
+        "data" => $categorias,
     ]);
-
 });
 
-Flight::route('POST /ArWL/tienda', function () {
 
+Flight::route("POST /ArWL/tienda", function () {
     include DEFINITION;
 
     DB::query("SET NAMES 'utf8mb4'");
 
-    $d = json_decode(
-        Flight::request()->getBody(),
-        true
-    ) ?: [];
+    $d = json_decode(Flight::request()->getBody(), true) ?: [];
 
     /* ============================================================
        CAMPOS
     ============================================================ */
 
-    $neg_id = isset($d['neg_id'])
-        ? intval($d['neg_id'])
-        : 0;
+    $neg_id = isset($d["neg_id"]) ? intval($d["neg_id"]) : 0;
 
-    $xin = isset($d['xin'])
-        ? trim((string)$d['xin'])
-        : '';
+    $xin = isset($d["xin"]) ? trim((string) $d["xin"]) : "";
 
-    $yuan = isset($d['yuan'])
-        ? trim((string)$d['yuan'])
-        : '';
+    $yuan = isset($d["yuan"]) ? trim((string) $d["yuan"]) : "";
 
     /* ============================================================
        VALIDAR FIRMA
     ============================================================ */
 
-    firma(
-        $xin,
-        $yuan
-    );
+    firma($xin, $yuan);
 
     /* ============================================================
        VALIDAR NEG_ID
     ============================================================ */
 
-    if($neg_id <= 0){
-
+    if ($neg_id <= 0) {
         Flight::json([
-
-            'status' => 'ok',
-
-            'data' => [
-
-                'redirect' => 'mod_404'
-
-            ]
-
+            "status" => "ok",
+            "data" => [
+                "redirect" => "mod_404",
+            ],
         ]);
 
         return;
-
     }
 
     /* ============================================================
-       🔥 USUARIO ACTUAL
+       USUARIO ACTUAL
     ============================================================ */
 
     global $usuario_actual;
 
-    $usu_id = intval(
-        $usuario_actual['usu_id'] ?? 0
-    );
+    $usu_id = intval($usuario_actual["usu_id"] ?? 0);
 
     /* ============================================================
        0. NEGOCIO
     ============================================================ */
 
-    $negocio = DB::queryFirstRow("
-
+    $negocio = DB::queryFirstRow(
+        "
         SELECT *
-
         FROM reg_neg
-
         WHERE neg_id = %i
-
         AND borrado_el IS NULL
-
         LIMIT 1
-
-    ", $neg_id);
+    ",
+        $neg_id
+    );
 
     /* ============================================================
        VALIDAR NEGOCIO
     ============================================================ */
 
-        if(!$negocio){
+    if (!$negocio) {
+        Flight::json([
+            "status" => "ok",
+            "neg_id" => $neg_id,
+            "data" => [
+                "redirect" => "mod_404",
+            ],
+        ]);
 
-            Flight::json([
+        return;
+    }
 
-                'status' => 'ok',
+    /* ============================================================
+       VALIDAR MEMBRESIA
+    ============================================================ */
 
-                'neg_id' => $neg_id,
+    $membresia = veri_membresia_neg($negocio["neg_id"]);
 
-                'data' => [
+    if (!$membresia || intval($membresia["is_aprobado"]) !== 1) {
+        Flight::json([
+            "status" => "ok",
+            "neg_id" => $neg_id,
+            "data" => [
+                "redirect" => "mod_404",
+            ],
+        ]);
 
-                    'redirect' => 'mod_404'
+        return;
+    }
 
-                ]
-
-            ]);
-
-            return;
-        }
-
-        /* ============================================================
-           VALIDAR MEMBRESIA
-        ============================================================ */
-
-        $membresia = veri_membresia_neg(
-            $negocio['neg_id']
-        );
-
-        if(
-
-            !$membresia
-
-            ||
-
-            intval(
-                $membresia['is_aprobado']
-            ) !== 1
-
-        ){
-
-            Flight::json([
-
-                'status' => 'ok',
-
-                'neg_id' => $neg_id,
-
-                'data' => [
-
-                    'redirect' => 'mod_404'
-
-                ]
-
-            ]);
-
-            return;
-
-        }        
     /* ============================================================
        1. SLIDERS
     ============================================================ */
 
-    $sliders = DB::query("
-
+    $sliders = DB::query(
+        "
         SELECT *
-
         FROM reg_slider
-
         WHERE neg_id = %i
-
         AND is_visible = 1
-
         AND borrado_el IS NULL
-
         ORDER BY orden ASC
-
-    ", $neg_id);
+    ",
+        $neg_id
+    );
 
     /* ============================================================
        2. CATEGORÍAS
     ============================================================ */
 
-    $categorias = DB::query("
-
+    $categorias = DB::query(
+        "
         SELECT
-
             c.category_id,
             c.name,
             c.icon,
@@ -698,29 +543,52 @@ Flight::route('POST /ArWL/tienda', function () {
             c.img,
             c.priority,
             c.clave_txt
-
         FROM pos_category c
-
         WHERE c.neg_id = %i
-
         AND c.is_activo = 1
-
         AND c.borrado_el IS NULL
-
         ORDER BY
             c.priority ASC,
             c.name ASC
+    ",
+        $neg_id
+    );
 
-    ", $neg_id);
+    /* ============================================================
+       2.1 SUBCATEGORÍAS POR CATEGORÍA
+    ============================================================ */
+
+    foreach ($categorias as &$cat) {
+        $subcategorias = DB::query(
+            "
+            SELECT
+                subcategoria_id,
+                category_id,
+                nombre,
+                img,
+                orden,
+                is_visible
+            FROM pos_subcategoria
+            WHERE category_id = %i
+            AND is_activo = 1
+            AND (is_visible = 1 OR is_visible IS NULL)
+            AND borrado_el IS NULL
+            ORDER BY orden ASC, nombre ASC
+        ",
+            $cat["category_id"]
+        );
+
+        $cat["subcategorias"] = $subcategorias;
+    }
+    unset($cat);
 
     /* ============================================================
        3. PRODUCTOS + IMAGEN
     ============================================================ */
 
-    $productos = DB::query("
-
+    $productos = DB::query(
+        "
         SELECT
-
             p.product_id,
             p.name,
             p.price,
@@ -731,10 +599,10 @@ Flight::route('POST /ArWL/tienda', function () {
             p.marca_des,
             p.is_visible,
             p.compra_total,
-p.variantes_json,
+            p.variantes_json,
             p.cantidad_comprada,
-
             p.precio_volumen_json,
+            p.subcategoria_id,
 
             pc.category_id,
 
@@ -744,19 +612,12 @@ p.variantes_json,
             ) AS stock,
 
             SUBSTRING_INDEX(
-
                 GROUP_CONCAT(
-
                     pi.img
-
                     ORDER BY pi.orden ASC
-
                 ),
-
                 ',',
-
                 1
-
             ) AS img
 
         FROM pos_product p
@@ -773,9 +634,7 @@ p.variantes_json,
             AND pi.borrado_el IS NULL
 
         WHERE p.neg_id = %i
-
         AND p.is_visible = 1
-
         AND p.borrado_el IS NULL
 
         GROUP BY
@@ -783,8 +642,9 @@ p.variantes_json,
             pc.category_id
 
         ORDER BY p.name ASC
-
-    ", $neg_id);
+    ",
+        $neg_id
+    );
 
     /* ============================================================
        4. MAPEAR PRODUCTOS
@@ -793,182 +653,75 @@ p.variantes_json,
     $map = [];
 
     foreach ($productos as $p) {
-
-        $cid = intval(
-            $p['category_id']
-        );
+        $cid = intval($p["category_id"]);
 
         if (!isset($map[$cid])) {
-
             $map[$cid] = [];
-
         }
 
-        /* ============================================================
-           IMAGENES
-        ============================================================ */
-
-        $imagenes = DB::query("
-
+        $imagenes = DB::query(
+            "
             SELECT
-
                 product_image_id,
-
                 img,
-
                 orden,
-
                 is_visible
-
             FROM pos_product_image
-
             WHERE product_id = %i
-
             AND borrado_el IS NULL
-
             ORDER BY orden ASC
-
         ",
-            $p['product_id']
+            $p["product_id"]
         );
 
-        foreach($imagenes as &$img){
-
-            $img['product_image_id'] = intval(
-                $img['product_image_id']
-            );
-
-            $img['orden'] = intval(
-                $img['orden']
-            );
-
-            $img['is_visible'] = intval(
-                $img['is_visible']
-            );
-
+        foreach ($imagenes as &$img) {
+            $img["product_image_id"] = intval($img["product_image_id"]);
+            $img["orden"] = intval($img["orden"]);
+            $img["is_visible"] = intval($img["is_visible"]);
         }
 
         $precio_volumen = [];
 
-        if(
-            !empty(
-                $p['precio_volumen_json']
-            )
-        ){
-
-            $precio_volumen = json_decode(
-
-                $p['precio_volumen_json'],
-
-                true
-
-            );
-
-            if(
-                !is_array(
-                    $precio_volumen
-                )
-            ){
+        if (!empty($p["precio_volumen_json"])) {
+            $precio_volumen = json_decode($p["precio_volumen_json"], true);
+            if (!is_array($precio_volumen)) {
                 $precio_volumen = [];
             }
         }
 
         $variantes = [
-
-            'atributo' => '',
-
-            'opciones' => []
-
+            "atributo" => "",
+            "opciones" => [],
         ];
 
-        if(
-            !empty(
-                $p['variantes_json']
-            )
-        ){
-
-            $variantes = json_decode(
-
-                $p['variantes_json'],
-
-                true
-
-            );
-
-            if(
-                !is_array(
-                    $variantes
-                )
-            ){
-
+        if (!empty($p["variantes_json"])) {
+            $variantes = json_decode($p["variantes_json"], true);
+            if (!is_array($variantes)) {
                 $variantes = [
-
-                    'atributo' => '',
-
-                    'opciones' => []
-
+                    "atributo" => "",
+                    "opciones" => [],
                 ];
-
             }
-
         }
 
         $map[$cid][] = [
-
-            'product_id' => intval(
-                $p['product_id']
-            ),
-
-            'name' => $p['name'],
-
-            'price' => floatval(
-                $p['price']
-            ),
-
-            'compra_total' => floatval(
-                $p['compra_total']
-            ),
-
-            'cantidad_comprada' => intval(
-                $p['cantidad_comprada']
-            ),
-
-            'precio_volumen' =>
-                $precio_volumen,
-
-            'variantes_json' =>
-                $p['variantes_json'],
-
-            'variantes' =>
-                $variantes,    
-
-            'stock' => intval(
-                $p['stock']
-            ),
-
-            'neg_id' => intval(
-                $p['neg_id']
-            ),
-
-            'description' =>
-                $p['description'],
-
-            'cod_producto' =>
-                $p['cod_producto'],
-
-            'tipo_producto' =>
-                $p['tipo_producto'],
-
-            'marca_des' =>
-                $p['marca_des'],
-
-            'is_visible' => intval(
-                $p['is_visible']
-            ),
-
-            'imagenes' =>
-                $imagenes
-
+            "product_id" => intval($p["product_id"]),
+            "name" => $p["name"],
+            "price" => floatval($p["price"]),
+            "compra_total" => floatval($p["compra_total"]),
+            "cantidad_comprada" => intval($p["cantidad_comprada"]),
+            "precio_volumen" => $precio_volumen,
+            "variantes_json" => $p["variantes_json"],
+            "variantes" => $variantes,
+            "stock" => intval($p["stock"]),
+            "neg_id" => intval($p["neg_id"]),
+            "description" => $p["description"],
+            "cod_producto" => $p["cod_producto"],
+            "tipo_producto" => $p["tipo_producto"],
+            "marca_des" => $p["marca_des"],
+            "is_visible" => intval($p["is_visible"]),
+            "subcategoria_id" => intval($p["subcategoria_id"] ?? 0),
+            "imagenes" => $imagenes,
         ];
     }
 
@@ -979,73 +732,86 @@ p.variantes_json,
     $categorias_filtradas = [];
 
     foreach ($categorias as $c) {
+        $cid = intval($c["category_id"]);
 
-        $cid = intval(
-            $c['category_id']
-        );
+        $productos_categoria = $map[$cid] ?? [];
 
-        $productos_categoria =
-            $map[$cid] ?? [];
-
-        if (
-            count($productos_categoria) <= 0
-        ) {
+        if (count($productos_categoria) <= 0) {
             continue;
         }
 
-        $c['productos'] =
-            $productos_categoria;
+        $c["productos"] = $productos_categoria;
 
         $categorias_filtradas[] = $c;
     }
 
-    $categorias =
-        $categorias_filtradas;
+    $categorias = $categorias_filtradas;
 
     /* ============================================================
-       TEMA DEL NEGOCIO
+       TEMA DEL NEGOCIO (base_css + estilo_css)
     ============================================================ */
 
-    $tema = DB::queryFirstRow("
-
+    $tema = DB::queryFirstRow(
+        "
         SELECT
-
             t.tema_id,
             t.nombre_tema,
             t.topnavbar,
             t.fondo,
             t.boton,
             t.fondo_card,
-            t.subtitulo
-
+            t.subtitulo,
+            t.base_css,
+            t.estilo_css
         FROM reg_temaxneg txn
-
         INNER JOIN reg_tema t
             ON t.tema_id = txn.tema_id
-
         WHERE txn.neg_id = %i
-
         ORDER BY txn.temaxneg_id DESC
-
         LIMIT 1
+    ",
+        $neg_id
+    );
 
-    ", $neg_id);
-
-    if(!$tema){
-
+    if (!$tema) {
         $tema = [
-
-            'tema_id'      => 0,
-            'nombre_tema'  => '',
-            'topnavbar'    => '',
-            'fondo'        => '',
-            'boton'        => '',
-            'subtitulo'        => '',
-            'fondo_card'   => ''
-
+            "tema_id" => 0,
+            "nombre_tema" => "",
+            "topnavbar" => "",
+            "fondo" => "",
+            "boton" => "",
+            "subtitulo" => "",
+            "fondo_card" => "",
+            "base_css" => "",
+            "estilo_css" => "",
         ];
+    }
 
-    }    
+    $base_vacio = trim((string) ($tema["base_css"] ?? "")) === "";
+    $estilo_vacio = trim((string) ($tema["estilo_css"] ?? "")) === "";
+
+    if ($base_vacio || $estilo_vacio) {
+        $tema_defecto = DB::queryFirstRow(
+            "
+            SELECT
+                base_css,
+                estilo_css
+            FROM reg_tema
+            WHERE tema_id = %i
+            LIMIT 1
+        ",
+            101
+        );
+
+        if ($tema_defecto) {
+            if ($base_vacio) {
+                $tema["base_css"] = $tema_defecto["base_css"];
+            }
+            if ($estilo_vacio) {
+                $tema["estilo_css"] = $tema_defecto["estilo_css"];
+            }
+        }
+    }
 
     /* ============================================================
        6. MÁS VENDIDOS
@@ -1054,37 +820,17 @@ p.variantes_json,
     $mas_vendidos = [];
 
     $catMasVendidos = array_filter(
-
         $categorias,
-
         function ($c) {
-
-            $clave = strtolower(
-                trim($c['clave_txt'])
-            );
-
-            $clave = str_replace(
-                '-',
-                '_',
-                $clave
-            );
-
-            return $clave === 'mas_vendidos';
-
+            $clave = strtolower(trim($c["clave_txt"]));
+            $clave = str_replace("-", "_", $clave);
+            return $clave === "mas_vendidos";
         }
-
     );
 
     if ($catMasVendidos) {
-
-        $catMasVendidos =
-            array_values(
-                $catMasVendidos
-            )[0];
-
-        $mas_vendidos =
-            $catMasVendidos['productos']
-            ?? [];
+        $catMasVendidos = array_values($catMasVendidos)[0];
+        $mas_vendidos = $catMasVendidos["productos"] ?? [];
     }
 
     /* ============================================================
@@ -1092,88 +838,67 @@ p.variantes_json,
     ============================================================ */
 
     Flight::json([
-
-        'status' => 'ok',
-
-        'neg_id' => $neg_id,
-
-        'data' => [
-
-            'negocio' => $negocio,
-
-            'tema' => $tema,
-
-            'sliders' => $sliders,
-
-            'categorias' => $categorias,
-
-            'mas_vendidos' => $mas_vendidos
-
-        ]
+        "status" => "ok",
+        "neg_id" => $neg_id,
+        "data" => [
+            "negocio" => $negocio,
+            "tema" => $tema,
+            "sliders" => $sliders,
+            "categorias" => $categorias,
+            "mas_vendidos" => $mas_vendidos,
+        ],
     ]);
-
 });
 
-Flight::route('POST /VG0a/productoStock', function(){
-
+Flight::route("POST /VG0a/productoStock", function () {
     include DEFINITION;
 
     DB::query("SET NAMES 'utf8mb4'");
 
-    $d = json_decode(
-        Flight::request()->getBody(),
-        true
-    ) ?: [];
+    $d = json_decode(Flight::request()->getBody(), true) ?: [];
 
     /* ======================================
        CAMPOS
     ====================================== */
 
-    $product_id = intval(
-        $d['product_id'] ?? 0
-    );
+    $product_id = intval($d["product_id"] ?? 0);
 
-    $stock = intval(
-        $d['stock'] ?? 0
-    );
+    $stock = intval($d["stock"] ?? 0);
 
-    $xin = trim(
-        $d['xin'] ?? ''
-    );
+    $xin = trim($d["xin"] ?? "");
 
-    $yuan = trim(
-        $d['yuan'] ?? ''
-    );
+    $yuan = trim($d["yuan"] ?? "");
 
     /* ======================================
        FIRMA
     ====================================== */
 
-    firma(
-        $xin,
-        $yuan
-    );
+    firma($xin, $yuan);
 
     /* ======================================
        VALIDAR
     ====================================== */
 
-    if($product_id <= 0){
-
-        Flight::json([
-            'status' => 'error',
-            'msg' => 'product_id requerido'
-        ], 400);
+    if ($product_id <= 0) {
+        Flight::json(
+            [
+                "status" => "error",
+                "msg" => "product_id requerido",
+            ],
+            400
+        );
 
         return;
     }
 
-    if($stock <= 0){
-
-        Flight::json([
-            'status' => 'error',
-            'msg' => 'stock inválido'
-        ], 400);
+    if ($stock <= 0) {
+        Flight::json(
+            [
+                "status" => "error",
+                "msg" => "stock inválido",
+            ],
+            400
+        );
 
         return;
     }
@@ -1181,14 +906,14 @@ Flight::route('POST /VG0a/productoStock', function(){
     DB::startTransaction();
 
     try {
-
-        $now = date('Y-m-d H:i:s');
+        $now = date("Y-m-d H:i:s");
 
         /* ======================================
            PRODUCTO
         ====================================== */
 
-        $producto = DB::queryFirstRow("
+        $producto = DB::queryFirstRow(
+            "
 
             SELECT
 
@@ -1207,16 +932,20 @@ Flight::route('POST /VG0a/productoStock', function(){
 
             LIMIT 1
 
-        ", $product_id);
+        ",
+            $product_id
+        );
 
-        if(!$producto){
-
+        if (!$producto) {
             DB::rollback();
 
-            Flight::json([
-                'status' => 'error',
-                'msg' => 'Producto no encontrado'
-            ], 404);
+            Flight::json(
+                [
+                    "status" => "error",
+                    "msg" => "Producto no encontrado",
+                ],
+                404
+            );
 
             return;
         }
@@ -1225,19 +954,16 @@ Flight::route('POST /VG0a/productoStock', function(){
            STOCKS
         ====================================== */
 
-        $stock_actual = intval(
-            $producto['stock_actual'] ?? 0
-        );
+        $stock_actual = intval($producto["stock_actual"] ?? 0);
 
-        $nuevo_stock =
-            $stock_actual + $stock;
+        $nuevo_stock = $stock_actual + $stock;
 
         /* ======================================
            INVENTARIO
         ====================================== */
 
-        $existeInventario =
-            DB::queryFirstField("
+        $existeInventario = DB::queryFirstField(
+            "
 
                 SELECT 1
 
@@ -1247,75 +973,50 @@ Flight::route('POST /VG0a/productoStock', function(){
 
                 LIMIT 1
 
-            ", $product_id);
+            ",
+            $product_id
+        );
 
-        if($existeInventario){
-
+        if ($existeInventario) {
             DB::update(
-                'pos_inventario',
+                "pos_inventario",
                 [
-
-                    'stock_actual' =>
-                        $nuevo_stock
-
+                    "stock_actual" => $nuevo_stock,
                 ],
                 "product_id=%i",
                 $product_id
             );
+        } else {
+            DB::insert("pos_inventario", [
+                "product_id" => $product_id,
 
-        }else{
+                "stock_actual" => $nuevo_stock,
 
-            DB::insert(
-                'pos_inventario',
-                [
-
-                    'product_id' =>
-                        $product_id,
-
-                    'stock_actual' =>
-                        $nuevo_stock,
-
-                    'neg_id' =>
-                        $producto['neg_id']
-
-                ]
-            );
-
+                "neg_id" => $producto["neg_id"],
+            ]);
         }
 
         /* ======================================
            MOVIMIENTO
         ====================================== */
 
-        DB::insert(
-            'pos_inventario_movimiento',
-            [
+        DB::insert("pos_inventario_movimiento", [
+            "product_id" => $product_id,
 
-                'product_id' =>
-                    $product_id,
+            "tipo" => "AJUSTE",
 
-                'tipo' => 'AJUSTE',
+            "origen" => "AJUSTE",
 
-                'origen' => 'AJUSTE',
+            "cantidad" => $stock,
 
-                'cantidad' =>
-                    $stock,
+            "precio_unitario" => floatval($producto["price"]),
 
-                'precio_unitario' =>
-                    floatval(
-                        $producto['price']
-                    ),
+            "fecha" => $now,
 
-                'fecha' => $now,
+            "stock_resultante" => $nuevo_stock,
 
-                'stock_resultante' =>
-                    $nuevo_stock,
-
-                'neg_id' =>
-                    $producto['neg_id']
-
-            ]
-        );
+            "neg_id" => $producto["neg_id"],
+        ]);
 
         DB::commit();
 
@@ -1324,121 +1025,94 @@ Flight::route('POST /VG0a/productoStock', function(){
         ====================================== */
 
         Flight::json([
+            "status" => "ok",
 
-            'status' => 'ok',
+            "msg" => "Stock actualizado correctamente",
 
-            'msg' => 'Stock actualizado correctamente',
+            "data" => [
+                "product_id" => $product_id,
 
-            'data' => [
+                "stock_anterior" => $stock_actual,
 
-                'product_id' =>
-                    $product_id,
+                "stock_agregado" => $stock,
 
-                'stock_anterior' =>
-                    $stock_actual,
-
-                'stock_agregado' =>
-                    $stock,
-
-                'stock_actual' =>
-                    $nuevo_stock
-
-            ]
-
+                "stock_actual" => $nuevo_stock,
+            ],
         ]);
-
-    } catch(Exception $e){
-
+    } catch (Exception $e) {
         DB::rollback();
 
-        Flight::json([
+        Flight::json(
+            [
+                "status" => "error",
 
-            'status' => 'error',
-
-            'msg' => $e->getMessage()
-
-        ], 500);
-
+                "msg" => $e->getMessage(),
+            ],
+            500
+        );
     }
-
 });
 
-
-Flight::route('POST /CF3a/productoVisible', function(){
-
+Flight::route("POST /CF3a/productoVisible", function () {
     include DEFINITION;
 
     DB::query("SET NAMES 'utf8mb4'");
 
-    $d = json_decode(
-        Flight::request()->getBody(),
-        true
-    ) ?: [];
+    $d = json_decode(Flight::request()->getBody(), true) ?: [];
 
     /* ======================================
        CAMPOS
     ====================================== */
 
-    $product_id = intval(
-        $d['product_id'] ?? 0
-    );
+    $product_id = intval($d["product_id"] ?? 0);
 
-    $is_visible = intval(
-        $d['is_visible'] ?? -1
-    );
+    $is_visible = intval($d["is_visible"] ?? -1);
 
-    $xin = trim(
-        $d['xin'] ?? ''
-    );
+    $xin = trim($d["xin"] ?? "");
 
-    $yuan = trim(
-        $d['yuan'] ?? ''
-    );
+    $yuan = trim($d["yuan"] ?? "");
 
     /* ======================================
        FIRMA
     ====================================== */
 
-    firma(
-        $xin,
-        $yuan
-    );
+    firma($xin, $yuan);
 
     /* ======================================
        VALIDAR
     ====================================== */
 
-    if($product_id <= 0){
-
-        Flight::json([
-            'status' => 'error',
-            'msg' => 'product_id requerido'
-        ], 400);
+    if ($product_id <= 0) {
+        Flight::json(
+            [
+                "status" => "error",
+                "msg" => "product_id requerido",
+            ],
+            400
+        );
 
         return;
     }
 
-    if(
-        $is_visible !== 0
-        &&
-        $is_visible !== 1
-    ){
-
-        Flight::json([
-            'status' => 'error',
-            'msg' => 'is_visible inválido'
-        ], 400);
+    if ($is_visible !== 0 && $is_visible !== 1) {
+        Flight::json(
+            [
+                "status" => "error",
+                "msg" => "is_visible inválido",
+            ],
+            400
+        );
 
         return;
     }
 
     try {
-
         /* ======================================
            VALIDAR PRODUCTO
         ====================================== */
 
-        $producto = DB::queryFirstRow("
+        $producto = DB::queryFirstRow(
+            "
 
             SELECT
 
@@ -1451,14 +1125,18 @@ Flight::route('POST /CF3a/productoVisible', function(){
 
             LIMIT 1
 
-        ", $product_id);
+        ",
+            $product_id
+        );
 
-        if(!$producto){
-
-            Flight::json([
-                'status' => 'error',
-                'msg' => 'Producto no encontrado'
-            ], 404);
+        if (!$producto) {
+            Flight::json(
+                [
+                    "status" => "error",
+                    "msg" => "Producto no encontrado",
+                ],
+                404
+            );
 
             return;
         }
@@ -1468,14 +1146,11 @@ Flight::route('POST /CF3a/productoVisible', function(){
         ====================================== */
 
         DB::update(
-            'pos_product',
+            "pos_product",
             [
+                "is_visible" => $is_visible,
 
-                'is_visible' => $is_visible,
-
-                'fecha_modificacion' =>
-                    date('Y-m-d H:i:s')
-
+                "fecha_modificacion" => date("Y-m-d H:i:s"),
             ],
             "product_id=%i",
             $product_id
@@ -1486,178 +1161,152 @@ Flight::route('POST /CF3a/productoVisible', function(){
         ====================================== */
 
         Flight::json([
+            "status" => "ok",
 
-            'status' => 'ok',
+            "msg" => "Visibilidad actualizada",
 
-            'msg' => 'Visibilidad actualizada',
+            "data" => [
+                "product_id" => $product_id,
 
-            'data' => [
-
-                'product_id' =>
-                    $product_id,
-
-                'is_visible' =>
-                    $is_visible
-
-            ]
-
+                "is_visible" => $is_visible,
+            ],
         ]);
+    } catch (Exception $e) {
+        Flight::json(
+            [
+                "status" => "error",
 
-    } catch(Exception $e){
-
-        Flight::json([
-
-            'status' => 'error',
-
-            'msg' => $e->getMessage()
-
-        ], 500);
-
+                "msg" => $e->getMessage(),
+            ],
+            500
+        );
     }
-
 });
 
-Flight::route('POST /RvKx/nuevoProducto', function(){
-
+Flight::route("POST /RvKx/nuevoProducto", function () {
     include DEFINITION;
 
     DB::query("SET NAMES 'utf8mb4'");
 
-    $d = json_decode(
-        Flight::request()->getBody(),
-        true
-    ) ?: [];
+    $d = json_decode(Flight::request()->getBody(), true) ?: [];
 
     /* ======================================
         FIRMA
     ====================================== */
 
-    $xin = trim(
-        $d['xin'] ?? ''
-    );
+    $xin = trim($d["xin"] ?? "");
 
-    $yuan = trim(
-        $d['yuan'] ?? ''
-    );
+    $yuan = trim($d["yuan"] ?? "");
 
-    firma(
-        $xin,
-        $yuan
-    );
+    firma($xin, $yuan);
 
     /* ======================================
         CAMPOS
     ====================================== */
 
-    $product_id = intval(
-        $d['product_id'] ?? 0
-    );
+    $product_id = intval($d["product_id"] ?? 0);
 
-    $editando = intval(
-        $d['editando'] ?? 0
-    );
+    $editando = intval($d["editando"] ?? 0);
 
-    $neg_id = intval(
-        $d['neg_id'] ?? 0
-    );
+    $neg_id = intval($d["neg_id"] ?? 0);
 
-    $name = trim(
-        $d['name'] ?? ''
-    );
+    $name = trim($d["name"] ?? "");
 
-    $price = floatval(
-        $d['price'] ?? 0
-    );
+    $price = floatval($d["price"] ?? 0);
 
-    $stock = intval(
-        $d['stock'] ?? 0
-    );
+    $stock = intval($d["stock"] ?? 0);
 
-    $description = trim(
-        $d['description'] ?? ''
-    );
+    $description = trim($d["description"] ?? "");
 
-    $marca_des = trim(
-        $d['marca_des']
-        ?? 'GENERICA'
-    );
+    $marca_des = trim($d["marca_des"] ?? "GENERICA");
 
-    $variantes_json = trim(
-        $d['variantes_json'] ?? ''
-    );
+    $variantes_json = trim($d["variantes_json"] ?? "");
 
-    if($variantes_json === ''){
+    if ($variantes_json === "") {
         $variantes_json = null;
-    }else{
+    } else {
         json_decode($variantes_json, true);
 
-        if(json_last_error() !== JSON_ERROR_NONE){
-            Flight::json([
-                'status'=>'error',
-                'msg'=>'variantes_json inválido'
-            ],400);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            Flight::json(
+                [
+                    "status" => "error",
+                    "msg" => "variantes_json inválido",
+                ],
+                400
+            );
             return;
         }
     }
 
-    $categorias = $d['categorias'] ?? [];
+    $categorias = $d["categorias"] ?? [];
 
     /* ======================================
         VALIDAR
     ====================================== */
 
-    if($neg_id <= 0){
+    if ($neg_id <= 0) {
         Flight::json([
-            'status' => 'ok',
-            'data' => [
-                'redirect' => 'mod_404'
-            ]
+            "status" => "ok",
+            "data" => [
+                "redirect" => "mod_404",
+            ],
         ]);
         return;
     }
 
-    if(!$name){
-        Flight::json([
-            'status'=>'error',
-            'msg'=>'name requerido'
-        ],400);
+    if (!$name) {
+        Flight::json(
+            [
+                "status" => "error",
+                "msg" => "name requerido",
+            ],
+            400
+        );
         return;
     }
 
     // 🔥 SOLUCIÓN: Cambiado de <= 0 a < 0 para permitir productos gratuitos (0)
-    if($price < 0){ 
-        Flight::json([
-            'status'=>'error',
-            'msg'=>'price inválido'
-        ],400);
+    if ($price < 0) {
+        Flight::json(
+            [
+                "status" => "error",
+                "msg" => "price inválido",
+            ],
+            400
+        );
         return;
     }
 
     DB::startTransaction();
 
-    try{
-        $now_dt = date(
-            "Y-m-d H:i:s"
-        );
+    try {
+        $now_dt = date("Y-m-d H:i:s");
 
         /* ======================================
             NEGOCIO
     ====================================== */
 
-        $negocio = DB::queryFirstRow("
+        $negocio = DB::queryFirstRow(
+            "
             SELECT neg_id
             FROM reg_neg
             WHERE neg_id = %i
             AND borrado_el IS NULL
             LIMIT 1
-        ", $neg_id);
+        ",
+            $neg_id
+        );
 
-        if(!$negocio){
+        if (!$negocio) {
             DB::rollback();
-            Flight::json([
-                'status'=>'error',
-                'msg'=>'Negocio no encontrado'
-            ],404);
+            Flight::json(
+                [
+                    "status" => "error",
+                    "msg" => "Negocio no encontrado",
+                ],
+                404
+            );
             return;
         }
 
@@ -1665,13 +1314,9 @@ Flight::route('POST /RvKx/nuevoProducto', function(){
             EDITAR PRODUCTO
         ====================================== */
 
-        if(
-            $editando
-            &&
-            $product_id > 0
-        ){
-
-            $producto = DB::queryFirstRow("
+        if ($editando && $product_id > 0) {
+            $producto = DB::queryFirstRow(
+                "
                 SELECT
                     product_id
                 FROM pos_product
@@ -1684,12 +1329,15 @@ Flight::route('POST /RvKx/nuevoProducto', function(){
                 $neg_id
             );
 
-            if(!$producto){
+            if (!$producto) {
                 DB::rollback();
-                Flight::json([
-                    'status'=>'error',
-                    'msg'=>'Producto no encontrado'
-                ],404);
+                Flight::json(
+                    [
+                        "status" => "error",
+                        "msg" => "Producto no encontrado",
+                    ],
+                    404
+                );
                 return;
             }
 
@@ -1698,14 +1346,14 @@ Flight::route('POST /RvKx/nuevoProducto', function(){
             ====================================== */
 
             DB::update(
-                'pos_product',
+                "pos_product",
                 [
-                    'name' => $name,
-                    'marca_des' => $marca_des,
-                    'price' => $price, // Se guardará 0.00 perfectamente
-                    'description' => $description,
-                    'variantes_json' => $variantes_json,
-                    'fecha_modificacion' => $now_dt
+                    "name" => $name,
+                    "marca_des" => $marca_des,
+                    "price" => $price, // Se guardará 0.00 perfectamente
+                    "description" => $description,
+                    "variantes_json" => $variantes_json,
+                    "fecha_modificacion" => $now_dt,
                 ],
                 "product_id=%i",
                 $product_id
@@ -1715,35 +1363,28 @@ Flight::route('POST /RvKx/nuevoProducto', function(){
                 ELIMINAR CATEGORIAS
             ====================================== */
 
-            DB::delete(
-                'pos_product_category',
-                "product_id=%i",
-                $product_id
-            );
+            DB::delete("pos_product_category", "product_id=%i", $product_id);
 
             /* ======================================
                 NUEVAS CATEGORIAS
             ====================================== */
 
-            if(!empty($categorias)){
-                foreach($categorias as $cat){
+            if (!empty($categorias)) {
+                foreach ($categorias as $cat) {
                     $category_id = is_array($cat)
-                        ? intval($cat['category_id'] ?? 0)
+                        ? intval($cat["category_id"] ?? 0)
                         : intval($cat);
 
-                    if($category_id <= 0){
+                    if ($category_id <= 0) {
                         continue;
                     }
 
-                    DB::insert(
-                        'pos_product_category',
-                        [
-                            'product_id' => $product_id,
-                            'category_id' => $category_id,
-                            'neg_id' => $neg_id,
-                            'is_visible' => 1
-                        ]
-                    );
+                    DB::insert("pos_product_category", [
+                        "product_id" => $product_id,
+                        "category_id" => $category_id,
+                        "neg_id" => $neg_id,
+                        "is_visible" => 1,
+                    ]);
                 }
             }
 
@@ -1751,62 +1392,60 @@ Flight::route('POST /RvKx/nuevoProducto', function(){
                 INVENTARIO
             ====================================== */
 
-            if($stock < 0){
+            if ($stock < 0) {
                 $stock = 0;
             }
 
-            $inventario = DB::queryFirstRow("
+            $inventario = DB::queryFirstRow(
+                "
                 SELECT
                     inventario_id,
                     stock_actual
                 FROM pos_inventario
                 WHERE product_id = %i
                 LIMIT 1
-            ", $product_id);
+            ",
+                $product_id
+            );
 
-            if($inventario){
+            if ($inventario) {
                 DB::update(
-                    'pos_inventario',
+                    "pos_inventario",
                     [
-                        'stock_actual' => $stock
+                        "stock_actual" => $stock,
                     ],
                     "inventario_id=%i",
-                    $inventario['inventario_id']
+                    $inventario["inventario_id"]
                 );
             } else {
-                DB::insert(
-                    'pos_inventario',
-                    [
-                        'product_id' => $product_id,
-                        'stock_actual' => $stock,
-                        'neg_id' => $neg_id
-                    ]
-                );
+                DB::insert("pos_inventario", [
+                    "product_id" => $product_id,
+                    "stock_actual" => $stock,
+                    "neg_id" => $neg_id,
+                ]);
             }
 
             /* ======================================
                 MOVIMIENTO INVENTARIO
             ====================================== */
 
-            DB::insert(
-                'pos_inventario_movimiento',
-                [
-                    'product_id' => $product_id,
-                    'tipo' => 'AJUSTE',
-                    'origen' => 'AJUSTE',
-                    'cantidad' => $stock,
-                    'precio_unitario' => $price, // Guarda 0.00 en el historial
-                    'fecha' => $now_dt,
-                    'stock_resultante' => $stock,
-                    'neg_id' => $neg_id
-                ]
-            );
+            DB::insert("pos_inventario_movimiento", [
+                "product_id" => $product_id,
+                "tipo" => "AJUSTE",
+                "origen" => "AJUSTE",
+                "cantidad" => $stock,
+                "precio_unitario" => $price, // Guarda 0.00 en el historial
+                "fecha" => $now_dt,
+                "stock_resultante" => $stock,
+                "neg_id" => $neg_id,
+            ]);
 
             /* ======================================
                 PRODUCTO RESPONSE
             ====================================== */
 
-            $product = DB::queryFirstRow("
+            $product = DB::queryFirstRow(
+                "
                 SELECT
                     p.product_id,
                     p.cod_producto,
@@ -1820,13 +1459,16 @@ Flight::route('POST /RvKx/nuevoProducto', function(){
                     ON i.product_id = p.product_id
                 WHERE p.product_id = %i
                 LIMIT 1
-            ", $product_id);
+            ",
+                $product_id
+            );
 
             /* ======================================
                 IMAGENES
             ====================================== */
 
-            $imagenes = DB::query("
+            $imagenes = DB::query(
+                "
                 SELECT
                     product_image_id,
                     img,
@@ -1836,19 +1478,22 @@ Flight::route('POST /RvKx/nuevoProducto', function(){
                 WHERE product_id = %i
                 AND borrado_el IS NULL
                 ORDER BY orden ASC
-            ", $product_id);
+            ",
+                $product_id
+            );
 
-            foreach($imagenes as &$img){
-                $img['product_image_id'] = intval($img['product_image_id']);
-                $img['orden'] = intval($img['orden']);
-                $img['is_visible'] = intval($img['is_visible']);
+            foreach ($imagenes as &$img) {
+                $img["product_image_id"] = intval($img["product_image_id"]);
+                $img["orden"] = intval($img["orden"]);
+                $img["is_visible"] = intval($img["is_visible"]);
             }
 
             /* ======================================
                 CATEGORIAS RESPONSE
             ====================================== */
 
-            $cats = DB::query("
+            $cats = DB::query(
+                "
                 SELECT
                     c.category_id,
                     c.name AS descripcion
@@ -1857,26 +1502,28 @@ Flight::route('POST /RvKx/nuevoProducto', function(){
                     ON c.category_id = pc.category_id
                 WHERE pc.product_id = %i
                 ORDER BY c.name ASC
-            ", $product_id);
+            ",
+                $product_id
+            );
 
-            foreach($cats as &$c){
-                $c['category_id'] = intval($c['category_id']);
+            foreach ($cats as &$c) {
+                $c["category_id"] = intval($c["category_id"]);
             }
 
-            $product['product_id'] = intval($product['product_id']);
-            $product['price'] = floatval($product['price']);
-            $product['stock'] = intval($product['stock']);
-            $product['is_visible'] = intval($product['is_visible']);
-            $product['imagenes'] = $imagenes;
-            $product['categorias'] = $cats;
+            $product["product_id"] = intval($product["product_id"]);
+            $product["price"] = floatval($product["price"]);
+            $product["stock"] = intval($product["stock"]);
+            $product["is_visible"] = intval($product["is_visible"]);
+            $product["imagenes"] = $imagenes;
+            $product["categorias"] = $cats;
 
             DB::commit();
 
             Flight::json([
-                'status'=>'ok',
-                'msg'=>'Producto actualizado correctamente',
-                'editando'=>true,
-                'product'=>$product
+                "status" => "ok",
+                "msg" => "Producto actualizado correctamente",
+                "editando" => true,
+                "product" => $product,
             ]);
 
             return;
@@ -1886,24 +1533,22 @@ Flight::route('POST /RvKx/nuevoProducto', function(){
             CREAR PRODUCTO
         ====================================== */
 
-        DB::insert(
-            'pos_product',
-            [
-                'cod_producto' => 'P' . str_pad(rand(1,999999), 6, '0', STR_PAD_LEFT),
-                'name' => $name,
-                'tipo_producto' => 'ABARROTES',
-                'marca_des' => $marca_des,
-                'price' => $price, // Registra 0.00 limpiamente
-                'description' => $description,
-                'variantes_json' => $variantes_json,
-                'fecha_creacion' => $now_dt,
-                'fecha_modificacion' => $now_dt,
-                'neg_id' => $neg_id,
-                'subcategoria_id' => null,
-                'is_visible' => 1,
-                'borrado_el' => null
-            ]
-        );
+        DB::insert("pos_product", [
+            "cod_producto" =>
+                "P" . str_pad(rand(1, 999999), 6, "0", STR_PAD_LEFT),
+            "name" => $name,
+            "tipo_producto" => "ABARROTES",
+            "marca_des" => $marca_des,
+            "price" => $price, // Registra 0.00 limpiamente
+            "description" => $description,
+            "variantes_json" => $variantes_json,
+            "fecha_creacion" => $now_dt,
+            "fecha_modificacion" => $now_dt,
+            "neg_id" => $neg_id,
+            "subcategoria_id" => null,
+            "is_visible" => 1,
+            "borrado_el" => null,
+        ]);
 
         $product_id = DB::insertId();
 
@@ -1911,25 +1556,22 @@ Flight::route('POST /RvKx/nuevoProducto', function(){
             CATEGORÍAS
         ====================================== */
 
-        if(!empty($categorias)){
-            foreach($categorias as $cat){
+        if (!empty($categorias)) {
+            foreach ($categorias as $cat) {
                 $category_id = is_array($cat)
-                    ? intval($cat['category_id'] ?? 0)
+                    ? intval($cat["category_id"] ?? 0)
                     : intval($cat);
 
-                if($category_id <= 0){
+                if ($category_id <= 0) {
                     continue;
                 }
 
-                DB::insert(
-                    'pos_product_category',
-                    [
-                        'product_id' => $product_id,
-                        'category_id' => $category_id,
-                        'neg_id' => $neg_id,
-                        'is_visible' => 1
-                    ]
-                );
+                DB::insert("pos_product_category", [
+                    "product_id" => $product_id,
+                    "category_id" => $category_id,
+                    "neg_id" => $neg_id,
+                    "is_visible" => 1,
+                ]);
             }
         }
 
@@ -1937,56 +1579,48 @@ Flight::route('POST /RvKx/nuevoProducto', function(){
             IMAGEN DEFAULT
         ====================================== */
 
-        DB::insert(
-            'pos_product_image',
-            [
-                'product_id' => $product_id,
-                'img' => 'https://barsi-img.b-cdn.net/recursos/6qz5.png',
-                'orden' => 1,
-                'is_visible' => 1
-            ]
-        );
+        DB::insert("pos_product_image", [
+            "product_id" => $product_id,
+            "img" => "https://barsi-img.b-cdn.net/recursos/6qz5.png",
+            "orden" => 1,
+            "is_visible" => 1,
+        ]);
 
         /* ======================================
             INVENTARIO
         ====================================== */
 
-        if($stock < 0){
+        if ($stock < 0) {
             $stock = 0;
         }
 
-        DB::insert(
-            'pos_inventario',
-            [
-                'product_id' => $product_id,
-                'stock_actual' => $stock,
-                'neg_id' => $neg_id
-            ]
-        );
+        DB::insert("pos_inventario", [
+            "product_id" => $product_id,
+            "stock_actual" => $stock,
+            "neg_id" => $neg_id,
+        ]);
 
         /* ======================================
             MOVIMIENTO INVENTARIO
         ====================================== */
 
-        DB::insert(
-            'pos_inventario_movimiento',
-            [
-                'product_id' => $product_id,
-                'tipo' => 'AJUSTE',
-                'origen' => 'AJUSTE',
-                'cantidad' => $stock,
-                'precio_unitario' => $price, // Guarda 0.00 en transacciones
-                'fecha' => $now_dt,
-                'stock_resultante' => $stock,
-                'neg_id' => $neg_id
-            ]
-        );
+        DB::insert("pos_inventario_movimiento", [
+            "product_id" => $product_id,
+            "tipo" => "AJUSTE",
+            "origen" => "AJUSTE",
+            "cantidad" => $stock,
+            "precio_unitario" => $price, // Guarda 0.00 en transacciones
+            "fecha" => $now_dt,
+            "stock_resultante" => $stock,
+            "neg_id" => $neg_id,
+        ]);
 
         /* ======================================
             PRODUCTO RESPONSE
         ====================================== */
 
-        $product = DB::queryFirstRow("
+        $product = DB::queryFirstRow(
+            "
             SELECT
                 p.product_id,
                 p.cod_producto,
@@ -2000,13 +1634,16 @@ Flight::route('POST /RvKx/nuevoProducto', function(){
                 ON i.product_id = p.product_id
             WHERE p.product_id = %i
             LIMIT 1
-        ", $product_id);
+        ",
+            $product_id
+        );
 
         /* ======================================
             IMAGENES
         ====================================== */
 
-        $imagenes = DB::query("
+        $imagenes = DB::query(
+            "
             SELECT
                 product_image_id,
                 img,
@@ -2016,19 +1653,22 @@ Flight::route('POST /RvKx/nuevoProducto', function(){
             WHERE product_id = %i
             AND borrado_el IS NULL
             ORDER BY orden ASC
-        ", $product_id);
+        ",
+            $product_id
+        );
 
-        foreach($imagenes as &$img){
-            $img['product_image_id'] = intval($img['product_image_id']);
-            $img['orden'] = intval($img['orden']);
-            $img['is_visible'] = intval($img['is_visible']);
+        foreach ($imagenes as &$img) {
+            $img["product_image_id"] = intval($img["product_image_id"]);
+            $img["orden"] = intval($img["orden"]);
+            $img["is_visible"] = intval($img["is_visible"]);
         }
 
         /* ======================================
             CATEGORIAS RESPONSE
         ====================================== */
 
-        $cats = DB::query("
+        $cats = DB::query(
+            "
             SELECT
                 c.category_id,
                 c.name AS descripcion
@@ -2037,18 +1677,20 @@ Flight::route('POST /RvKx/nuevoProducto', function(){
                 ON c.category_id = pc.category_id
             WHERE pc.product_id = %i
             ORDER BY c.name ASC
-        ", $product_id);
+        ",
+            $product_id
+        );
 
-        foreach($cats as &$c){
-            $c['category_id'] = intval($c['category_id']);
+        foreach ($cats as &$c) {
+            $c["category_id"] = intval($c["category_id"]);
         }
 
-        $product['product_id'] = intval($product['product_id']);
-        $product['price'] = floatval($product['price']);
-        $product['stock'] = intval($product['stock']);
-        $product['is_visible'] = intval($product['is_visible']);
-        $product['imagenes'] = $imagenes;
-        $product['categorias'] = $cats;
+        $product["product_id"] = intval($product["product_id"]);
+        $product["price"] = floatval($product["price"]);
+        $product["stock"] = intval($product["stock"]);
+        $product["is_visible"] = intval($product["is_visible"]);
+        $product["imagenes"] = $imagenes;
+        $product["categorias"] = $cats;
 
         DB::commit();
 
@@ -2057,83 +1699,72 @@ Flight::route('POST /RvKx/nuevoProducto', function(){
         ====================================== */
 
         Flight::json([
-            'status'=>'ok',
-            'msg'=>'Producto creado correctamente',
-            'editando'=>false,
-            'product'=>$product
+            "status" => "ok",
+            "msg" => "Producto creado correctamente",
+            "editando" => false,
+            "product" => $product,
         ]);
-
-    }catch(Exception $e){
+    } catch (Exception $e) {
         DB::rollback();
-        Flight::json([
-            'status'=>'error',
-            'msg'=>$e->getMessage()
-        ],500);
+        Flight::json(
+            [
+                "status" => "error",
+                "msg" => $e->getMessage(),
+            ],
+            500
+        );
     }
 });
 
-Flight::route('POST /ZnO3/eliminarProducto', function(){
-
+Flight::route("POST /ZnO3/eliminarProducto", function () {
     include DEFINITION;
 
     DB::query("SET NAMES 'utf8mb4'");
 
-    $d = json_decode(
-        Flight::request()->getBody(),
-        true
-    ) ?: [];
+    $d = json_decode(Flight::request()->getBody(), true) ?: [];
 
     /* ======================================
        CAMPOS
     ====================================== */
 
-    $product_id = intval(
-        $d['product_id'] ?? 0
-    );
+    $product_id = intval($d["product_id"] ?? 0);
 
-    $xin = trim(
-        $d['xin'] ?? ''
-    );
+    $xin = trim($d["xin"] ?? "");
 
-    $yuan = trim(
-        $d['yuan'] ?? ''
-    );
+    $yuan = trim($d["yuan"] ?? "");
 
     /* ======================================
        FIRMA
     ====================================== */
 
-    firma(
-        $xin,
-        $yuan
-    );
+    firma($xin, $yuan);
 
     /* ======================================
        VALIDAR
     ====================================== */
 
-    if(!$product_id){
+    if (!$product_id) {
+        Flight::json(
+            [
+                "status" => "error",
 
-        Flight::json([
-
-            'status' => 'error',
-
-            'msg' => 'product_id requerido'
-
-        ],400);
+                "msg" => "product_id requerido",
+            ],
+            400
+        );
 
         return;
     }
 
     try {
-
-        $now = date('Y-m-d H:i:s');
+        $now = date("Y-m-d H:i:s");
 
         /* ======================================
            VALIDAR PRODUCTO
         ====================================== */
 
-        $producto = DB::queryFirstRow("
+        $producto = DB::queryFirstRow(
+            "
 
             SELECT
 
@@ -2147,17 +1778,19 @@ Flight::route('POST /ZnO3/eliminarProducto', function(){
 
             LIMIT 1
 
-        ", $product_id);
+        ",
+            $product_id
+        );
 
-        if(!$producto){
+        if (!$producto) {
+            Flight::json(
+                [
+                    "status" => "error",
 
-            Flight::json([
-
-                'status' => 'error',
-
-                'msg' => 'Producto no encontrado'
-
-            ],404);
+                    "msg" => "Producto no encontrado",
+                ],
+                404
+            );
 
             return;
         }
@@ -2167,23 +1800,17 @@ Flight::route('POST /ZnO3/eliminarProducto', function(){
         ====================================== */
 
         DB::update(
-
-            'pos_product',
+            "pos_product",
 
             [
+                "borrado_el" => $now,
 
-                'borrado_el' =>
-                    $now,
-
-                'fecha_modificacion' =>
-                    $now
-
+                "fecha_modificacion" => $now,
             ],
 
             "product_id=%i",
 
             $product_id
-
         );
 
         /* ======================================
@@ -2191,84 +1818,62 @@ Flight::route('POST /ZnO3/eliminarProducto', function(){
         ====================================== */
 
         Flight::json([
+            "status" => "ok",
 
-            'status' => 'ok',
+            "msg" => "Producto eliminado correctamente",
 
-            'msg' =>
-                'Producto eliminado correctamente',
+            "product_id" => $product_id,
 
-            'product_id' =>
-                $product_id,
-
-            'borrado_el' =>
-                $now
-
+            "borrado_el" => $now,
         ]);
+    } catch (Exception $e) {
+        Flight::json(
+            [
+                "status" => "error",
 
-    } catch(Exception $e){
-
-        Flight::json([
-
-            'status' => 'error',
-
-            'msg' =>
-                $e->getMessage()
-
-        ],500);
-
+                "msg" => $e->getMessage(),
+            ],
+            500
+        );
     }
-
 });
 
-Flight::route('POST /IlY2/eliminarCategoria', function(){
-
+Flight::route("POST /IlY2/eliminarCategoria", function () {
     include DEFINITION;
 
     DB::query("SET NAMES 'utf8mb4'");
 
-    $d = json_decode(
-        Flight::request()->getBody(),
-        true
-    ) ?: [];
+    $d = json_decode(Flight::request()->getBody(), true) ?: [];
 
     /* ======================================
        CAMPOS
     ====================================== */
 
-    $category_id = intval(
-        $d['category_id'] ?? 0
-    );
+    $category_id = intval($d["category_id"] ?? 0);
 
-    $xin = trim(
-        $d['xin'] ?? ''
-    );
+    $xin = trim($d["xin"] ?? "");
 
-    $yuan = trim(
-        $d['yuan'] ?? ''
-    );
+    $yuan = trim($d["yuan"] ?? "");
 
     /* ======================================
        FIRMA
     ====================================== */
 
-    firma(
-        $xin,
-        $yuan
-    );
+    firma($xin, $yuan);
 
     /* ======================================
        VALIDAR
     ====================================== */
 
-    if(!$category_id){
+    if (!$category_id) {
+        Flight::json(
+            [
+                "status" => "error",
 
-        Flight::json([
-
-            'status' => 'error',
-
-            'msg' => 'category_id requerido'
-
-        ],400);
+                "msg" => "category_id requerido",
+            ],
+            400
+        );
 
         return;
     }
@@ -2276,14 +1881,14 @@ Flight::route('POST /IlY2/eliminarCategoria', function(){
     DB::startTransaction();
 
     try {
-
-        $now = date('Y-m-d H:i:s');
+        $now = date("Y-m-d H:i:s");
 
         /* ======================================
            VALIDAR CATEGORIA
         ====================================== */
 
-        $categoria = DB::queryFirstRow("
+        $categoria = DB::queryFirstRow(
+            "
 
             SELECT
 
@@ -2298,19 +1903,21 @@ Flight::route('POST /IlY2/eliminarCategoria', function(){
 
             LIMIT 1
 
-        ", $category_id);
+        ",
+            $category_id
+        );
 
-        if(!$categoria){
-
+        if (!$categoria) {
             DB::rollback();
 
-            Flight::json([
+            Flight::json(
+                [
+                    "status" => "error",
 
-                'status' => 'error',
-
-                'msg' => 'Categoría no encontrada'
-
-            ],404);
+                    "msg" => "Categoría no encontrada",
+                ],
+                404
+            );
 
             return;
         }
@@ -2320,27 +1927,23 @@ Flight::route('POST /IlY2/eliminarCategoria', function(){
         ====================================== */
 
         DB::update(
-
-            'pos_category',
+            "pos_category",
 
             [
-
-                'borrado_el' =>
-                    $now
-
+                "borrado_el" => $now,
             ],
 
             "category_id=%i",
 
             $category_id
-
         );
 
         /* ======================================
            PRODUCTOS DE LA CATEGORIA
         ====================================== */
 
-        $productos = DB::query("
+        $productos = DB::query(
+            "
 
             SELECT DISTINCT
 
@@ -2356,7 +1959,9 @@ Flight::route('POST /IlY2/eliminarCategoria', function(){
 
             AND p.borrado_el IS NULL
 
-        ", $category_id);
+        ",
+            $category_id
+        );
 
         $productos_afectados = [];
 
@@ -2364,35 +1969,24 @@ Flight::route('POST /IlY2/eliminarCategoria', function(){
            SOFT DELETE PRODUCTOS
         ====================================== */
 
-        foreach($productos as $p){
+        foreach ($productos as $p) {
+            $product_id = intval($p["product_id"]);
 
-            $product_id = intval(
-                $p['product_id']
-            );
-
-            $productos_afectados[] =
-                $product_id;
+            $productos_afectados[] = $product_id;
 
             DB::update(
-
-                'pos_product',
+                "pos_product",
 
                 [
+                    "borrado_el" => $now,
 
-                    'borrado_el' =>
-                        $now,
-
-                    'fecha_modificacion' =>
-                        $now
-
+                    "fecha_modificacion" => $now,
                 ],
 
                 "product_id=%i",
 
                 $product_id
-
             );
-
         }
 
         DB::commit();
@@ -2402,105 +1996,79 @@ Flight::route('POST /IlY2/eliminarCategoria', function(){
         ====================================== */
 
         Flight::json([
+            "status" => "ok",
 
-            'status' => 'ok',
+            "msg" => "Categoría eliminada correctamente",
 
-            'msg' =>
-                'Categoría eliminada correctamente',
+            "category_id" => $category_id,
 
-            'category_id' =>
-                $category_id,
+            "productos_afectados" => $productos_afectados,
 
-            'productos_afectados' =>
-                $productos_afectados,
+            "cantidad_productos" => count($productos_afectados),
 
-            'cantidad_productos' =>
-                count(
-                    $productos_afectados
-                ),
-
-            'borrado_el' =>
-                $now
-
+            "borrado_el" => $now,
         ]);
-
-    } catch(Exception $e){
-
+    } catch (Exception $e) {
         DB::rollback();
 
-        Flight::json([
+        Flight::json(
+            [
+                "status" => "error",
 
-            'status' => 'error',
-
-            'msg' =>
-                $e->getMessage()
-
-        ],500);
-
+                "msg" => $e->getMessage(),
+            ],
+            500
+        );
     }
-
 });
 
-Flight::route('POST /KgOS/ocultarCategoria', function(){
-
+Flight::route("POST /KgOS/ocultarCategoria", function () {
     include DEFINITION;
 
     DB::query("SET NAMES 'utf8mb4'");
 
-    $d = json_decode(
-        Flight::request()->getBody(),
-        true
-    ) ?: [];
+    $d = json_decode(Flight::request()->getBody(), true) ?: [];
 
     /* ======================================
        CAMPOS
     ====================================== */
 
-    $category_id = intval(
-        $d['category_id'] ?? 0
-    );
+    $category_id = intval($d["category_id"] ?? 0);
 
-    $xin = trim(
-        $d['xin'] ?? ''
-    );
+    $xin = trim($d["xin"] ?? "");
 
-    $yuan = trim(
-        $d['yuan'] ?? ''
-    );
+    $yuan = trim($d["yuan"] ?? "");
 
     /* ======================================
        FIRMA
     ====================================== */
 
-    firma(
-        $xin,
-        $yuan
-    );
+    firma($xin, $yuan);
 
     /* ======================================
        VALIDAR
     ====================================== */
 
-    if(!$category_id){
+    if (!$category_id) {
+        Flight::json(
+            [
+                "status" => "error",
 
-        Flight::json([
-
-            'status' => 'error',
-
-            'msg' => 'category_id requerido'
-
-        ],400);
+                "msg" => "category_id requerido",
+            ],
+            400
+        );
 
         return;
     }
 
     try {
-
         /* ======================================
            VALIDAR CATEGORIA
         ====================================== */
 
-        $categoria = DB::queryFirstRow("
+        $categoria = DB::queryFirstRow(
+            "
 
             SELECT
 
@@ -2515,34 +2083,32 @@ Flight::route('POST /KgOS/ocultarCategoria', function(){
 
             LIMIT 1
 
-        ", $category_id);
+        ",
+            $category_id
+        );
 
-        if(!$categoria){
+        if (!$categoria) {
+            Flight::json(
+                [
+                    "status" => "error",
 
-            Flight::json([
-
-                'status' => 'error',
-
-                'msg' => 'Categoría no encontrada'
-
-            ],404);
+                    "msg" => "Categoría no encontrada",
+                ],
+                404
+            );
 
             return;
         }
 
-        if(
-            !is_null(
-                $categoria['borrado_el']
-            )
-        ){
+        if (!is_null($categoria["borrado_el"])) {
+            Flight::json(
+                [
+                    "status" => "error",
 
-            Flight::json([
-
-                'status' => 'error',
-
-                'msg' => 'La categoría está eliminada'
-
-            ],400);
+                    "msg" => "La categoría está eliminada",
+                ],
+                400
+            );
 
             return;
         }
@@ -2551,25 +2117,18 @@ Flight::route('POST /KgOS/ocultarCategoria', function(){
            TOGGLE
         ====================================== */
 
-        $nuevo_estado = intval(
-            !$categoria['is_activo']
-        );
+        $nuevo_estado = intval(!$categoria["is_activo"]);
 
         DB::update(
-
-            'pos_category',
+            "pos_category",
 
             [
-
-                'is_activo' =>
-                    $nuevo_estado
-
+                "is_activo" => $nuevo_estado,
             ],
 
             "category_id=%i",
 
             $category_id
-
         );
 
         /* ======================================
@@ -2577,66 +2136,46 @@ Flight::route('POST /KgOS/ocultarCategoria', function(){
         ====================================== */
 
         Flight::json([
+            "status" => "ok",
 
-            'status' => 'ok',
+            "msg" => $nuevo_estado
+                ? "Categoría activada"
+                : "Categoría ocultada",
 
-            'msg' =>
+            "category_id" => $category_id,
 
-                $nuevo_estado
-                ?
-
-                'Categoría activada'
-
-                :
-
-                'Categoría ocultada',
-
-            'category_id' =>
-                $category_id,
-
-            'is_activo' =>
-                $nuevo_estado
-
+            "is_activo" => $nuevo_estado,
         ]);
+    } catch (Exception $e) {
+        Flight::json(
+            [
+                "status" => "error",
 
-    } catch(Exception $e){
-
-        Flight::json([
-
-            'status' => 'error',
-
-            'msg' =>
-                $e->getMessage()
-
-        ],500);
-
+                "msg" => $e->getMessage(),
+            ],
+            500
+        );
     }
-
 });
 
 /* =========================================================
    GUARDAR IMAGEN PRODUCTO
 ========================================================= */
 
-Flight::route('POST /M4LT/guardarImagenProducto', function () {
-
+Flight::route("POST /M4LT/guardarImagenProducto", function () {
     try {
-
         include DEFINITION;
 
         DB::query("SET NAMES 'utf8mb4'");
 
-        $d = json_decode(
-            Flight::request()->getBody(),
-            true
-        ) ?: [];
+        $d = json_decode(Flight::request()->getBody(), true) ?: [];
 
         /* =========================================
            FIRMA
         ========================================= */
 
-        $xin  = $d['xin'] ?? '';
-        $yuan = $d['yuan'] ?? '';
+        $xin = $d["xin"] ?? "";
+        $yuan = $d["yuan"] ?? "";
 
         firma($xin, $yuan);
 
@@ -2644,47 +2183,42 @@ Flight::route('POST /M4LT/guardarImagenProducto', function () {
            PAYLOAD
         ========================================= */
 
-        $product_id = intval(
-            $d['product_id'] ?? 0
-        );
+        $product_id = intval($d["product_id"] ?? 0);
 
-        $url_imagen = trim(
-            $d['url_imagen'] ?? ''
-        );
+        $url_imagen = trim($d["url_imagen"] ?? "");
 
-        if(!$product_id){
+        if (!$product_id) {
+            Flight::json(
+                [
+                    "status" => "error",
 
-            Flight::json([
-
-                'status' => 'error',
-
-                'msg' => 'product_id requerido'
-
-            ],400);
+                    "msg" => "product_id requerido",
+                ],
+                400
+            );
 
             return;
-
         }
 
-        if(!$url_imagen){
+        if (!$url_imagen) {
+            Flight::json(
+                [
+                    "status" => "error",
 
-            Flight::json([
-
-                'status' => 'error',
-
-                'msg' => 'url_imagen requerida'
-
-            ],400);
+                    "msg" => "url_imagen requerida",
+                ],
+                400
+            );
 
             return;
-
         }
 
         /* =========================================
            VALIDAR PRODUCTO
         ========================================= */
 
-        $producto = DB::queryFirstRow("
+        $producto = DB::queryFirstRow(
+            "
 
             SELECT
 
@@ -2699,20 +2233,21 @@ Flight::route('POST /M4LT/guardarImagenProducto', function () {
 
             LIMIT 1
 
-        ", $product_id);
+        ",
+            $product_id
+        );
 
-        if(!$producto){
+        if (!$producto) {
+            Flight::json(
+                [
+                    "status" => "error",
 
-            Flight::json([
-
-                'status' => 'error',
-
-                'msg' => 'Producto no encontrado'
-
-            ],404);
+                    "msg" => "Producto no encontrado",
+                ],
+                404
+            );
 
             return;
-
         }
 
         /* =========================================
@@ -2720,7 +2255,8 @@ Flight::route('POST /M4LT/guardarImagenProducto', function () {
            +1 A TODOS
         ========================================= */
 
-        DB::query("
+        DB::query(
+            "
 
             UPDATE pos_product_image
 
@@ -2730,7 +2266,9 @@ Flight::route('POST /M4LT/guardarImagenProducto', function () {
 
             AND borrado_el IS NULL
 
-        ", $product_id);
+        ",
+            $product_id
+        );
 
         /* =========================================
            INSERTAR NUEVA FOTO
@@ -2738,41 +2276,23 @@ Flight::route('POST /M4LT/guardarImagenProducto', function () {
         ========================================= */
 
         DB::insert(
-
-            'pos_product_image',
+            "pos_product_image",
 
             [
+                "product_id" => $product_id,
 
-                'product_id' =>
+                "cod_producto" => $producto["cod_producto"],
 
-                    $product_id,
+                "img" => $url_imagen,
 
-                'cod_producto' =>
+                "orden" => 1,
 
-                    $producto['cod_producto'],
+                "is_visible" => 1,
 
-                'img' =>
+                "fecha_creacion" => date("Y-m-d H:i:s"),
 
-                    $url_imagen,
-
-                'orden' =>
-
-                    1,
-
-                'is_visible' =>
-
-                    1,
-
-                'fecha_creacion' =>
-
-                    date('Y-m-d H:i:s'),
-
-                'borrado_el' =>
-
-                    null
-
+                "borrado_el" => null,
             ]
-
         );
 
         $product_image_id = DB::insertId();
@@ -2782,48 +2302,33 @@ Flight::route('POST /M4LT/guardarImagenProducto', function () {
         ========================================= */
 
         Flight::json([
+            "status" => "ok",
 
-            'status' => 'ok',
+            "product_image_id" => $product_image_id,
 
-            'product_image_id' =>
+            "product_id" => $product_id,
 
-                $product_image_id,
+            "img" => $url_imagen,
 
-            'product_id' =>
-
-                $product_id,
-
-            'img' =>
-
-                $url_imagen,
-
-            'orden' =>
-
-                1
-
+            "orden" => 1,
         ]);
-
     } catch (Exception $e) {
+        Flight::json(
+            [
+                "status" => "error",
 
-        Flight::json([
+                "msg" => $e->getMessage(),
 
-            'status' => 'error',
+                "line" => $e->getLine(),
 
-            'msg' => $e->getMessage(),
-
-            'line' => $e->getLine(),
-
-            'file' => $e->getFile()
-
-        ],500);
-
+                "file" => $e->getFile(),
+            ],
+            500
+        );
     }
-
 });
 
-
-Flight::route('POST /CK2f/eliminarFotoProducto', function(){
-
+Flight::route("POST /CK2f/eliminarFotoProducto", function () {
     include DEFINITION;
 
     $json = Flight::request()->getBody();
@@ -2844,22 +2349,17 @@ Flight::route('POST /CK2f/eliminarFotoProducto', function(){
        PAYLOAD
     ====================================== */
 
-    $product_image_id = intval(
-        $data->product_image_id ?? 0
-    );
+    $product_image_id = intval($data->product_image_id ?? 0);
 
     /* ======================================
        VALIDAR
     ====================================== */
 
-    if($product_image_id <= 0){
-
+    if ($product_image_id <= 0) {
         echo json_encode([
-
             "res" => "error",
 
-            "msg" => "product_image_id inválido"
-
+            "msg" => "product_image_id inválido",
         ]);
 
         return;
@@ -2869,7 +2369,8 @@ Flight::route('POST /CK2f/eliminarFotoProducto', function(){
        FOTO
     ====================================== */
 
-    $info_foto = DB::queryFirstRow("
+    $info_foto = DB::queryFirstRow(
+        "
 
         SELECT *
 
@@ -2881,16 +2382,15 @@ Flight::route('POST /CK2f/eliminarFotoProducto', function(){
 
         LIMIT 1
 
-    ", $product_image_id);
+    ",
+        $product_image_id
+    );
 
-    if(!$info_foto){
-
+    if (!$info_foto) {
         echo json_encode([
-
             "res" => "error",
 
-            "msg" => "Foto no encontrada"
-
+            "msg" => "Foto no encontrada",
         ]);
 
         return;
@@ -2901,21 +2401,15 @@ Flight::route('POST /CK2f/eliminarFotoProducto', function(){
     ====================================== */
 
     DB::update(
-
-        'pos_product_image',
+        "pos_product_image",
 
         [
-
-            'borrado_el' => date(
-                'Y-m-d H:i:s'
-            )
-
+            "borrado_el" => date("Y-m-d H:i:s"),
         ],
 
-        'product_image_id=%i',
+        "product_image_id=%i",
 
         $product_image_id
-
     );
 
     /* ======================================
@@ -2923,17 +2417,13 @@ Flight::route('POST /CK2f/eliminarFotoProducto', function(){
     ====================================== */
 
     echo json_encode([
-
         "res" => "ok",
 
-        "msg" => "Foto eliminada"
-
+        "msg" => "Foto eliminada",
     ]);
-
 });
 
-Flight::route('POST /QVhq/ordenarFotoProducto', function(){
-
+Flight::route("POST /QVhq/ordenarFotoProducto", function () {
     include DEFINITION;
 
     $json = Flight::request()->getBody();
@@ -2960,22 +2450,11 @@ Flight::route('POST /QVhq/ordenarFotoProducto', function(){
        VALIDAR
     ====================================== */
 
-    if(
-
-        !is_array($lista)
-
-        ||
-
-        empty($lista)
-
-    ){
-
+    if (!is_array($lista) || empty($lista)) {
         echo json_encode([
-
             "res" => "error",
 
-            "msg" => "Lista inválida"
-
+            "msg" => "Lista inválida",
         ]);
 
         return;
@@ -2985,28 +2464,20 @@ Flight::route('POST /QVhq/ordenarFotoProducto', function(){
        RECORRER
     ====================================== */
 
-    foreach($lista as $item){
+    foreach ($lista as $item) {
+        $product_image_id = intval($item->product_image_id ?? 0);
 
-        $product_image_id = intval(
-            $item->product_image_id ?? 0
-        );
+        $orden = intval($item->orden ?? 0);
 
-        $orden = intval(
-            $item->orden ?? 0
-        );
-
-        if($product_image_id <= 0){
+        if ($product_image_id <= 0) {
             continue;
         }
 
         DB::update(
-
-            'pos_product_image',
+            "pos_product_image",
 
             [
-
-                'orden' => $orden
-
+                "orden" => $orden,
             ],
 
             '
@@ -3018,9 +2489,7 @@ Flight::route('POST /QVhq/ordenarFotoProducto', function(){
             ',
 
             $product_image_id
-
         );
-
     }
 
     /* ======================================
@@ -3028,94 +2497,69 @@ Flight::route('POST /QVhq/ordenarFotoProducto', function(){
     ====================================== */
 
     echo json_encode([
-
         "res" => "ok",
 
-        "msg" => "Orden actualizado"
-
+        "msg" => "Orden actualizado",
     ]);
-
 });
 
-
-Flight::route('POST /W4ta/calculadoraPrecio', function(){
-
-    try{
-
+Flight::route("POST /W4ta/calculadoraPrecio", function () {
+    try {
         include DEFINITION;
 
         DB::query("SET NAMES 'utf8mb4'");
 
-        $d = json_decode(
+        $d =
+            json_decode(
+                Flight::request()->getBody(),
 
-            Flight::request()->getBody(),
-
-            true
-
-        ) ?: [];
+                true
+            ) ?:
+            [];
 
         /* =====================================
            FIRMA
         ====================================== */
 
-        $xin = trim(
-            $d['xin'] ?? ''
-        );
+        $xin = trim($d["xin"] ?? "");
 
-        $yuan = trim(
-            $d['yuan'] ?? ''
-        );
+        $yuan = trim($d["yuan"] ?? "");
 
-        firma(
-            $xin,
-            $yuan
-        );
+        firma($xin, $yuan);
 
         /* =====================================
            PARAMETROS
         ====================================== */
 
-        $product_id = intval(
-            $d['product_id'] ?? 0
-        );
+        $product_id = intval($d["product_id"] ?? 0);
 
-        $neg_id = intval(
-            $d['neg_id'] ?? 0
-        );
+        $neg_id = intval($d["neg_id"] ?? 0);
 
-        $compra_total = floatval(
-            $d['compra_total'] ?? 0
-        );
+        $compra_total = floatval($d["compra_total"] ?? 0);
 
-        $cantidad_comprada = intval(
-            $d['cantidad_comprada'] ?? 0
-        );
+        $cantidad_comprada = intval($d["cantidad_comprada"] ?? 0);
 
-        $rangos = $d['rangos'] ?? [];
+        $rangos = $d["rangos"] ?? [];
 
-        if(
-            $product_id <= 0
-            ||
-            $neg_id <= 0
-        ){
+        if ($product_id <= 0 || $neg_id <= 0) {
+            Flight::json(
+                [
+                    "status" => "error",
 
-            Flight::json([
-
-                'status' => 'error',
-
-                'msg' => 'Parámetros inválidos'
-
-            ], 400);
+                    "msg" => "Parámetros inválidos",
+                ],
+                400
+            );
 
             return;
-
         }
 
         /* =====================================
            PRODUCTO
         ====================================== */
 
-        $producto = DB::queryFirstRow("
+        $producto = DB::queryFirstRow(
+            "
 
             SELECT
 
@@ -3137,18 +2581,17 @@ Flight::route('POST /W4ta/calculadoraPrecio', function(){
             $neg_id
         );
 
-        if(!$producto){
+        if (!$producto) {
+            Flight::json(
+                [
+                    "status" => "error",
 
-            Flight::json([
-
-                'status' => 'error',
-
-                'msg' => 'Producto no encontrado'
-
-            ], 404);
+                    "msg" => "Producto no encontrado",
+                ],
+                404
+            );
 
             return;
-
         }
 
         /* =====================================
@@ -3157,20 +2600,12 @@ Flight::route('POST /W4ta/calculadoraPrecio', function(){
 
         $costo_unitario_base = 0;
 
-        if(
-            $cantidad_comprada > 0
-        ){
-
+        if ($cantidad_comprada > 0) {
             $costo_unitario_base = round(
-
-                $compra_total
-                /
-                $cantidad_comprada,
+                $compra_total / $cantidad_comprada,
 
                 2
-
             );
-
         }
 
         $precio_unidad = 0;
@@ -3181,63 +2616,32 @@ Flight::route('POST /W4ta/calculadoraPrecio', function(){
            CALCULAR
         ====================================== */
 
-        foreach($rangos as $r){
+        foreach ($rangos as $r) {
+            $cantidad_desde = intval($r["cantidad_desde"]);
 
-            $cantidad_desde = intval(
-                $r['cantidad_desde']
-            );
+            $nombre_rango = trim($r["nombre_rango"]);
 
-            $nombre_rango = trim(
-                $r['nombre_rango']
-            );
-
-            $ganancia = floatval(
-                $r['ganancia_porcentaje']
-            );
+            $ganancia = floatval($r["ganancia_porcentaje"]);
 
             $precio_unitario = round(
-
-                $costo_unitario_base
-
-                +
-
-                (
-                    $costo_unitario_base
-                    *
-                    $ganancia
-                    /
-                    100
-                ),
+                $costo_unitario_base + ($costo_unitario_base * $ganancia) / 100,
 
                 2
-
             );
 
-            if(
-                $cantidad_desde == 1
-            ){
-
-                $precio_unidad =
-                    $precio_unitario;
-
+            if ($cantidad_desde == 1) {
+                $precio_unidad = $precio_unitario;
             }
 
             $rangos_final[] = [
+                "cantidad_desde" => $cantidad_desde,
 
-                'cantidad_desde' =>
-                    $cantidad_desde,
+                "nombre_rango" => $nombre_rango,
 
-                'nombre_rango' =>
-                    $nombre_rango,
+                "ganancia_porcentaje" => $ganancia,
 
-                'ganancia_porcentaje' =>
-                    $ganancia,
-
-                'precio_unitario_calculado' =>
-                    $precio_unitario
-
+                "precio_unitario_calculado" => $precio_unitario,
             ];
-
         }
 
         /* =====================================
@@ -3245,32 +2649,22 @@ Flight::route('POST /W4ta/calculadoraPrecio', function(){
         ====================================== */
 
         DB::update(
-
-            'pos_product',
+            "pos_product",
 
             [
+                "price" => $precio_unidad,
 
-                'price' =>
-                    $precio_unidad,
+                "compra_total" => $compra_total,
 
-                'compra_total' =>
-                    $compra_total,
+                "cantidad_comprada" => $cantidad_comprada,
 
-                'cantidad_comprada' =>
-                    $cantidad_comprada,
+                "precio_volumen_json" => json_encode(
+                    $rangos_final,
 
-                'precio_volumen_json' =>
-                    json_encode(
+                    JSON_UNESCAPED_UNICODE
+                ),
 
-                        $rangos_final,
-
-                        JSON_UNESCAPED_UNICODE
-
-                    ),
-
-                'fecha_modificacion' =>
-                    date('Y-m-d H:i:s')
-
+                "fecha_modificacion" => date("Y-m-d H:i:s"),
             ],
 
             '
@@ -3280,7 +2674,6 @@ Flight::route('POST /W4ta/calculadoraPrecio', function(){
             ',
 
             $product_id
-
         );
 
         /* =====================================
@@ -3288,120 +2681,89 @@ Flight::route('POST /W4ta/calculadoraPrecio', function(){
         ====================================== */
 
         Flight::json([
+            "status" => "ok",
 
-            'status' => 'ok',
+            "product_id" => $product_id,
 
-            'product_id' =>
-                $product_id,
+            "neg_id" => $neg_id,
 
-            'neg_id' =>
-                $neg_id,
+            "compra_total" => $compra_total,
 
-            'compra_total' =>
-                $compra_total,
+            "cantidad_comprada" => $cantidad_comprada,
 
-            'cantidad_comprada' =>
-                $cantidad_comprada,
+            "costo_unitario_base" => $costo_unitario_base,
 
-            'costo_unitario_base' =>
-                $costo_unitario_base,
+            "precio_unidad_actualizado" => $precio_unidad,
 
-            'precio_unidad_actualizado' =>
-                $precio_unidad,
-
-            'rangos' =>
-                $rangos_final
-
+            "rangos" => $rangos_final,
         ]);
+    } catch (Throwable $e) {
+        Flight::json(
+            [
+                "status" => "error",
 
+                "msg" => $e->getMessage(),
+
+                "line" => $e->getLine(),
+
+                "file" => $e->getFile(),
+            ],
+            500
+        );
     }
-    catch(Throwable $e){
-
-        Flight::json([
-
-            'status' => 'error',
-
-            'msg' => $e->getMessage(),
-
-            'line' => $e->getLine(),
-
-            'file' => $e->getFile()
-
-        ], 500);
-
-    }
-
 });
 
-
-Flight::route('POST /V8ke/calculadoraPrecioDetalle', function(){
-
-    try{
-
+Flight::route("POST /V8ke/calculadoraPrecioDetalle", function () {
+    try {
         include DEFINITION;
 
         DB::query("SET NAMES 'utf8mb4'");
 
-        $d = json_decode(
+        $d =
+            json_decode(
+                Flight::request()->getBody(),
 
-            Flight::request()->getBody(),
-
-            true
-
-        ) ?: [];
+                true
+            ) ?:
+            [];
 
         /* =====================================
            FIRMA
         ====================================== */
 
-        $xin = trim(
-            $d['xin'] ?? ''
-        );
+        $xin = trim($d["xin"] ?? "");
 
-        $yuan = trim(
-            $d['yuan'] ?? ''
-        );
+        $yuan = trim($d["yuan"] ?? "");
 
-        firma(
-            $xin,
-            $yuan
-        );
+        firma($xin, $yuan);
 
         /* =====================================
            PARAMETROS
         ====================================== */
 
-        $product_id = intval(
-            $d['product_id'] ?? 0
-        );
+        $product_id = intval($d["product_id"] ?? 0);
 
-        $neg_id = intval(
-            $d['neg_id'] ?? 0
-        );
+        $neg_id = intval($d["neg_id"] ?? 0);
 
-        if(
-            $product_id <= 0
-            ||
-            $neg_id <= 0
-        ){
+        if ($product_id <= 0 || $neg_id <= 0) {
+            Flight::json(
+                [
+                    "status" => "error",
 
-            Flight::json([
-
-                'status' => 'error',
-
-                'msg' => 'Parámetros inválidos'
-
-            ], 400);
+                    "msg" => "Parámetros inválidos",
+                ],
+                400
+            );
 
             return;
-
         }
 
         /* =====================================
            PRODUCTO
         ====================================== */
 
-        $producto = DB::queryFirstRow("
+        $producto = DB::queryFirstRow(
+            "
 
             SELECT
 
@@ -3429,48 +2791,35 @@ Flight::route('POST /V8ke/calculadoraPrecioDetalle', function(){
             $neg_id
         );
 
-        if(!$producto){
+        if (!$producto) {
+            Flight::json(
+                [
+                    "status" => "error",
 
-            Flight::json([
-
-                'status' => 'error',
-
-                'msg' => 'Producto no encontrado'
-
-            ], 404);
+                    "msg" => "Producto no encontrado",
+                ],
+                404
+            );
 
             return;
-
         }
 
         /* =====================================
            COSTO BASE
         ====================================== */
 
-        $compra_total = floatval(
-            $producto['compra_total'] ?? 0
-        );
+        $compra_total = floatval($producto["compra_total"] ?? 0);
 
-        $cantidad_comprada = intval(
-            $producto['cantidad_comprada'] ?? 0
-        );
+        $cantidad_comprada = intval($producto["cantidad_comprada"] ?? 0);
 
         $costo_unitario_base = 0;
 
-        if(
-            $cantidad_comprada > 0
-        ){
-
+        if ($cantidad_comprada > 0) {
             $costo_unitario_base = round(
-
-                $compra_total
-                /
-                $cantidad_comprada,
+                $compra_total / $cantidad_comprada,
 
                 2
-
             );
-
         }
 
         /* =====================================
@@ -3479,26 +2828,16 @@ Flight::route('POST /V8ke/calculadoraPrecioDetalle', function(){
 
         $rangos = [];
 
-        if(
-            !empty(
-                $producto['precio_volumen_json']
-            )
-        ){
-
+        if (!empty($producto["precio_volumen_json"])) {
             $rangos = json_decode(
-
-                $producto['precio_volumen_json'],
+                $producto["precio_volumen_json"],
 
                 true
-
             );
 
-            if(!is_array($rangos)){
-
+            if (!is_array($rangos)) {
                 $rangos = [];
-
             }
-
         }
 
         /* =====================================
@@ -3506,89 +2845,72 @@ Flight::route('POST /V8ke/calculadoraPrecioDetalle', function(){
         ====================================== */
 
         Flight::json([
+            "status" => "ok",
 
-            'status' => 'ok',
+            "product_id" => intval($producto["product_id"]),
 
-            'product_id' =>
-                intval(
-                    $producto['product_id']
-                ),
+            "neg_id" => intval($producto["neg_id"]),
 
-            'neg_id' =>
-                intval(
-                    $producto['neg_id']
-                ),
+            "producto_nombre" => $producto["name"],
 
-            'producto_nombre' =>
-                $producto['name'],
+            "compra_total" => $compra_total,
 
-            'compra_total' =>
-                $compra_total,
+            "cantidad_comprada" => $cantidad_comprada,
 
-            'cantidad_comprada' =>
-                $cantidad_comprada,
+            "costo_unitario_base" => $costo_unitario_base,
 
-            'costo_unitario_base' =>
-                $costo_unitario_base,
+            "precio_unidad_actualizado" => floatval($producto["price"]),
 
-            'precio_unidad_actualizado' =>
-                floatval(
-                    $producto['price']
-                ),
-
-            'rangos' =>
-                $rangos
-
+            "rangos" => $rangos,
         ]);
+    } catch (Throwable $e) {
+        Flight::json(
+            [
+                "status" => "error",
 
+                "msg" => $e->getMessage(),
+
+                "line" => $e->getLine(),
+
+                "file" => $e->getFile(),
+            ],
+            500
+        );
     }
-    catch(Throwable $e){
-
-        Flight::json([
-
-            'status' => 'error',
-
-            'msg' => $e->getMessage(),
-
-            'line' => $e->getLine(),
-
-            'file' => $e->getFile()
-
-        ], 500);
-
-    }
-
 });
-
 
 /* =========================================================
    🔥 GESTIÓN DE CARGA DIRECTA DE IMÁGENES (REEMPLAZO FLASK)
 ========================================================= */
 
 // 1. Endpoint principal de subida de archivos
-Flight::route('POST /tk_guardar_img', function () {
+Flight::route("POST /tk_guardar_img", function () {
     global $varpath_img;
     global $varhost_img;
 
     // Verificar que se haya enviado un archivo válido
-    if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
-        Flight::json([
-            'status' => 'error',
-            'msg' => 'No se recibió ningún archivo válido o hubo un error en la carga.'
-        ], 400);
+    if (!isset($_FILES["file"]) || $_FILES["file"]["error"] !== UPLOAD_ERR_OK) {
+        Flight::json(
+            [
+                "status" => "error",
+                "msg" =>
+                    "No se recibió ningún archivo válido o hubo un error en la carga.",
+            ],
+            400
+        );
         return;
     }
 
-    $file = $_FILES['file'];
-    
+    $file = $_FILES["file"];
+
     // Obtener extensión original y sanitizar
-    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-    if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
-        $ext = 'jpg'; // Forzado por el Canvas de origen a image/jpeg
+    $ext = strtolower(pathinfo($file["name"], PATHINFO_EXTENSION));
+    if (!in_array($ext, ["jpg", "jpeg", "png", "webp"])) {
+        $ext = "jpg"; // Forzado por el Canvas de origen a image/jpeg
     }
 
     // Generar un nombre único basado en un hash aleatorio de 6 caracteres (siguiendo tu estilo de rutas)
-    $nuevo_nombre = substr(md5(uniqid(rand(), true)), 0, 6) . '.' . $ext;
+    $nuevo_nombre = substr(md5(uniqid(rand(), true)), 0, 6) . "." . $ext;
     $ruta_destino = $varpath_img . $nuevo_nombre;
 
     // Asegurar que el directorio de destino exista
@@ -3597,27 +2919,32 @@ Flight::route('POST /tk_guardar_img', function () {
     }
 
     // Mover el archivo temporal a la carpeta física F:/xampp/htdocs/88/
-    if (move_uploaded_files_sitio($file['tmp_name'], $ruta_destino)) {
-        
+    if (move_uploaded_files_sitio($file["tmp_name"], $ruta_destino)) {
         // Simular la respuesta del Job original de Flask pero ya procesado de inmediato
         $url_final = $varhost_img . $nuevo_nombre;
-        
-        Flight::json([
-            'status' => 'ok',
-            'job_id' => 'direct_' . uniqid(), // ID sintético por compatibilidad
-            'url_directa' => $url_final       // Para uso optimizado directo
-        ], 200);
-        
+
+        Flight::json(
+            [
+                "status" => "ok",
+                "job_id" => "direct_" . uniqid(), // ID sintético por compatibilidad
+                "url_directa" => $url_final, // Para uso optimizado directo
+            ],
+            200
+        );
     } else {
-        Flight::json([
-            'status' => 'error',
-            'msg' => 'No se pudo guardar el archivo en el servidor local.'
-        ], 500);
+        Flight::json(
+            [
+                "status" => "error",
+                "msg" => "No se pudo guardar el archivo en el servidor local.",
+            ],
+            500
+        );
     }
 });
 
 // Función auxiliar de guardado seguro
-function move_uploaded_files_sitio($tmp, $destino) {
+function move_uploaded_files_sitio($tmp, $destino)
+{
     if (is_uploaded_file($tmp)) {
         return move_uploaded_file($tmp, $destino);
     }
@@ -3625,25 +2952,26 @@ function move_uploaded_files_sitio($tmp, $destino) {
     return rename($tmp, $destino);
 }
 
-
 // 2. Endpoint de simulación de Polling (Por compatibilidad con el loop de Vue)
-Flight::route('GET /jobs/result', function () {
+Flight::route("GET /jobs/result", function () {
     global $varhost_img;
-    
-    $job_id = Flight::request()->query['job_id'] ?? '';
-    
+
+    $job_id = Flight::request()->query["job_id"] ?? "";
+
     // Como el archivo ya se procesó de forma síncrona, respondemos inmediatamente "finished"
-    Flight::json([
-        'status' => 'finished',
-        'result' => [
-            // No rastreamos memoria de variables globales previas, pero dejamos la estructura limpia
-            'url' => null 
-        ]
-    ], 200);
+    Flight::json(
+        [
+            "status" => "finished",
+            "result" => [
+                // No rastreamos memoria de variables globales previas, pero dejamos la estructura limpia
+                "url" => null,
+            ],
+        ],
+        200
+    );
 });
 
-Flight::route('POST /crear_catalogo', function () {
-
+Flight::route("POST /crear_catalogo", function () {
     include DEFINITION; // Carga configuraciones globales
 
     DB::query("SET NAMES 'utf8mb4'");
@@ -3651,24 +2979,28 @@ Flight::route('POST /crear_catalogo', function () {
     // 1. Obtener y parsear el payload JSON enviado desde el cliente
     $body = json_decode(Flight::request()->getBody(), true) ?: [];
 
-    $xin    = trim($body['xin'] ?? '');
-    $yuan   = trim($body['yuan'] ?? '');
-    $neg_id = intval($body['neg_id'] ?? 0);
+    $xin = trim($body["xin"] ?? "");
+    $yuan = trim($body["yuan"] ?? "");
+    $neg_id = intval($body["neg_id"] ?? 0);
 
     // 2. Validar firma de seguridad criptográfica
     // firma($xin, $yuan);
 
     // 3. Validar presencia del parámetro neg_id
     if ($neg_id <= 0) {
-        Flight::json([
-            'status' => 'error',
-            'msg'    => 'El neg_id es requerido y debe ser válido'
-        ], 400);
+        Flight::json(
+            [
+                "status" => "error",
+                "msg" => "El neg_id es requerido y debe ser válido",
+            ],
+            400
+        );
         return;
     }
 
     // 4. Consultar datos del negocio seleccionado (Corregido borrado_el)
-    $negocio = DB::queryFirstRow("
+    $negocio = DB::queryFirstRow(
+        "
         SELECT 
             nombre, 
             direccion, 
@@ -3677,25 +3009,31 @@ Flight::route('POST /crear_catalogo', function () {
         FROM reg_neg
         WHERE neg_id = %i AND borrado_el IS NULL
         LIMIT 1
-    ", $neg_id);
+    ",
+        $neg_id
+    );
 
     if (!$negocio) {
-        Flight::json([
-            'status' => 'error',
-            'msg'    => 'Negocio no encontrado'
-        ], 404);
+        Flight::json(
+            [
+                "status" => "error",
+                "msg" => "Negocio no encontrado",
+            ],
+            404
+        );
         return;
     }
 
-    $ruc_empresa = '99999999';
+    $ruc_empresa = "99999999";
 
     // Logo del negocio o fallback por defecto
-    $logo_negocio = !empty($negocio['img_logo']) 
-        ? $negocio['img_logo'] 
-        : $varhost . '/public/admin/login/images/logo_login.png';
+    $logo_negocio = !empty($negocio["img_logo"])
+        ? $negocio["img_logo"]
+        : $varhost . "/public/admin/login/images/logo_login.png";
 
     // 5. Consultar todas las categorías activas del negocio (Corregido borrado_el)
-    $categorias = DB::query("
+    $categorias = DB::query(
+        "
         SELECT 
             c.category_id,
             c.name AS categoria_nombre,
@@ -3705,14 +3043,16 @@ Flight::route('POST /crear_catalogo', function () {
           AND (c.is_activo = 1 OR c.is_activo IS NULL)
           AND c.borrado_el IS NULL
         ORDER BY c.priority ASC, c.category_id ASC
-    ", $neg_id);
+    ",
+        $neg_id
+    );
 
     $listado_categorias = [];
 
     foreach ($categorias as $cat) {
-
         // 6. Consultar productos de la categoría (Corregido borrado_el)
-        $productos = DB::query("
+        $productos = DB::query(
+            "
             SELECT DISTINCT
                 p.product_id,
                 p.name AS producto_nombre,
@@ -3733,7 +3073,10 @@ Flight::route('POST /crear_catalogo', function () {
               AND (p.is_visible = 1 OR p.is_visible IS NULL)
               AND p.borrado_el IS NULL
             ORDER BY p.product_id DESC
-        ", $cat['category_id'], $neg_id);
+        ",
+            $cat["category_id"],
+            $neg_id
+        );
 
         // Si la categoría no tiene productos, se ignora
         if (empty($productos)) {
@@ -3743,55 +3086,61 @@ Flight::route('POST /crear_catalogo', function () {
         // Mapeo de productos para la plantilla Mustache
         $listado_productos = [];
         foreach ($productos as $prod) {
-            $img_prod = !empty($prod['producto_img']) 
-                ? $prod['producto_img'] 
-                : $varhost . '/public/admin/images/no_image.png';
+            $img_prod = !empty($prod["producto_img"])
+                ? $prod["producto_img"]
+                : $varhost . "/public/admin/images/no_image.png";
 
             $listado_productos[] = [
-                'product_id'      => $prod['product_id'],
-                'producto_nombre' => $prod['producto_nombre'],
-                'marca'           => !empty($prod['marca']) ? '#' . $prod['marca'] : '#DISPONIBLE',
-                'precio'          => number_format((float)$prod['precio'], 2),
-                'producto_img'    => $img_prod
+                "product_id" => $prod["product_id"],
+                "producto_nombre" => $prod["producto_nombre"],
+                "marca" => !empty($prod["marca"])
+                    ? "#" . $prod["marca"]
+                    : "#DISPONIBLE",
+                "precio" => number_format((float) $prod["precio"], 2),
+                "producto_img" => $img_prod,
             ];
         }
 
         // Imagen de la cabecera de categoría
-        $img_cat = !empty($cat['categoria_img']) ? $cat['categoria_img'] : '';
+        $img_cat = !empty($cat["categoria_img"]) ? $cat["categoria_img"] : "";
 
         $listado_categorias[] = [
-            'category_id'         => $cat['category_id'],
-            'categoria_nombre'    => $cat['categoria_nombre'],
-            'categoria_img'       => $img_cat,
-            'tiene_categoria_img' => !empty($img_cat),
-            'productos'           => $listado_productos
+            "category_id" => $cat["category_id"],
+            "categoria_nombre" => $cat["categoria_nombre"],
+            "categoria_img" => $img_cat,
+            "tiene_categoria_img" => !empty($img_cat),
+            "productos" => $listado_productos,
         ];
     }
 
     // 7. Estructura de datos para Mustache
     $template_data = [
-        'informacion' => [[
-            'razon_social'   => $negocio['nombre'] ?? 'CATÁLOGO DE PRODUCTOS',
-            'ruc'            => $ruc_empresa,
-            'direccion'      => $negocio['direccion'] ?? '',
-            'celular'        => $negocio['celular_informes'] ?? '',
-            'logo'           => $logo_negocio,
-            'titulo_reporte' => 'CATÁLOGO VIRTUAL',
-            'fecha'          => date('d/m/Y')
-        ]],
-        'categorias' => $listado_categorias
+        "informacion" => [
+            [
+                "razon_social" => $negocio["nombre"] ?? "CATÁLOGO DE PRODUCTOS",
+                "ruc" => $ruc_empresa,
+                "direccion" => $negocio["direccion"] ?? "",
+                "celular" => $negocio["celular_informes"] ?? "",
+                "logo" => $logo_negocio,
+                "titulo_reporte" => "CATÁLOGO VIRTUAL",
+                "fecha" => date("d/m/Y"),
+            ],
+        ],
+        "categorias" => $listado_categorias,
     ];
 
     // 8. Compilar plantilla HTML almacenada en disco
-    $html = (new Mustache)->render(
-        file_get_contents(VARPATH . '/public/reportes/reporte_html/catalogo_productos.html'),
+    $html = (new Mustache())->render(
+        file_get_contents(
+            VARPATH . "/public/reportes/reporte_html/catalogo_productos.html"
+        ),
         $template_data
     );
 
     // 9. Generación de PDF mediante binario WkHtmlToPdf (Estructurado exactamente como imp_ventas_fecha)
     global $wkh_pdf, $varpath_tmp, $varhost_tmp;
 
-    $pdf = $varpath_tmp . 'catalogo_negocio_' . $neg_id . '_' . time() . '.pdf';
+    $pdf = $varpath_tmp . "catalogo_negocio_" . $neg_id . "_" . time() . ".pdf";
 
     $wkh_pdf->addPage($html);
 
@@ -3799,27 +3148,28 @@ Flight::route('POST /crear_catalogo', function () {
 
     // 10. Respuesta JSON con la URL directa del PDF generado
     Flight::json([
-        'status' => 'ok',
-        'url'    => $varhost_tmp . basename($pdf)
+        "status" => "ok",
+        "url" => $varhost_tmp . basename($pdf),
     ]);
 });
 
-
-
-
-Flight::route('GET /megazas', function () {
-
+Flight::route("GET /megazas", function () {
     include DEFINITION;
 
-    global $wkh_pdf, $varhost, $varpath_tmp, $varhost_tmp, $administrador_actual;
+    global $wkh_pdf,
+        $varhost,
+        $varpath_tmp,
+        $varhost_tmp,
+        $administrador_actual;
 
     DB::query("SET NAMES 'utf8mb4'");
 
     // Validar y castear a entero el parametro de la URL
-    $neg_id = vari('MEGAZAS');
+    $neg_id = vari("MEGAZAS");
 
     // 1. Obtener datos de la empresa/negocio
-    $negocio = DB::queryFirstRow("
+    $negocio = DB::queryFirstRow(
+        "
         SELECT 
             nombre, 
             direccion, 
@@ -3828,22 +3178,28 @@ Flight::route('GET /megazas', function () {
         FROM reg_neg
         WHERE neg_id = %i AND borrado_el IS NULL
         LIMIT 1
-    ", $neg_id);
+    ",
+        $neg_id
+    );
 
     if (!$negocio) {
-        Flight::json(['status' => 'error', 'msg' => 'Negocio no encontrado'], 404);
+        Flight::json(
+            ["status" => "error", "msg" => "Negocio no encontrado"],
+            404
+        );
         return;
     }
 
-    $ruc_empresa = '99999999';
+    $ruc_empresa = "99999999";
 
     // Logo del negocio o fallback por defecto
-    $logo_negocio = !empty($negocio['img_logo']) 
-        ? $negocio['img_logo'] 
-        : $varhost . '/public/admin/login/images/logo_login.png';
+    $logo_negocio = !empty($negocio["img_logo"])
+        ? $negocio["img_logo"]
+        : $varhost . "/public/admin/login/images/logo_login.png";
 
     // 2. Consultar todas las categorías del negocio
-    $categorias = DB::query("
+    $categorias = DB::query(
+        "
         SELECT 
             c.category_id,
             c.name AS categoria_nombre,
@@ -3853,15 +3209,17 @@ Flight::route('GET /megazas', function () {
           AND (c.is_activo = 1 OR c.is_activo IS NULL)
           AND c.borrado_el IS NULL
         ORDER BY c.priority ASC, c.category_id ASC
-    ", $neg_id);
+    ",
+        $neg_id
+    );
 
     $listado_categorias = [];
     $index_cat = 0;
 
     foreach ($categorias as $cat) {
-
         // 3. Consultar productos activos de la categoría
-        $productos = DB::query("
+        $productos = DB::query(
+            "
             SELECT DISTINCT
                 p.product_id,
                 p.name AS producto_nombre,
@@ -3882,7 +3240,10 @@ Flight::route('GET /megazas', function () {
               AND (p.is_visible = 1 OR p.is_visible IS NULL)
               AND p.borrado_el IS NULL
             ORDER BY p.product_id DESC
-        ", $cat['category_id'], $neg_id);
+        ",
+            $cat["category_id"],
+            $neg_id
+        );
 
         // Si la categoría no tiene productos, se ignora
         if (empty($productos)) {
@@ -3892,29 +3253,31 @@ Flight::route('GET /megazas', function () {
         // Mapeo de productos para la plantilla Mustache
         $listado_productos = [];
         foreach ($productos as $prod) {
-            $img_prod = !empty($prod['producto_img']) 
-                ? $prod['producto_img'] 
-                : $varhost . '/public/admin/images/no_image.png';
+            $img_prod = !empty($prod["producto_img"])
+                ? $prod["producto_img"]
+                : $varhost . "/public/admin/images/no_image.png";
 
             $listado_productos[] = [
-                'product_id'      => $prod['product_id'],
-                'producto_nombre' => $prod['producto_nombre'],
-                'marca'           => !empty($prod['marca']) ? '#' . $prod['marca'] : '#DISPONIBLE',
-                'precio'          => number_format((float)$prod['precio'], 2),
-                'producto_img'    => $img_prod
+                "product_id" => $prod["product_id"],
+                "producto_nombre" => $prod["producto_nombre"],
+                "marca" => !empty($prod["marca"])
+                    ? "#" . $prod["marca"]
+                    : "#DISPONIBLE",
+                "precio" => number_format((float) $prod["precio"], 2),
+                "producto_img" => $img_prod,
             ];
         }
 
         // Imagen de la cabecera de categoría
-        $img_cat = !empty($cat['categoria_img']) ? $cat['categoria_img'] : '';
+        $img_cat = !empty($cat["categoria_img"]) ? $cat["categoria_img"] : "";
 
         $listado_categorias[] = [
-            'salto_pagina'        => ($index_cat > 0), // false para la 1ra categoría, true para la 2da en adelante
-            'category_id'         => $cat['category_id'],
-            'categoria_nombre'    => $cat['categoria_nombre'],
-            'categoria_img'       => $img_cat,
-            'tiene_categoria_img' => !empty($img_cat),
-            'productos'           => $listado_productos
+            "salto_pagina" => $index_cat > 0, // false para la 1ra categoría, true para la 2da en adelante
+            "category_id" => $cat["category_id"],
+            "categoria_nombre" => $cat["categoria_nombre"],
+            "categoria_img" => $img_cat,
+            "tiene_categoria_img" => !empty($img_cat),
+            "productos" => $listado_productos,
         ];
 
         $index_cat++;
@@ -3922,21 +3285,25 @@ Flight::route('GET /megazas', function () {
 
     // 4. Estructura de datos para Mustache
     $template_data = [
-        'informacion' => [[
-            'razon_social'   => $negocio['nombre'] ?? 'CATÁLOGO DE PRODUCTOS',
-            'ruc'            => $ruc_empresa,
-            'direccion'      => $negocio['direccion'] ?? '',
-            'celular'        => $negocio['celular_informes'] ?? '',
-            'logo'           => $logo_negocio,
-            'titulo_reporte' => 'CATÁLOGO VIRTUAL',
-            'fecha'          => date('d/m/Y')
-        ]],
-        'categorias' => $listado_categorias
+        "informacion" => [
+            [
+                "razon_social" => $negocio["nombre"] ?? "CATÁLOGO DE PRODUCTOS",
+                "ruc" => $ruc_empresa,
+                "direccion" => $negocio["direccion"] ?? "",
+                "celular" => $negocio["celular_informes"] ?? "",
+                "logo" => $logo_negocio,
+                "titulo_reporte" => "CATÁLOGO VIRTUAL",
+                "fecha" => date("d/m/Y"),
+            ],
+        ],
+        "categorias" => $listado_categorias,
     ];
 
     // 5. Compilar la plantilla HTML almacenada en disco
-    $html = (new Mustache)->render(
-        file_get_contents(VARPATH . '/public/reportes/reporte_html/catalogo_personal.html'),
+    $html = (new Mustache())->render(
+        file_get_contents(
+            VARPATH . "/public/reportes/reporte_html/catalogo_personal.html"
+        ),
         $template_data
     );
 

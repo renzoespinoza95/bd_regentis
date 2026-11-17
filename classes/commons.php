@@ -327,6 +327,13 @@ function firma($xin, $yuan){
 
 }
 
+/* =========================================================
+   MEMBRESIA (SIN SUSCRIPCION)
+   Ya no existe suscripcion ni columnas de membresia.
+   Un negocio existente y no borrado siempre queda aprobado.
+   Se mantiene la misma estructura de retorno por compatibilidad.
+========================================================= */
+
 function veri_membresia($usu_id){
 
     /* =====================================
@@ -378,22 +385,22 @@ function veri_membresia($usu_id){
     );
 
     /* =====================================
-       BUSCAR MEMBRESIA EN REG_NEG
+       VALIDAR NEGOCIO (SIN COLUMNAS PREMIUM)
     ====================================== */
 
     $negocio = DB::queryFirstRow("
 
         SELECT
 
-            is_activo,
+            neg_id,
 
-            fecha_inicio_premium,
-
-            fecha_fin_premium
+            is_activo
 
         FROM reg_neg
 
         WHERE neg_id = %i
+
+        AND borrado_el IS NULL
 
         LIMIT 1
 
@@ -405,8 +412,6 @@ function veri_membresia($usu_id){
 
     }
 
-    $is_aprobado = (!empty($negocio['fecha_fin_premium']) && strtotime($negocio['fecha_fin_premium']) >= time()) ? 1 : 0;
-
     /* =====================================
        RESPONSE
     ====================================== */
@@ -415,11 +420,11 @@ function veri_membresia($usu_id){
 
         'motivo' => 'ANUAL',
 
-        'is_aprobado' => $is_aprobado,
+        'is_aprobado' => 1,
 
-        'fecha_inicio_premium' => $negocio['fecha_inicio_premium'] ?? null,
+        'fecha_inicio_premium' => null,
 
-        'fecha_fin_premium' => $negocio['fecha_fin_premium'] ?? null
+        'fecha_fin_premium' => null
 
     ];
 
@@ -442,22 +447,22 @@ function veri_membresia_neg($neg_id){
     }
 
     /* =====================================
-       BUSCAR MEMBRESIA EN REG_NEG
+       VALIDAR NEGOCIO (SIN COLUMNAS PREMIUM)
     ====================================== */
 
     $negocio = DB::queryFirstRow("
 
         SELECT
 
-            is_activo,
+            neg_id,
 
-            fecha_inicio_premium,
-
-            fecha_fin_premium
+            is_activo
 
         FROM reg_neg
 
         WHERE neg_id = %i
+
+        AND borrado_el IS NULL
 
         LIMIT 1
 
@@ -469,8 +474,6 @@ function veri_membresia_neg($neg_id){
 
     }
 
-    $is_aprobado = (!empty($negocio['fecha_fin_premium']) && strtotime($negocio['fecha_fin_premium']) >= time()) ? 1 : 0;
-
     /* =====================================
        RESPONSE
     ====================================== */
@@ -479,11 +482,11 @@ function veri_membresia_neg($neg_id){
 
         'motivo' => 'ANUAL',
 
-        'is_aprobado' => $is_aprobado,
+        'is_aprobado' => 1,
 
-        'fecha_inicio_premium' => $negocio['fecha_inicio_premium'] ?? null,
+        'fecha_inicio_premium' => null,
 
-        'fecha_fin_premium' => $negocio['fecha_fin_premium'] ?? null
+        'fecha_fin_premium' => null
 
     ];
 

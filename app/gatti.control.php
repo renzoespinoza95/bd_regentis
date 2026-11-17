@@ -77,7 +77,7 @@ require_once VARPATH."/public/ofer/usu.php";
 require_once VARPATH."/public/ofer/neg.php";
 require_once VARPATH."/public/ofer/prod.php";
 require_once VARPATH."/public/ofer/categoria.php";
-require_once VARPATH."/public/admin/login/app.php";
+require_once VARPATH."/public/ofer/login.php";
 require_once VARPATH."/public/admin/tab_chat/app.php";
 require_once VARPATH."/public/admin/tab_fav/app.php";
 require_once VARPATH."/public/admin/tab_order/app.php";

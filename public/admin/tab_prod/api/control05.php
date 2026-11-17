@@ -56,6 +56,9 @@ Flight::route('POST /product/subcategoria_crear', function () {
 
     $category_id = intval($d['category_id'] ?? 0);
     $nombre      = mb_substr(trim($d['nombre'] ?? ''), 0, 200);
+    $is_activo   = array_key_exists('is_activo', $d)
+        ? (filter_var($d['is_activo'], FILTER_VALIDATE_BOOLEAN) ? 1 : 0)
+        : 1;
 
     if (!$category_id || $nombre === '') {
         Flight::json(['status' => 'error', 'msg' => 'Datos incompletos'], 400);
@@ -87,12 +90,17 @@ Flight::route('POST /product/subcategoria_crear', function () {
             $category_id
         )) + 1;
 
+        $img = trim($d['img'] ?? '');
+        if ($img === '' || !preg_match('#^https?://#i', $img)) {
+            $img = IMG_SUBCATEGORIA_DEFECTO;
+        }
+
         DB::insert('pos_subcategoria', [
             'category_id' => $category_id,
             'nombre'      => $nombre,
-            'is_activo'   => 1,
+            'is_activo'   => $is_activo,
             'orden'       => $orden,
-            'img'         => IMG_SUBCATEGORIA_DEFECTO,
+            'img'         => mb_substr($img, 0, 200),
             'is_visible'  => 1
         ]);
 

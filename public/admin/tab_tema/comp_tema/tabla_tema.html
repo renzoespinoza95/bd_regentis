@@ -1,0 +1,52 @@
+<div class="row-fluid">
+    <div class="span12">
+        <div class="titulo-fijo clearfix">
+            <div style="float:left;">
+                <h2 style="margin:0;">
+                    Temas
+                </h2>
+            </div>
+            <div class="btn-group pull-right">
+                <button class="btn btn-info dropdown-toggle" data-toggle="dropdown">
+                    <i class="fa fa-paint-brush"></i>
+                    <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu pull-right">
+                    <li>
+                        <a href="#" @click.prevent="abrirModalTemaxNeg">
+                            <i class="fa fa-link"></i>
+                            Tema x Neg
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" @click.prevent="abrirModalExportar">
+                            <i class="fa fa-download"></i>
+                            Exportar
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" @click.prevent="abrirModalImportar">
+                            <i class="fa fa-upload"></i>
+                            Importar
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="span12 tabla_esp_sup">
+            <table id="tablaTema" class="table table-bordered table-condensed">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Miniatura</th>
+                        <th>Vista App</th>
+                        <th>Nombre</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>

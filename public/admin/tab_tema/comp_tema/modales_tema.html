@@ -1,0 +1,244 @@
+<!-- MODAL CREAR TEMA -->
+        <div id="modalCrearTema" class="modal hide fade fullscreen" tabindex="-1">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">×</button>
+                <h3>Nuevo Tema</h3>
+            </div>
+            <div class="modal-body">
+                <div class="control-group">
+                    <label class="control-label">Nombre Tema</label>
+                    <div class="controls">
+                        <input type="text" class="input-xxlarge" v-model="nuevoTema.nombre_tema">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Miniatura (URL)</label>
+                    <div class="controls">
+                        <input type="text" class="input-xxlarge" v-model="nuevoTema.miniatura" placeholder="https://ejemplo.com/imagen.jpg">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Vista App (URL)</label>
+                    <div class="controls">
+                        <input type="text" class="input-xxlarge" v-model="nuevoTema.vista_app" placeholder="https://ejemplo.com/vista_app.jpg">
+                    </div>
+                </div>
+
+                <!-- ZONA ARRASTRAR O INGRESAR URL -->
+                <div style="border: 2px dashed #f39c12; padding: 15px; border-radius: 6px; background: #2c3e50; color: #fff; margin-top: 15px;">
+                    <div style="text-align: center; font-weight: bold; margin-bottom: 5px;">
+                        Arrastra o pega enlaces URL de archivos aquí
+                    </div>
+                    <div style="text-align: center; font-size: 11px; color: #bdc3c7; margin-bottom: 10px;">
+                        (Escribe o pega una URL por línea)
+                    </div>
+                    <textarea 
+                        class="input-xxlarge" 
+                        rows="3" 
+                        placeholder="https://ejemplo.com/img1.jpg&#10;https://ejemplo.com/img2.jpg"
+                        v-model="inputUrlsCrear"
+                        style="width: 95%; background: #fff; color: #333;"
+                        @dragover.prevent 
+                        @drop.prevent="onDropCrear($event)"
+                    ></textarea>
+                    <div style="text-align: center; margin-top: 10px;">
+                        <button class="btn btn-warning" type="button" @click="usarUrlCrear">Usar URL en Miniatura</button>
+                    </div>
+                </div>
+
+            </div>
+            <div class="modal-footer" style="text-align: left;">
+                <button class="btn btn-primary" @click="crearTema">Guardar</button>
+                <button class="btn" data-dismiss="modal">Cancelar</button>
+            </div>
+        </div>
+
+        <!-- MODAL EDITAR TEMA -->
+        <div id="modalEditarTema" class="modal hide fade fullscreen" tabindex="-1">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">×</button>
+                <h3>Editar Tema</h3>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" v-model="formTema.tema_id">
+                <div class="control-group">
+                    <label class="control-label">Nombre Tema</label>
+                    <div class="controls">
+                        <input type="text" class="input-xxlarge" v-model="formTema.nombre_tema">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Miniatura (URL)</label>
+                    <div class="controls">
+                        <input type="text" class="input-xxlarge" v-model="formTema.miniatura" placeholder="https://ejemplo.com/imagen.jpg">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <label class="control-label">Vista App (URL)</label>
+                    <div class="controls">
+                        <input type="text" class="input-xxlarge" v-model="formTema.vista_app" placeholder="https://ejemplo.com/vista_app.jpg">
+                    </div>
+                </div>
+
+                <!-- ZONA ARRASTRAR O INGRESAR URL -->
+                <div style="border: 2px dashed #f39c12; padding: 15px; border-radius: 6px; background: #2c3e50; color: #fff; margin-top: 15px;">
+                    <div style="text-align: center; font-weight: bold; margin-bottom: 5px;">
+                        Arrastra o pega enlaces URL de archivos aquí
+                    </div>
+                    <div style="text-align: center; font-size: 11px; color: #bdc3c7; margin-bottom: 10px;">
+                        (Escribe o pega una URL por línea)
+                    </div>
+                    <textarea 
+                        class="input-xxlarge" 
+                        rows="3" 
+                        placeholder="https://ejemplo.com/img1.jpg&#10;https://ejemplo.com/img2.jpg"
+                        v-model="inputUrlsEditar"
+                        style="width: 95%; background: #fff; color: #333;"
+                        @dragover.prevent 
+                        @drop.prevent="onDropEditar($event)"
+                    ></textarea>
+                    <div style="text-align: center; margin-top: 10px;">
+                        <button class="btn btn-warning" type="button" @click="usarUrlEditar">Usar URL en Miniatura</button>
+                        <button class="btn btn-info" type="button" @click="usarUrlVistaAppEditar" style="margin-left: 10px;">Usar URL en Vista App</button>
+                    </div>
+                </div>
+
+            </div>
+            <div class="modal-footer" style="text-align: left;">
+                <button class="btn btn-primary" @click="guardarTema">Guardar</button>
+                <button class="btn" data-dismiss="modal">Cancelar</button>
+            </div>
+        </div>
+
+        <!-- MODAL VISOR IMAGEN PANTALLA COMPLETA -->
+        <div id="modalVisorImagen" class="modal hide fade fullscreen" tabindex="-1" style="background: rgba(0,0,0,0.9); text-align: center;">
+            <div class="modal-header" style="border: none;">
+                <button type="button" class="close" data-dismiss="modal" style="color: #fff; opacity: 1; font-size: 30px;">×</button>
+                <h3 style="color: #fff; margin: 0;">Vista de Imagen</h3>
+            </div>
+            <div class="modal-body" style="display: flex; align-items: center; justify-content: center; height: calc(100vh - 120px); padding: 0;">
+                <img :src="imagenVisorUrl" style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 6px; box-shadow: 0 0 20px rgba(0,0,0,0.8);" />
+            </div>
+        </div>
+
+        <!-- MODAL EXPORTAR -->
+        <div id="modalExportarTema" class="modal hide fade" tabindex="-1">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">×</button>
+                <h3>Exportar Temas</h3>
+            </div>
+            <div class="modal-body" style="text-align: center; padding: 20px;">
+                <p>Haz clic en el botón de abajo para descargar el archivo JSON completo con todos los registros de la tabla de temas.</p>
+                <a :href="apphost + '/U9bTtemaExportarJson'" class="btn btn-success btn-large" target="_blank">
+                    <i class="icon-download icon-white"></i> Descargar Archivo JSON
+                </a>
+            </div>
+            <div class="modal-footer" style="text-align: left;">
+                <button class="btn" data-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+
+        <!-- MODAL IMPORTAR -->
+        <div id="modalImportarTema" class="modal hide fade" tabindex="-1">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">×</button>
+                <h3>Importar Temas</h3>
+            </div>
+            <div class="modal-body">
+                <p style="color: #e74c3c; font-weight: bold;">Advertencia: Esta acción realizará un TRUNCATE a toda la tabla y la llenará con el contenido del archivo JSON importado.</p>
+                <div class="control-group">
+                    <label class="control-label">Seleccionar archivo JSON</label>
+                    <div class="controls">
+                        <input type="file" id="archivoJsonImportar" accept=".json">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="text-align: left;">
+                <button class="btn btn-primary" @click="ejecutarImportacion">Importar</button>
+                <button class="btn" data-dismiss="modal">Cancelar</button>
+            </div>
+        </div>
+
+        <!-- MODAL LISTADO TEMA X NEG -->
+        <div id="modalTemaXNeg" class="modal hide fade fullscreen" tabindex="-1">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">×</button>
+                <h3>Tema x Negocio</h3>
+            </div>
+            <div class="modal-body">
+                <table id="tablaTemaXNeg" class="table table-bordered table-condensed">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Negocio</th>
+                            <th>Tema</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="modal-footer" style="text-align: left;">
+                <button class="btn btn-success" @click="abrirModalCrearTemaXNeg">
+                    <i class="icon-plus icon-white"></i> Agregar
+                </button>
+                <button class="btn" data-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+
+        <!-- MODAL CREAR TEMA X NEG -->
+        <div id="modalCrearTemaXNeg" class="modal hide fade fullscreen" tabindex="-1">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">×</button>
+                <h3>Nuevo Tema x Negocio</h3>
+            </div>
+            <div class="modal-body">
+                <div class="control-group">
+                    <label class="control-label">Tema</label>
+                    <div class="controls">
+                        <v-select :options="temasOptions" :reduce="x => x.tema_id" label="nombre_tema" placeholder="Selecciona un tema" v-model="nuevoTemaXNeg.tema_id" style="width:420px;"></v-select>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Negocio</label>
+                    <div class="controls">
+                        <v-select :options="negociosOptions" :reduce="x => x.neg_id" label="nombre" placeholder="Selecciona un negocio" v-model="nuevoTemaXNeg.neg_id" style="width:420px;"></v-select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="text-align: left;">
+                <button class="btn btn-primary" @click="crearTemaXNeg">Guardar</button>
+                <button class="btn" @click="volverModalTemaXNeg">Cancelar</button>
+            </div>
+        </div>
+
+        <!-- MODAL EDITAR TEMA X NEG -->
+        <div id="modalEditarTemaXNeg" class="modal hide fade fullscreen" tabindex="-1">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">×</button>
+                <h3>Editar Tema x Negocio</h3>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" v-model="formTemaXNeg.temaxneg_id">
+                <div class="control-group">
+                    <label class="control-label">Tema</label>
+                    <div class="controls">
+                        <v-select :options="temasOptions" label="nombre_tema" v-model="formTemaXNeg.tema"></v-select>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label class="control-label">Negocio</label>
+                    <div class="controls">
+                        <v-select :options="negociosOptions" label="nombre" v-model="formTemaXNeg.negocio"></v-select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="text-align: left;">
+                <button class="btn btn-primary" @click="guardarTemaXNeg">Guardar</button>
+                <button class="btn" @click="volverModalTemaXNegEditar">Cancelar</button>
+            </div>
+        </div>

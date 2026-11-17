@@ -1,106 +1,73 @@
 <?php
-Flight::route('POST /NsQm/crearCategoria', function(){
-
+Flight::route("POST /NsQm/crearCategoria", function () {
     include DEFINITION;
 
     DB::query("SET NAMES 'utf8mb4'");
 
-    $d = json_decode(
-        Flight::request()->getBody(),
-        true
-    ) ?: [];
+    $d = json_decode(Flight::request()->getBody(), true) ?: [];
 
     /* ======================================
        FIRMA
     ====================================== */
 
-    $xin = trim(
-        $d['xin'] ?? ''
-    );
+    $xin = trim($d["xin"] ?? "");
 
-    $yuan = trim(
-        $d['yuan'] ?? ''
-    );
+    $yuan = trim($d["yuan"] ?? "");
 
-    firma(
-        $xin,
-        $yuan
-    );
+    firma($xin, $yuan);
 
     /* ======================================
        CAMPOS
     ====================================== */
 
-    $editando = intval(
-        $d['editando'] ?? 0
-    );
+    $editando = intval($d["editando"] ?? 0);
 
-    $category_id = intval(
-        $d['category_id'] ?? 0
-    );
+    $category_id = intval($d["category_id"] ?? 0);
 
-    $neg_id = intval(
-        $d['neg_id'] ?? 0
-    );
+    $neg_id = intval($d["neg_id"] ?? 0);
 
-    $name = trim(
-        $d['name'] ?? ''
-    );
+    $name = trim($d["name"] ?? "");
 
-    $icon = trim(
-        $d['icon'] ?? ''
-    );
+    $icon = trim($d["icon"] ?? "");
 
-    $brief = trim(
-        $d['brief'] ?? ''
-    );
+    $brief = trim($d["brief"] ?? "");
 
-    $color = trim(
-        $d['color'] ?? ''
-    );
+    $color = trim($d["color"] ?? "");
 
-    $priority = intval(
-        $d['priority'] ?? 0
-    );
+    $priority = intval($d["priority"] ?? 0);
 
-    $categoria_global_id = intval(
-        $d['categoria_global_id'] ?? 0
-    );
+    $categoria_global_id = intval($d["categoria_global_id"] ?? 0);
 
-    $clave_txt = trim(
-        $d['clave_txt'] ?? ''
-    );
+    $clave_txt = trim($d["clave_txt"] ?? "");
 
-    $img = trim(
-        $d['img'] ?? ''
-    );
+    $img = trim($d["img"] ?? "");
 
     /* ======================================
        VALIDAR
     ====================================== */
 
-    if($neg_id <= 0){
+    if ($neg_id <= 0) {
+        Flight::json(
+            [
+                "status" => "error",
 
-        Flight::json([
-
-            'status' => 'error',
-
-            'msg' => 'neg_id requerido'
-
-        ], 400);
+                "msg" => "neg_id requerido",
+            ],
+            400
+        );
 
         return;
     }
 
-    if(!$name){
+    if (!$name) {
+        Flight::json(
+            [
+                "status" => "error",
 
-        Flight::json([
-
-            'status' => 'error',
-
-            'msg' => 'name requerido'
-
-        ], 400);
+                "msg" => "name requerido",
+            ],
+            400
+        );
 
         return;
     }
@@ -108,12 +75,12 @@ Flight::route('POST /NsQm/crearCategoria', function(){
     DB::startTransaction();
 
     try {
-
         /* ======================================
            NEGOCIO
         ====================================== */
 
-        $negocio = DB::queryFirstRow("
+        $negocio = DB::queryFirstRow(
+            "
 
             SELECT neg_id
 
@@ -124,19 +91,21 @@ Flight::route('POST /NsQm/crearCategoria', function(){
 
             LIMIT 1
 
-        ", $neg_id);
+        ",
+            $neg_id
+        );
 
-        if(!$negocio){
-
+        if (!$negocio) {
             DB::rollback();
 
-            Flight::json([
+            Flight::json(
+                [
+                    "status" => "error",
 
-                'status' => 'error',
-
-                'msg' => 'Negocio no encontrado'
-
-            ], 404);
+                    "msg" => "Negocio no encontrado",
+                ],
+                404
+            );
 
             return;
         }
@@ -145,9 +114,9 @@ Flight::route('POST /NsQm/crearCategoria', function(){
            CATEGORIA GLOBAL
         ====================================== */
 
-        if($categoria_global_id > 0){
-
-            $categoria_global = DB::queryFirstRow("
+        if ($categoria_global_id > 0) {
+            $categoria_global = DB::queryFirstRow(
+                "
 
                 SELECT
                     categoria_global_id,
@@ -162,47 +131,41 @@ Flight::route('POST /NsQm/crearCategoria', function(){
 
                 LIMIT 1
 
-            ", $categoria_global_id);
+            ",
+                $categoria_global_id
+            );
 
-            if(!$categoria_global){
-
+            if (!$categoria_global) {
                 DB::rollback();
 
-                Flight::json([
+                Flight::json(
+                    [
+                        "status" => "error",
 
-                    'status' => 'error',
-
-                    'msg' => 'categoria_global_id inválido'
-
-                ], 404);
+                        "msg" => "categoria_global_id inválido",
+                    ],
+                    404
+                );
 
                 return;
             }
 
-            if(!$icon){
-
-                $icon =
-                    $categoria_global['icono'];
-
+            if (!$icon) {
+                $icon = $categoria_global["icono"];
             }
-
         }
 
         /* ======================================
            EDITAR
         ====================================== */
 
-        if(
-            $editando
-            &&
-            $category_id > 0
-        ){
-
+        if ($editando && $category_id > 0) {
             /* ======================================
                VALIDAR CATEGORIA
             ====================================== */
 
-            $categoria = DB::queryFirstRow("
+            $categoria = DB::queryFirstRow(
+                "
 
                 SELECT
 
@@ -223,17 +186,17 @@ Flight::route('POST /NsQm/crearCategoria', function(){
                 $neg_id
             );
 
-            if(!$categoria){
-
+            if (!$categoria) {
                 DB::rollback();
 
-                Flight::json([
+                Flight::json(
+                    [
+                        "status" => "error",
 
-                    'status' => 'error',
-
-                    'msg' => 'Categoría no encontrada'
-
-                ],404);
+                        "msg" => "Categoría no encontrada",
+                    ],
+                    404
+                );
 
                 return;
             }
@@ -242,7 +205,8 @@ Flight::route('POST /NsQm/crearCategoria', function(){
                DUPLICADO
             ====================================== */
 
-            $duplicado = DB::queryFirstRow("
+            $duplicado = DB::queryFirstRow(
+                "
 
                 SELECT category_id
 
@@ -264,17 +228,17 @@ Flight::route('POST /NsQm/crearCategoria', function(){
                 $category_id
             );
 
-            if($duplicado){
-
+            if ($duplicado) {
                 DB::rollback();
 
-                Flight::json([
+                Flight::json(
+                    [
+                        "status" => "error",
 
-                    'status' => 'error',
-
-                    'msg' => 'La categoría ya existe'
-
-                ],400);
+                        "msg" => "La categoría ya existe",
+                    ],
+                    400
+                );
 
                 return;
             }
@@ -284,57 +248,38 @@ Flight::route('POST /NsQm/crearCategoria', function(){
             ====================================== */
 
             DB::update(
-
-                'pos_category',
+                "pos_category",
 
                 [
+                    "name" => $name,
 
-                    'name' =>
-                        $name,
+                    "icon" => $icon,
 
-                    'icon' =>
-                        $icon,
+                    "brief" => $brief,
 
-                    'brief' =>
-                        $brief,
+                    "color" => $color,
 
-                    'color' =>
-                        $color,
+                    "priority" => $priority,
 
-                    'priority' =>
-                        $priority,
+                    "categoria_global_id" =>
+                        $categoria_global_id > 0 ? $categoria_global_id : null,
 
-                    'categoria_global_id' =>
+                    "clave_txt" => $clave_txt,
 
-                        $categoria_global_id > 0
-
-                        ?
-
-                        $categoria_global_id
-
-                        :
-
-                        null,
-
-                    'clave_txt' =>
-                        $clave_txt,
-
-                    'img' =>
-                        $img
-
+                    "img" => $img,
                 ],
 
                 "category_id=%i",
 
                 $category_id
-
             );
 
             /* ======================================
                RESPONSE CATEGORY
             ====================================== */
 
-            $cat = DB::queryFirstRow("
+            $cat = DB::queryFirstRow(
+                "
 
                 SELECT
 
@@ -356,52 +301,41 @@ Flight::route('POST /NsQm/crearCategoria', function(){
 
                 LIMIT 1
 
-            ", $category_id);
-
-            $cat['category_id'] = intval(
-                $cat['category_id']
+            ",
+                $category_id
             );
 
-            $cat['priority'] = intval(
-                $cat['priority']
-            );
+            $cat["category_id"] = intval($cat["category_id"]);
 
-            $cat['neg_id'] = intval(
-                $cat['neg_id']
-            );
+            $cat["priority"] = intval($cat["priority"]);
 
-            $cat['categoria_global_id'] = intval(
-                $cat['categoria_global_id']
-            );
+            $cat["neg_id"] = intval($cat["neg_id"]);
 
-            $cat['is_activo'] = intval(
-                $cat['is_activo']
-            );
+            $cat["categoria_global_id"] = intval($cat["categoria_global_id"]);
+
+            $cat["is_activo"] = intval($cat["is_activo"]);
 
             DB::commit();
 
             Flight::json([
+                "status" => "ok",
 
-                'status' => 'ok',
+                "msg" => "Categoría actualizada correctamente",
 
-                'msg' =>
-                    'Categoría actualizada correctamente',
+                "editando" => true,
 
-                'editando' => true,
-
-                'category' => $cat
-
+                "category" => $cat,
             ]);
 
             return;
-
         }
 
         /* ======================================
            DUPLICADO
         ====================================== */
 
-        $duplicado = DB::queryFirstRow("
+        $duplicado = DB::queryFirstRow(
+            "
 
             SELECT category_id
 
@@ -418,17 +352,17 @@ Flight::route('POST /NsQm/crearCategoria', function(){
             $name
         );
 
-        if($duplicado){
-
+        if ($duplicado) {
             DB::rollback();
 
-            Flight::json([
+            Flight::json(
+                [
+                    "status" => "error",
 
-                'status' => 'error',
-
-                'msg' => 'La categoría ya existe'
-
-            ], 400);
+                    "msg" => "La categoría ya existe",
+                ],
+                400
+            );
 
             return;
         }
@@ -438,53 +372,32 @@ Flight::route('POST /NsQm/crearCategoria', function(){
         ====================================== */
 
         DB::insert(
-
-            'pos_category',
+            "pos_category",
 
             [
+                "name" => $name,
 
-                'name' =>
-                    $name,
+                "icon" => $icon,
 
-                'icon' =>
-                    $icon,
+                "brief" => $brief,
 
-                'brief' =>
-                    $brief,
+                "color" => $color,
 
-                'color' =>
-                    $color,
+                "priority" => $priority,
 
-                'priority' =>
-                    $priority,
+                "neg_id" => $neg_id,
 
-                'neg_id' =>
-                    $neg_id,
+                "categoria_global_id" =>
+                    $categoria_global_id > 0 ? $categoria_global_id : null,
 
-                'categoria_global_id' =>
+                "is_activo" => 1,
 
-                    $categoria_global_id > 0
+                "clave_txt" => $clave_txt,
 
-                    ?
+                "img" => $img,
 
-                    $categoria_global_id
-
-                    :
-
-                    null,
-
-                'is_activo' => 1,
-
-                'clave_txt' =>
-                    $clave_txt,
-
-                'img' =>
-                    $img,
-
-                'borrado_el' => null
-
+                "borrado_el" => null,
             ]
-
         );
 
         $category_id = DB::insertId();
@@ -493,7 +406,8 @@ Flight::route('POST /NsQm/crearCategoria', function(){
            RESPONSE CATEGORY
         ====================================== */
 
-        $cat = DB::queryFirstRow("
+        $cat = DB::queryFirstRow(
+            "
 
             SELECT
 
@@ -515,27 +429,19 @@ Flight::route('POST /NsQm/crearCategoria', function(){
 
             LIMIT 1
 
-        ", $category_id);
-
-        $cat['category_id'] = intval(
-            $cat['category_id']
+        ",
+            $category_id
         );
 
-        $cat['priority'] = intval(
-            $cat['priority']
-        );
+        $cat["category_id"] = intval($cat["category_id"]);
 
-        $cat['neg_id'] = intval(
-            $cat['neg_id']
-        );
+        $cat["priority"] = intval($cat["priority"]);
 
-        $cat['categoria_global_id'] = intval(
-            $cat['categoria_global_id']
-        );
+        $cat["neg_id"] = intval($cat["neg_id"]);
 
-        $cat['is_activo'] = intval(
-            $cat['is_activo']
-        );
+        $cat["categoria_global_id"] = intval($cat["categoria_global_id"]);
+
+        $cat["is_activo"] = intval($cat["is_activo"]);
 
         DB::commit();
 
@@ -544,31 +450,24 @@ Flight::route('POST /NsQm/crearCategoria', function(){
         ====================================== */
 
         Flight::json([
+            "status" => "ok",
 
-            'status' => 'ok',
+            "msg" => "Categoría creada correctamente",
 
-            'msg' =>
-                'Categoría creada correctamente',
+            "editando" => false,
 
-            'editando' => false,
-
-            'category' => $cat
-
+            "category" => $cat,
         ]);
-
-    } catch(Exception $e){
-
+    } catch (Exception $e) {
         DB::rollback();
 
-        Flight::json([
+        Flight::json(
+            [
+                "status" => "error",
 
-            'status' => 'error',
-
-            'msg' =>
-                $e->getMessage()
-
-        ],500);
-
+                "msg" => $e->getMessage(),
+            ],
+            500
+        );
     }
-
 });

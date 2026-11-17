@@ -4,8 +4,7 @@
   </div>
   <div class="modal-body" style="max-height: 450px; overflow-y: auto;">
     <div style="text-align: center; margin-bottom: 15px;">
-      <img :src="imgSubDefecto" alt="" style="width: 96px; height: 96px; border-radius: 50%; object-fit: cover; border: 3px solid #27ae60; box-shadow: 0 2px 8px rgba(0,0,0,0.4);">
-      <div style="font-size: 12px; color: #bdc3c7; margin-top: 6px;">Imagen por defecto</div>
+      <img :src="subNueva.img || imgSubDefecto" alt="" style="width: 96px; height: 96px; border-radius: 50%; object-fit: cover; border: 3px solid #27ae60; box-shadow: 0 2px 8px rgba(0,0,0,0.4);">
     </div>
 
     <div style="margin-bottom: 12px; color: #bdc3c7;">
@@ -17,6 +16,44 @@
       <div class="controls">
         <input type="text" v-model="subNueva.nombre" maxlength="200" @keyup.enter="crearSubcategoria" placeholder="Ej: Gorras, Polos..." style="width: 100%; box-sizing: border-box; background: #1a252f; color: #fff; border: 1px solid #4e6d8c;">
       </div>
+    </div>
+
+    <div class="control-group">
+      <label style="color: #bdc3c7;">Imagen de la subcategoría (URL)</label>
+      <div class="controls">
+        <div @dragover.prevent @drop.prevent="soltarUrlsSubNueva"
+             style="background: #1a252f; border: 2px dashed #e67e22; border-radius: 8px; padding: 15px; margin-bottom: 10px;">
+          <div style="font-weight: bold; font-size: 13px; color: #e67e22; margin-bottom: 6px;">Ingrese la URL de la imagen (o arrastra enlaces aquí):</div>
+          <div style="display: flex; gap: 10px; margin-bottom: 8px;">
+            <input type="text" v-model="subNueva.urlTmp" placeholder="https://ejemplo.com/imagen.jpg" style="flex: 1; margin: 0; background: #2c3e50; color: #fff; border: 1px solid #4e6d8c;">
+            <button class="btn btn-success" type="button" @click="aceptarUrlSubNueva">Aceptar</button>
+          </div>
+
+          <div style="text-align: center; margin-top: 6px;">
+            <div style="font-size: 11px; color: #bdc3c7; margin-bottom: 4px;">También puedes pegar múltiples enlaces abajo (uno por línea):</div>
+            <textarea v-model="subNueva.urlsArrastradas" @input="actualizarPreviewSubNuevaUrlTextarea" placeholder="https://ejemplo.com/img1.jpg" rows="2" style="width: 100%; box-sizing: border-box; background: #2c3e50; color: #fff; border: 1px solid #4e6d8c; font-size: 11px; resize: vertical;"></textarea>
+            
+            <div v-if="subNueva.previewUrlList && subNueva.previewUrlList.length" style="display: flex; gap: 8px; justify-content: center; margin-top: 6px; flex-wrap: wrap;">
+              <div v-for="(u, idx) in subNueva.previewUrlList" :key="idx" style="position: relative; width: 60px; height: 60px; border-radius: 4px; overflow: hidden; border: 1px solid #4e6d8c;">
+                <img :src="u" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://barsi-img.b-cdn.net/regx/Wirr77.jpg';" />
+                <button type="button" @click="quitarSubNuevaUrlLista(idx)" style="position: absolute; top: 1px; right: 1px; background: rgba(231, 76, 60, 0.9); color: white; border: none; border-radius: 50%; width: 16px; height: 16px; line-height: 14px; text-align: center; font-size: 9px; cursor: pointer;">×</button>
+              </div>
+            </div>
+
+            <div style="text-align: right; margin-top: 6px;">
+              <button v-if="subNueva.previewUrlList && subNueva.previewUrlList.length" class="btn btn-primary btn-mini" type="button" @click="aplicarSubNuevaUrlsArrastradas">Usar URL</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <label style="color: #bdc3c7; cursor: pointer; display: flex; align-items: center; gap: 8px; margin: 0;">
+        <input type="checkbox" :checked="subNueva.is_activo === 1" @change="subNueva.is_activo = $event.target.checked ? 1 : 0" style="margin: 0;">
+        <span>Subcategoría activa</span>
+      </label>
+      <div style="font-size: 12px; color: #95a5a6; margin-top: 4px;">Si se desactiva, se mostrará en gris y cursiva.</div>
     </div>
   </div>
   <div class="modal-footer" style="background-color: #1a252f; border-top: 1px solid #34495e; text-align: left; display: flex; gap: 10px; align-items: center; justify-content: flex-start;">

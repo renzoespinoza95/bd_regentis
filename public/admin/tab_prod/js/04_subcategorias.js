@@ -54,7 +54,14 @@ const subcategoriasMethods = {
       apprise('Selecciona una categoría en "2. CATEGORÍAS" para crear la subcategoría.');
       return;
     }
-    this.subNueva = { nombre: '' };
+    this.subNueva = {
+      nombre: '',
+      img: IMG_SUBCATEGORIA_DEFECTO,
+      is_activo: 1,
+      urlTmp: '',
+      urlsArrastradas: '',
+      previewUrlList: []
+    };
     $('#modalCrearSubcategoria').modal('show');
     setTimeout(() => {
       const inp = $('#modalCrearSubcategoria input[type=text]').first();
@@ -62,8 +69,51 @@ const subcategoriasMethods = {
     }, 400);
   },
 
+  aceptarUrlSubNueva(){
+    const url = (this.subNueva.urlTmp || '').trim();
+    if(!/^https?:\/\//i.test(url)){
+      apprise('Ingrese una URL válida (http o https)');
+      return;
+    }
+    this.subNueva.img = url;
+    this.subNueva.urlTmp = '';
+    apprise('URL aplicada correctamente');
+  },
+
+  soltarUrlsSubNueva(e){
+    const text = e.dataTransfer && e.dataTransfer.getData('text');
+    if(text){
+      this.subNueva.urlsArrastradas = (this.subNueva.urlsArrastradas ? this.subNueva.urlsArrastradas + '\n' : '') + text;
+      this.actualizarPreviewSubNuevaUrlTextarea();
+    }
+  },
+
+  actualizarPreviewSubNuevaUrlTextarea(){
+    const texto = this.subNueva.urlsArrastradas || '';
+    const lineas = texto.split('\n').map(l => l.trim()).filter(l => l.length > 0 && /^https?:\/\//i.test(l));
+    this.subNueva.previewUrlList = lineas;
+  },
+
+  quitarSubNuevaUrlLista(index){
+    let lineas = [...this.subNueva.previewUrlList];
+    lineas.splice(index, 1);
+    this.subNueva.urlsArrastradas = lineas.join('\n');
+    this.actualizarPreviewSubNuevaUrlTextarea();
+  },
+
+  aplicarSubNuevaUrlsArrastradas(){
+    const lista = this.subNueva.previewUrlList || [];
+    if(!lista.length) return;
+    const url = lista[0];
+    this.subNueva.img = url;
+    this.subNueva.urlsArrastradas = '';
+    this.subNueva.previewUrlList = [];
+    apprise('Imagen aplicada correctamente');
+  },
+
   crearSubcategoria(){
-    const nombre = (this.subNueva.nombre || '').trim();
+    const s = this.subNueva;
+    const nombre = (s.nombre || '').trim();
     if(!nombre){
       apprise('Escribe un nombre para la subcategoría');
       return;
@@ -76,7 +126,9 @@ const subcategoriasMethods = {
     $.blockUI({ message: 'Guardando subcategoría...' });
     axios.post(`${this.apphost}/product/subcategoria_crear`, {
       category_id: Number(this.categoriaSeleccionada),
-      nombre: nombre
+      nombre: nombre,
+      img: s.img || IMG_SUBCATEGORIA_DEFECTO,
+      is_activo: s.is_activo === 0 ? 0 : 1
     })
     .then(res => {
       if(res.data.status === 'ok'){
@@ -140,7 +192,6 @@ const subcategoriasMethods = {
     this.actualizarPreviewSubUrlTextarea();
   },
 
-  // Botón "Usar URL": toma la primera URL de la lista y actualiza pos_subcategoria.img
   aplicarSubUrlsArrastradas(){
     const lista = this.subEditar.previewUrlList || [];
     if(!lista.length) return;

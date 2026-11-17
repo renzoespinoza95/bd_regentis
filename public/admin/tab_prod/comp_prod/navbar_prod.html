@@ -91,6 +91,9 @@
         <h3 style="margin: 0; font-size: 18px;">
           Productos de:
           <span style="color: #2980b9;" :class="{ 'txt-inactivo': catActivaEsInactiva() }" v-text="nombreCategoriaActiva"></span>
+          <button v-if="categoriaSeleccionada !== null" type="button" class="btn btn-mini" style="margin-left: 6px; vertical-align: middle;" title="Nueva subcategoría" @click="abrirModalCrearSubcategoria">
+            <i class="icon-folder-open"></i>
+          </button>
           <button v-if="categoriaSeleccionada !== null" type="button" class="btn btn-mini" style="margin-left: 6px; vertical-align: middle;" title="Editar categoría" @click="abrirModalEditarCategoria">
             <i class="icon-pencil"></i>
           </button>

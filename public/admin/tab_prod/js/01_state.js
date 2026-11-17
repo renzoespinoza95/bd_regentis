@@ -11,7 +11,12 @@ const productoState = {
   busquedaCatEditar: '',
   imgSubDefecto: 'https://barsi-img.b-cdn.net/regx/4GjSVb.jpg',
   subNueva: {
-    nombre: ''
+    nombre: '',
+    img: 'https://barsi-img.b-cdn.net/regx/4GjSVb.jpg',
+    is_activo: 1,
+    urlTmp: '',
+    urlsArrastradas: '',
+    previewUrlList: []
   },
   subEditar: {
     subcategoria_id: null,

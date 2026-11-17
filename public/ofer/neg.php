@@ -1,6 +1,6 @@
 <?php
 
-Flight::route('GET /Cuvg/neg/listar', function() {
+Flight::route("GET /Cuvg/neg/listar", function () {
     try {
         DB::query("SET NAMES 'utf8mb4'");
 
@@ -10,30 +10,24 @@ Flight::route('GET /Cuvg/neg/listar', function() {
             ORDER BY n.neg_id DESC
         ");
 
-        Flight::json(['status'=>'ok','data'=>$rows]);
-
+        Flight::json(["status" => "ok", "data" => $rows]);
     } catch (Exception $e) {
-        Flight::json(['status'=>'error','msg'=>$e->getMessage()],500);
+        Flight::json(["status" => "error", "msg" => $e->getMessage()], 500);
     }
 });
 
-Flight::route('POST /app/principal', function() {
-
+Flight::route("POST /app/principal", function () {
     try {
-
         DB::query("SET NAMES 'utf8mb4'");
 
-        $d = json_decode(
-            Flight::request()->getBody(),
-            true
-        ) ?: [];
+        $d = json_decode(Flight::request()->getBody(), true) ?: [];
 
         /* =========================
            🔥 FIRMA
         ========================== */
 
-        $xin  = $d['xin'] ?? '';
-        $yuan = $d['yuan'] ?? '';
+        $xin = $d["xin"] ?? "";
+        $yuan = $d["yuan"] ?? "";
 
         firma($xin, $yuan);
 
@@ -41,13 +35,9 @@ Flight::route('POST /app/principal', function() {
            PAYLOAD
         ========================== */
 
-        $mercado_id = intval(
-            $d['mercado_id'] ?? 0
-        );
+        $mercado_id = intval($d["mercado_id"] ?? 0);
 
-        $neg_id = intval(
-            $d['neg_id'] ?? 0
-        );
+        $neg_id = intval($d["neg_id"] ?? 0);
 
         /* =========================
            🔥 SI mercado_id = 0
@@ -58,17 +48,16 @@ Flight::route('POST /app/principal', function() {
            MERCADO DEFAULT
         ========================== */
 
-        if($mercado_id === 0){
-
+        if ($mercado_id === 0) {
             $mercado_id = 2;
-
         }
 
         /* =========================
            MERCADO
         ========================== */
 
-        $mercado = DB::queryFirstRow("
+        $mercado = DB::queryFirstRow(
+            "
 
             SELECT 
 
@@ -91,14 +80,18 @@ Flight::route('POST /app/principal', function() {
 
             LIMIT 1
 
-        ", $mercado_id);
+        ",
+            $mercado_id
+        );
 
-        if(!$mercado){
-
-            Flight::json([
-                'status'=>'error',
-                'msg'=>'Mercado no encontrado'
-            ],404);
+        if (!$mercado) {
+            Flight::json(
+                [
+                    "status" => "error",
+                    "msg" => "Mercado no encontrado",
+                ],
+                404
+            );
 
             return;
         }
@@ -107,7 +100,8 @@ Flight::route('POST /app/principal', function() {
            SLIDERS PRINCIPALES
         ========================== */
 
-        $sliders = DB::query("
+        $sliders = DB::query(
+            "
 
             SELECT 
 
@@ -125,7 +119,9 @@ Flight::route('POST /app/principal', function() {
 
             ORDER BY orden ASC
 
-        ", $mercado_id);
+        ",
+            $mercado_id
+        );
 
         /* =========================
            RUBROS
@@ -152,7 +148,8 @@ Flight::route('POST /app/principal', function() {
            NEGOCIOS DEL MERCADO
         ========================== */
 
-        $negocios = DB::query("
+        $negocios = DB::query(
+            "
 
             SELECT 
 
@@ -173,15 +170,17 @@ Flight::route('POST /app/principal', function() {
 
             ORDER BY n.neg_id DESC
 
-        ", $mercado_id);
+        ",
+            $mercado_id
+        );
 
         /* =========================
            RUBROS POR NEGOCIO
         ========================== */
 
-        foreach($negocios as &$n){
-
-            $rubrosNeg = DB::query("
+        foreach ($negocios as &$n) {
+            $rubrosNeg = DB::query(
+                "
 
                 SELECT
 
@@ -202,65 +201,59 @@ Flight::route('POST /app/principal', function() {
 
                 ORDER BY r.nombre ASC
 
-            ", $n['neg_id']);
+            ",
+                $n["neg_id"]
+            );
 
-            $n['rubros'] = $rubrosNeg;
-
+            $n["rubros"] = $rubrosNeg;
         }
 
         /* =========================
            VARIABLES SISTEMA
         ========================== */
 
-        $version = vari('VERSION');
+        $version = vari("VERSION");
 
-        $playstore = vari('PLAYSTORE');
+        $playstore = vari("PLAYSTORE");
 
         /* =========================
            RESPONSE
         ========================== */
 
-        Flight::json([
+        Flight::json(
+            [
+                "status" => "ok",
 
-            'status' => 'ok',
+                "data" => [
+                    "mercado" => $mercado,
 
-            'data' => [
+                    "sliders" => $sliders,
 
-                'mercado' => $mercado,
+                    "rubros" => $rubros,
 
-                'sliders' => $sliders,
+                    "negocios" => $negocios,
 
-                'rubros'  => $rubros,
+                    "version" => $version,
 
-                'negocios'=> $negocios,
-
-                'version' => $version,
-
-                'playstore' => $playstore
-
-            ]
-
-        ], 200, JSON_UNESCAPED_UNICODE);
-
+                    "playstore" => $playstore,
+                ],
+            ],
+            200,
+            JSON_UNESCAPED_UNICODE
+        );
     } catch (Exception $e) {
+        Flight::json(
+            [
+                "status" => "error",
 
-        Flight::json([
-
-            'status' => 'error',
-
-            'msg' => $e->getMessage()
-
-        ], 500);
-
+                "msg" => $e->getMessage(),
+            ],
+            500
+        );
     }
-
 });
 
-
-
-
-Flight::route('POST /XQzQ/detalleNeg', function(){
-
+Flight::route("POST /XQzQ/detalleNeg", function () {
     include DEFINITION;
 
     $json = Flight::request()->getBody();
@@ -281,22 +274,17 @@ Flight::route('POST /XQzQ/detalleNeg', function(){
        PAYLOAD
     ====================================== */
 
-    $neg_id = intval(
-        $data->neg_id ?? 0
-    );
+    $neg_id = intval($data->neg_id ?? 0);
 
     /* ======================================
        VALIDAR
     ====================================== */
 
-    if($neg_id <= 0){
-
+    if ($neg_id <= 0) {
         echo json_encode([
-
             "res" => "error",
 
-            "msg" => "neg_id inválido"
-
+            "msg" => "neg_id inválido",
         ]);
 
         return;
@@ -306,7 +294,8 @@ Flight::route('POST /XQzQ/detalleNeg', function(){
        NEGOCIO
     ====================================== */
 
-    $info_negocio = DB::queryFirstRow("
+    $info_negocio = DB::queryFirstRow(
+        "
 
         SELECT
 
@@ -358,20 +347,19 @@ Flight::route('POST /XQzQ/detalleNeg', function(){
 
         LIMIT 1
 
-    ", $neg_id);
+    ",
+        $neg_id
+    );
 
     /* ======================================
        NO ENCONTRADO
     ====================================== */
 
-    if(!$info_negocio){
-
+    if (!$info_negocio) {
         echo json_encode([
-
             "res" => "error",
 
-            "msg" => "Negocio no encontrado"
-
+            "msg" => "Negocio no encontrado",
         ]);
 
         return;
@@ -382,17 +370,13 @@ Flight::route('POST /XQzQ/detalleNeg', function(){
     ====================================== */
 
     echo json_encode([
-
         "res" => "ok",
 
-        "data" => $info_negocio
-
+        "data" => $info_negocio,
     ]);
-
 });
 
-Flight::route('POST /Fw7L/editarMiNeg', function(){
-
+Flight::route("POST /Fw7L/editarMiNeg", function () {
     include DEFINITION;
 
     $json = Flight::request()->getBody();
@@ -413,57 +397,31 @@ Flight::route('POST /Fw7L/editarMiNeg', function(){
        PAYLOAD
     ====================================== */
 
-    $neg_id = intval(
-        $data->neg_id ?? 0
-    );
+    $neg_id = intval($data->neg_id ?? 0);
 
-    $nombre = trim(
-        $data->nombre ?? ''
-    );
+    $nombre = trim($data->nombre ?? "");
 
-    $celular_informes = trim(
-        $data->celular_informes ?? ''
-    );
+    $celular_informes = trim($data->celular_informes ?? "");
 
-    $ciudad = trim(
-        $data->ciudad ?? ''
-    );
+    $ciudad = trim($data->ciudad ?? "");
 
-    $provincia = trim(
-        $data->provincia ?? ''
-    );
+    $provincia = trim($data->provincia ?? "");
 
-    $departamento = trim(
-        $data->departamento ?? ''
-    );
+    $departamento = trim($data->departamento ?? "");
 
-    $map_lat = trim(
-        $data->map_lat ?? ''
-    );
+    $map_lat = trim($data->map_lat ?? "");
 
-    $map_lng = trim(
-        $data->map_lng ?? ''
-    );
+    $map_lng = trim($data->map_lng ?? "");
 
-    $place_id = trim(
-        $data->place_id ?? ''
-    );
+    $place_id = trim($data->place_id ?? "");
 
-    $direccion = trim(
-        $data->direccion ?? ''
-    );
+    $direccion = trim($data->direccion ?? "");
 
-    $img_logo = trim(
-        $data->img_logo ?? ''
-    );
+    $img_logo = trim($data->img_logo ?? "");
 
-    $puesto = trim(
-        $data->puesto ?? ''
-    );
+    $puesto = trim($data->puesto ?? "");
 
-    $descripcion = trim(
-        $data->descripcion ?? ''
-    );
+    $descripcion = trim($data->descripcion ?? "");
 
     $lista_yape = $data->lista_yape ?? null;
 
@@ -471,14 +429,11 @@ Flight::route('POST /Fw7L/editarMiNeg', function(){
        VALIDAR
     ====================================== */
 
-    if($neg_id <= 0){
-
+    if ($neg_id <= 0) {
         echo json_encode([
-
             "res" => "error",
 
-            "msg" => "neg_id inválido"
-
+            "msg" => "neg_id inválido",
         ]);
 
         return;
@@ -488,7 +443,8 @@ Flight::route('POST /Fw7L/editarMiNeg', function(){
        NEGOCIO
     ====================================== */
 
-    $info_negocio = DB::queryFirstRow("
+    $info_negocio = DB::queryFirstRow(
+        "
 
         SELECT *
 
@@ -500,16 +456,15 @@ Flight::route('POST /Fw7L/editarMiNeg', function(){
 
         LIMIT 1
 
-    ", $neg_id);
+    ",
+        $neg_id
+    );
 
-    if(!$info_negocio){
-
+    if (!$info_negocio) {
         echo json_encode([
-
             "res" => "error",
 
-            "msg" => "Negocio no encontrado"
-
+            "msg" => "Negocio no encontrado",
         ]);
 
         return;
@@ -521,158 +476,79 @@ Flight::route('POST /Fw7L/editarMiNeg', function(){
 
     $update = [];
 
-    if(
-    $nombre !== ''
-    &&
-    $nombre != $info_negocio['nombre']
-){
+    if ($nombre !== "" && $nombre != $info_negocio["nombre"]) {
+        $update["nombre"] = $nombre;
 
-    $update['nombre'] = $nombre;
+        $slug = generar_slug($nombre);
 
-    $slug = generar_slug(
-        $nombre
-    );
+        // evita duplicados
+        $slug_base = $slug;
 
-    // evita duplicados
-    $slug_base = $slug;
+        $i = 1;
 
-    $i = 1;
-
-    while(
-        DB::queryFirstField("
+        while (
+            DB::queryFirstField(
+                "
             SELECT neg_id
             FROM reg_neg
             WHERE slug = %s
             AND neg_id <> %i
             LIMIT 1
         ",
-        $slug,
-        $neg_id)
-    ){
+                $slug,
+                $neg_id
+            )
+        ) {
+            $slug = $slug_base . "-" . $i;
 
-        $slug =
-            $slug_base .
-            '-' .
-            $i;
+            $i++;
+        }
 
-        $i++;
-
+        $update["slug"] = $slug;
     }
 
-    $update['slug'] = $slug;
-
-}
-
-    if(
-        $celular_informes !=
-        $info_negocio['celular_informes']
-    ){
-
-        $update['celular_informes']
-            = $celular_informes;
-
+    if ($celular_informes != $info_negocio["celular_informes"]) {
+        $update["celular_informes"] = $celular_informes;
     }
 
-    if(
-        $ciudad !=
-        $info_negocio['ciudad']
-    ){
-
-        $update['ciudad']
-            = $ciudad;
-
+    if ($ciudad != $info_negocio["ciudad"]) {
+        $update["ciudad"] = $ciudad;
     }
 
-    if(
-        $provincia !=
-        $info_negocio['provincia']
-    ){
-
-        $update['provincia']
-            = $provincia;
-
+    if ($provincia != $info_negocio["provincia"]) {
+        $update["provincia"] = $provincia;
     }
 
-    if(
-        $departamento !=
-        $info_negocio['departamento']
-    ){
-
-        $update['departamento']
-            = $departamento;
-
+    if ($departamento != $info_negocio["departamento"]) {
+        $update["departamento"] = $departamento;
     }
 
-    if(
-        $map_lat !=
-        $info_negocio['map_lat']
-    ){
-
-        $update['map_lat']
-            = $map_lat;
-
+    if ($map_lat != $info_negocio["map_lat"]) {
+        $update["map_lat"] = $map_lat;
     }
 
-    if(
-        $map_lng !=
-        $info_negocio['map_lng']
-    ){
-
-        $update['map_lng']
-            = $map_lng;
-
+    if ($map_lng != $info_negocio["map_lng"]) {
+        $update["map_lng"] = $map_lng;
     }
 
-    if(
-        $place_id !=
-        $info_negocio['place_id']
-    ){
-
-        $update['place_id']
-            = $place_id;
-
+    if ($place_id != $info_negocio["place_id"]) {
+        $update["place_id"] = $place_id;
     }
 
-    if(
-        $direccion !=
-        $info_negocio['direccion']
-    ){
-
-        $update['direccion']
-            = $direccion;
-
+    if ($direccion != $info_negocio["direccion"]) {
+        $update["direccion"] = $direccion;
     }
 
-    if(
-        $img_logo !== ''
-        &&
-        $img_logo !=
-        $info_negocio['img_logo']
-    ){
-
-        $update['img_logo']
-            = $img_logo;
-
+    if ($img_logo !== "" && $img_logo != $info_negocio["img_logo"]) {
+        $update["img_logo"] = $img_logo;
     }
 
-    if(
-        $puesto !=
-        $info_negocio['puesto']
-    ){
-
-        $update['puesto']
-            = $puesto;
-
+    if ($puesto != $info_negocio["puesto"]) {
+        $update["puesto"] = $puesto;
     }
 
-    if(
-        $descripcion !=
-        $info_negocio['descripcion']
-    ){
-
-        $update['descripcion']
-            = $descripcion;
-
+    if ($descripcion != $info_negocio["descripcion"]) {
+        $update["descripcion"] = $descripcion;
     }
 
     /* ======================================
@@ -681,49 +557,25 @@ Flight::route('POST /Fw7L/editarMiNeg', function(){
 
     $lista_yape_json = null;
 
-    if(
-        is_array($lista_yape)
-    ){
-
-        $lista_yape_json =
-            json_encode(
-                $lista_yape,
-                JSON_UNESCAPED_UNICODE
-            );
-
-    }else{
-
-        $lista_yape_json =
-            trim(
-                strval($lista_yape)
-            );
-
+    if (is_array($lista_yape)) {
+        $lista_yape_json = json_encode($lista_yape, JSON_UNESCAPED_UNICODE);
+    } else {
+        $lista_yape_json = trim(strval($lista_yape));
     }
 
-    if(
-        $lista_yape_json !=
-        $info_negocio['lista_yape']
-    ){
-
-        $update['lista_yape']
-            = $lista_yape_json;
-
+    if ($lista_yape_json != $info_negocio["lista_yape"]) {
+        $update["lista_yape"] = $lista_yape_json;
     }
 
     /* ======================================
        SIN CAMBIOS
     ====================================== */
 
-    if(
-        empty($update)
-    ){
-
+    if (empty($update)) {
         echo json_encode([
-
             "res" => "ok",
 
-            "msg" => "Sin cambios"
-
+            "msg" => "Sin cambios",
         ]);
 
         return;
@@ -734,15 +586,13 @@ Flight::route('POST /Fw7L/editarMiNeg', function(){
     ====================================== */
 
     DB::update(
-
-        'reg_neg',
+        "reg_neg",
 
         $update,
 
-        'neg_id=%i',
+        "neg_id=%i",
 
         $neg_id
-
     );
 
     /* ======================================
@@ -750,93 +600,63 @@ Flight::route('POST /Fw7L/editarMiNeg', function(){
     ====================================== */
 
     echo json_encode([
-
         "res" => "ok",
 
         "msg" => "Negocio actualizado",
 
-        "campos_actualizados" =>
-            array_keys($update)
-
+        "campos_actualizados" => array_keys($update),
     ]);
-
 });
 
-function generar_slug($texto){
-
+function generar_slug($texto)
+{
     $texto = trim($texto);
 
-    $texto = mb_strtolower(
-        $texto,
-        'UTF-8'
-    );
+    $texto = mb_strtolower($texto, "UTF-8");
 
     $reemplazos = [
-
-        'á'=>'a',
-        'é'=>'e',
-        'í'=>'i',
-        'ó'=>'o',
-        'ú'=>'u',
-        'ä'=>'a',
-        'ë'=>'e',
-        'ï'=>'i',
-        'ö'=>'o',
-        'ü'=>'u',
-        'ñ'=>'n'
-
+        "á" => "a",
+        "é" => "e",
+        "í" => "i",
+        "ó" => "o",
+        "ú" => "u",
+        "ä" => "a",
+        "ë" => "e",
+        "ï" => "i",
+        "ö" => "o",
+        "ü" => "u",
+        "ñ" => "n",
     ];
 
-    $texto = strtr(
-        $texto,
-        $reemplazos
-    );
+    $texto = strtr($texto, $reemplazos);
 
-    $texto = preg_replace(
-        '/[^a-z0-9]+/',
-        '-',
-        $texto
-    );
+    $texto = preg_replace("/[^a-z0-9]+/", "-", $texto);
 
-    $texto = trim(
-        $texto,
-        '-'
-    );
+    $texto = trim($texto, "-");
 
     return $texto;
 }
 
 Flight::route(
+    "POST /negocio/buscar_slug",
 
-    'POST /negocio/buscar_slug',
-
-    function(){
-
+    function () {
         include DEFINITION;
 
-        DB::query(
-            "SET NAMES 'utf8mb4'"
-        );
+        DB::query("SET NAMES 'utf8mb4'");
 
-        $d = json_decode(
+        $d =
+            json_decode(
+                Flight::request()->getBody(),
 
-            Flight::request()
-                ->getBody(),
+                true
+            ) ?:
+            [];
 
-            true
+        $slug = trim($d["slug"] ?? "");
 
-        ) ?: [];
-
-        $slug = trim(
-
-            $d['slug']
-            ??
-
-            ''
-
-        );
-
-        $row = DB::queryFirstRow("
+        $row = DB::queryFirstRow(
+            "
 
             SELECT
 
@@ -848,29 +668,22 @@ Flight::route(
 
             AND borrado_el IS NULL
 
-        ", $slug);
+        ",
+            $slug
+        );
 
-        if(!$row){
-
+        if (!$row) {
             Flight::json([
-
-                'status' => 'error'
-
+                "status" => "error",
             ]);
 
             return;
         }
 
         Flight::json([
+            "status" => "ok",
 
-            'status' => 'ok',
-
-            'neg_id' =>
-
-                $row['neg_id']
-
+            "neg_id" => $row["neg_id"],
         ]);
-
     }
-
 );

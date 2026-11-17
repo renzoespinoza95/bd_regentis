@@ -1,47 +1,33 @@
 <?php
 
-function crear_usuario_negocio(
-    $nombres_apellidos,
-    $neg_id
-){
+function crear_usuario_negocio($nombres_apellidos, $neg_id)
+{
+    $nombres_apellidos = trim($nombres_apellidos);
 
-    $nombres_apellidos = trim(
-        $nombres_apellidos
-    );
+    $neg_id = intval($neg_id);
 
-    $neg_id = intval(
-        $neg_id
-    );
-
-    if($nombres_apellidos === ''){
-
+    if ($nombres_apellidos === "") {
         return [
+            "ok" => false,
 
-            'ok' => false,
-
-            'msg' => 'nombres_apellidos requerido'
-
+            "msg" => "nombres_apellidos requerido",
         ];
-
     }
 
-    if($neg_id <= 0){
-
+    if ($neg_id <= 0) {
         return [
+            "ok" => false,
 
-            'ok' => false,
-
-            'msg' => 'neg_id requerido'
-
+            "msg" => "neg_id requerido",
         ];
-
     }
 
     /* =====================================
        NEGOCIO
     ====================================== */
 
-    $negocio = DB::queryFirstRow("
+    $negocio = DB::queryFirstRow(
+        "
 
         SELECT
 
@@ -55,18 +41,16 @@ function crear_usuario_negocio(
 
         LIMIT 1
 
-    ", $neg_id);
+    ",
+        $neg_id
+    );
 
-    if(!$negocio){
-
+    if (!$negocio) {
         return [
+            "ok" => false,
 
-            'ok' => false,
-
-            'msg' => 'Negocio no encontrado'
-
+            "msg" => "Negocio no encontrado",
         ];
-
     }
 
     /* =====================================
@@ -88,12 +72,7 @@ function crear_usuario_negocio(
 
     ");
 
-    $img_perfil =
-        $imagen
-        ?
-        $imagen['url']
-        :
-        '7pyi.jpg';
+    $img_perfil = $imagen ? $imagen["url"] : "7pyi.jpg";
 
     /* =====================================
        NICK ALEATORIO
@@ -114,60 +93,38 @@ function crear_usuario_negocio(
 
     ");
 
-    $sobrenombre =
-        $nick
-        ?
-        $nick['nick']
-        :
-        null;
+    $sobrenombre = $nick ? $nick["nick"] : null;
 
     /* =====================================
        INSERT USUARIO
     ====================================== */
 
     DB::insert(
-
-        'reg_usu',
+        "reg_usu",
 
         [
+            "cod_usu" => generarCodigoUnico(),
 
-            'cod_usu' =>
-                generarCodigoUnico(),
+            "google_uid" => generarCodigoUnico(),
 
-            'google_uid' =>
-                generarCodigoUnico(),
+            "nombres_apellidos" => $nombres_apellidos,
 
-            'nombres_apellidos' =>
-                $nombres_apellidos,
+            "sobrenombre" => $sobrenombre,
 
-            'sobrenombre' =>
-                $sobrenombre,
+            "img_perfil" => $img_perfil,
 
-            'img_perfil' =>
-                $img_perfil,
+            "tipoxusu_id" => 2,
 
-            'tipoxusu_id' =>
-                2,
+            "rol_id" => 1,
 
-            'rol_id' =>
-                1,
+            "clavel" => "12qw12",
 
-            'clavel' =>
-                '12qw12',
+            "is_activo" => 1,
 
-            'is_activo' =>
-                1,
+            "is_fantasma" => 1,
 
-            'is_fantasma' =>
-                1,
-
-            'fecha_creacion' =>
-                date(
-                    'Y-m-d H:i:s'
-                )
-
+            "fecha_creacion" => date("Y-m-d H:i:s"),
         ]
-
     );
 
     $usu_id = DB::insertId();
@@ -177,134 +134,69 @@ function crear_usuario_negocio(
     ====================================== */
 
     DB::insert(
-
-        'reg_negxusu',
+        "reg_negxusu",
 
         [
+            "usu_id" => $usu_id,
 
-            'usu_id' =>
-                $usu_id,
+            "neg_id" => $neg_id,
 
-            'neg_id' =>
-                $neg_id,
+            "is_activo" => 1,
 
-            'is_activo' =>
-                1,
-
-            'fecha_creacion' =>
-                date(
-                    'Y-m-d H:i:s'
-                )
-
+            "fecha_creacion" => date("Y-m-d H:i:s"),
         ]
-
     );
 
     /* =====================================
        CREAR PIN
     ====================================== */
 
-    $pin = crear_pin_code(
-        $usu_id
-    );
+    $pin = crear_pin_code($usu_id);
 
-    if(!$pin['ok']){
-
+    if (!$pin["ok"]) {
         return [
+            "ok" => false,
 
-            'ok' => false,
-
-            'msg' => 'No se pudo crear el PIN'
-
+            "msg" => "No se pudo crear el PIN",
         ];
-
     }
-
-    /* =====================================
-       EXPIRACION 24 HORAS
-    ====================================== */
-
-    $pin_code_fecha_fin = date(
-
-        'Y-m-d H:i:s',
-
-        strtotime(
-            '+24 hours'
-        )
-
-    );
-
-    DB::update(
-
-        'reg_usu',
-
-        [
-
-            'pin_code_fecha_fin' =>
-                $pin_code_fecha_fin
-
-        ],
-
-        'usu_id=%i',
-
-        $usu_id
-
-    );
 
     /* =====================================
        LOGIN COMPLETO
     ====================================== */
 
-    $login = login_by_id(
-        $usu_id
-    );
+    $login = login_by_id($usu_id);
 
-    if(!$login['ok']){
-
+    if (!$login["ok"]) {
         return [
+            "ok" => false,
 
-            'ok' => false,
-
-            'msg' => $login['msg']
-
+            "msg" => $login["msg"],
         ];
-
     }
 
     /* =====================================
        AGREGAR PIN AL RESPONSE
     ====================================== */
 
-    $login['data']['pin_code'] =
-        $pin['pin_code'];
-
-    $login['data']['pin_code_fecha_fin'] =
-        $pin_code_fecha_fin;
+    $login["data"]["pin_code"] = $pin["pin_code"];
 
     /* =====================================
        RESPONSE
     ====================================== */
 
     return [
+        "ok" => true,
 
-        'ok' => true,
+        "data" => $login["data"],
 
-        'data' =>
-            $login['data'],
+        "rubros" => $login["rubros"],
 
-        'rubros' =>
-            $login['rubros'],
-
-        'screens' =>
-            $login['screens']
-
+        "screens" => $login["screens"],
     ];
-
 }
 
-
-Flight::route('GET /KT3E/listarUsuarios', function(){
-
+Flight::route("GET /KT3E/listarUsuarios", function () {
     $rows = DB::query("
         SELECT 
             u.usu_id,
@@ -317,7 +209,7 @@ Flight::route('GET /KT3E/listarUsuarios', function(){
             u.fecha_creacion,
             u.nombres_apellidos,
             u.tipoxusu_id,
-            t.descripcion AS tipoxusu_descripcion,  -- 🔥 NUEVO
+            t.descripcion AS tipoxusu_descripcion,
 
             r.nombre AS rol_nombre,
 
@@ -325,7 +217,7 @@ Flight::route('GET /KT3E/listarUsuarios', function(){
 
         FROM reg_usu u
 
-        LEFT JOIN reg_tipoxusu t   -- 🔥 NUEVO
+        LEFT JOIN reg_tipoxusu t   
             ON t.tipoxusu_id = u.tipoxusu_id
 
         LEFT JOIN reg_rol r 
@@ -334,40 +226,38 @@ Flight::route('GET /KT3E/listarUsuarios', function(){
         LEFT JOIN reg_negxusu nxu
             ON nxu.usu_id = u.usu_id
             AND nxu.is_activo = 1
+            AND nxu.borrado_el IS NULL
 
         LEFT JOIN reg_neg n
             ON n.neg_id = nxu.neg_id
+            AND n.borrado_el IS NULL
         WHERE u.is_fantasma = 1    
         ORDER BY u.usu_id ASC
     ");
 
     Flight::json($rows);
-
 });
 
-
-Flight::route('POST /ZYhL/detalleUsu', function(){
-
+Flight::route("POST /ZYhL/detalleUsu", function () {
     include DEFINITION;
 
     DB::query("SET NAMES 'utf8mb4'");
 
-    $data = json_decode(
-        Flight::request()->getBody(),
-        true
-    ) ?: [];
+    $data = json_decode(Flight::request()->getBody(), true) ?: [];
 
-    $usu_id = intval($data['usu_id'] ?? 0);
+    $usu_id = intval($data["usu_id"] ?? 0);
 
     // ================================
     // VALIDAR
     // ================================
-    if(!$usu_id){
-
-        Flight::json([
-            'ok' => false,
-            'msg' => 'usu_id requerido'
-        ], 400);
+    if (!$usu_id) {
+        Flight::json(
+            [
+                "ok" => false,
+                "msg" => "usu_id requerido",
+            ],
+            400
+        );
 
         return;
     }
@@ -375,7 +265,8 @@ Flight::route('POST /ZYhL/detalleUsu', function(){
     // ================================
     // CONSULTA
     // ================================
-    $row = DB::queryFirstRow("
+    $row = DB::queryFirstRow(
+        "
 
         SELECT 
             u.usu_id,
@@ -415,25 +306,32 @@ Flight::route('POST /ZYhL/detalleUsu', function(){
         LEFT JOIN reg_negxusu nxu
             ON nxu.usu_id = u.usu_id
             AND nxu.is_activo = 1
+            AND nxu.borrado_el IS NULL
 
         LEFT JOIN reg_neg n
             ON n.neg_id = nxu.neg_id
+            AND n.borrado_el IS NULL
 
         WHERE u.usu_id = %i
+        AND u.borrado_el IS NULL
 
         LIMIT 1
 
-    ", $usu_id);
+    ",
+        $usu_id
+    );
 
     // ================================
     // NO ENCONTRADO
     // ================================
-    if(!$row){
-
-        Flight::json([
-            'ok' => false,
-            'msg' => 'Usuario no encontrado'
-        ], 404);
+    if (!$row) {
+        Flight::json(
+            [
+                "ok" => false,
+                "msg" => "Usuario no encontrado",
+            ],
+            404
+        );
 
         return;
     }
@@ -442,94 +340,78 @@ Flight::route('POST /ZYhL/detalleUsu', function(){
     // RESPUESTA
     // ================================
     Flight::json([
-        'ok' => true,
-        'usuario' => $row
+        "ok" => true,
+        "usuario" => $row,
     ]);
-
 });
 
-Flight::route('POST /EUwe/registroBasico', function(){
-
+Flight::route("POST /EUwe/registroBasico", function () {
     include DEFINITION;
 
     DB::query("SET NAMES 'utf8mb4'");
 
-    $data = json_decode(
-        Flight::request()->getBody(),
-        true
-    ) ?: [];
+    $data = json_decode(Flight::request()->getBody(), true) ?: [];
 
     /* ======================================
        FIRMA
     ====================================== */
 
-    $xin  = $data['xin'] ?? '';
-    $yuan = $data['yuan'] ?? '';
+    $xin = $data["xin"] ?? "";
+    $yuan = $data["yuan"] ?? "";
 
-    firma(
-        $xin,
-        $yuan
-    );
+    firma($xin, $yuan);
 
     /* ======================================
        PAYLOAD
     ====================================== */
 
-    $usu_id = intval(
-        $data['usu_id'] ?? 0
-    );
+    $usu_id = intval($data["usu_id"] ?? 0);
 
-    $sobrenombre = trim(
-        $data['sobrenombre'] ?? ''
-    );
+    $sobrenombre = trim($data["sobrenombre"] ?? "");
 
-    $celular = trim(
-        $data['celular'] ?? ''
-    );
+    $celular = trim($data["celular"] ?? "");
 
-    $nombres_apellidos = trim(
-        $data['nombres_apellidos'] ?? ''
-    );
+    $nombres_apellidos = trim($data["nombres_apellidos"] ?? "");
 
     /* ======================================
        VALIDAR
     ====================================== */
 
-    if(!$usu_id){
+    if (!$usu_id) {
+        Flight::json(
+            [
+                "ok" => false,
 
-        Flight::json([
-
-            'ok' => false,
-
-            'msg' => 'usu_id requerido'
-
-        ], 400);
-
-        return;
-    }
-
-    if($sobrenombre === ''){
-
-        Flight::json([
-
-            'ok' => false,
-
-            'msg' => 'sobrenombre requerido'
-
-        ], 400);
+                "msg" => "usu_id requerido",
+            ],
+            400
+        );
 
         return;
     }
 
-    if($nombres_apellidos === ''){
+    if ($sobrenombre === "") {
+        Flight::json(
+            [
+                "ok" => false,
 
-        Flight::json([
+                "msg" => "sobrenombre requerido",
+            ],
+            400
+        );
 
-            'ok' => false,
+        return;
+    }
 
-            'msg' => 'nombres_apellidos requerido'
+    if ($nombres_apellidos === "") {
+        Flight::json(
+            [
+                "ok" => false,
 
-        ], 400);
+                "msg" => "nombres_apellidos requerido",
+            ],
+            400
+        );
 
         return;
     }
@@ -538,7 +420,8 @@ Flight::route('POST /EUwe/registroBasico', function(){
        VALIDAR USUARIO
     ====================================== */
 
-    $usuario = DB::queryFirstRow("
+    $usuario = DB::queryFirstRow(
+        "
 
         SELECT 
 
@@ -550,20 +433,23 @@ Flight::route('POST /EUwe/registroBasico', function(){
         FROM reg_usu
 
         WHERE usu_id = %i
+        AND borrado_el IS NULL
 
         LIMIT 1
 
-    ", $usu_id);
+    ",
+        $usu_id
+    );
 
-    if(!$usuario){
+    if (!$usuario) {
+        Flight::json(
+            [
+                "ok" => false,
 
-        Flight::json([
-
-            'ok' => false,
-
-            'msg' => 'Usuario no encontrado'
-
-        ], 404);
+                "msg" => "Usuario no encontrado",
+            ],
+            404
+        );
 
         return;
     }
@@ -572,7 +458,8 @@ Flight::route('POST /EUwe/registroBasico', function(){
        VALIDAR SOBRENOMBRE REPETIDO
     ====================================== */
 
-    $existeNick = DB::queryFirstField("
+    $existeNick = DB::queryFirstField(
+        "
 
         SELECT usu_id
 
@@ -581,6 +468,7 @@ Flight::route('POST /EUwe/registroBasico', function(){
         WHERE LOWER(sobrenombre) = LOWER(%s)
 
         AND usu_id <> %i
+        AND borrado_el IS NULL
 
         LIMIT 1
 
@@ -589,15 +477,15 @@ Flight::route('POST /EUwe/registroBasico', function(){
         $usu_id
     );
 
-    if($existeNick){
+    if ($existeNick) {
+        Flight::json(
+            [
+                "ok" => false,
 
-        Flight::json([
-
-            'ok' => false,
-
-            'msg' => 'El sobrenombre ya existe'
-
-        ], 409);
+                "msg" => "El sobrenombre ya existe",
+            ],
+            409
+        );
 
         return;
     }
@@ -621,11 +509,8 @@ Flight::route('POST /EUwe/registroBasico', function(){
 
     ");
 
-    if(!$img_perfil){
-
-        $img_perfil =
-            'https://barsi-img.b-cdn.net/recursos/ffc1.png';
-
+    if (!$img_perfil) {
+        $img_perfil = "https://barsi-img.b-cdn.net/recursos/ffc1.png";
     }
 
     /* ======================================
@@ -633,37 +518,27 @@ Flight::route('POST /EUwe/registroBasico', function(){
     ====================================== */
 
     DB::update(
-
-        'reg_usu',
+        "reg_usu",
 
         [
+            "sobrenombre" => $sobrenombre,
 
-            'sobrenombre' =>
-                $sobrenombre,
+            "celular" => $celular,
 
-            'celular' =>
-                $celular,
+            "nombres_apellidos" => $nombres_apellidos,
 
-            'nombres_apellidos' =>
-                $nombres_apellidos,
-
-            'img_perfil' =>
-                $img_perfil
-
+            "img_perfil" => $img_perfil,
         ],
 
         "usu_id=%i",
 
         $usu_id
-
     );
 
     enviar_auto_msg(
-
         $usu_id,
 
-        'TXT_REGISTRO'
-
+        "TXT_REGISTRO"
     );
 
     /* ======================================
@@ -671,80 +546,58 @@ Flight::route('POST /EUwe/registroBasico', function(){
     ====================================== */
 
     Flight::json([
+        "ok" => true,
 
-        'ok' => true,
+        "msg" => "Registro básico actualizado",
 
-        'msg' => 'Registro básico actualizado',
+        "usuario" => [
+            "usu_id" => $usu_id,
 
-        'usuario' => [
+            "sobrenombre" => $sobrenombre,
 
-            'usu_id' =>
-                $usu_id,
+            "nombres_apellidos" => $nombres_apellidos,
 
-            'sobrenombre' =>
-                $sobrenombre,
-
-            'nombres_apellidos' =>
-                $nombres_apellidos,
-
-            'img_perfil' =>
-                $img_perfil
-
-        ]
-
+            "img_perfil" => $img_perfil,
+        ],
     ]);
-
 });
 
-Flight::route('POST /GbaX/buscarCodigo', function(){
-
+Flight::route("POST /GbaX/buscarCodigo", function () {
     include DEFINITION;
 
     DB::query("SET NAMES 'utf8mb4'");
 
-    $data = json_decode(
-        Flight::request()->getBody(),
-        true
-    ) ?: [];
+    $data = json_decode(Flight::request()->getBody(), true) ?: [];
 
     /* ======================================
        FIRMA
     ====================================== */
 
-    $xin = trim(
-        $data['xin'] ?? ''
-    );
+    $xin = trim($data["xin"] ?? "");
 
-    $yuan = trim(
-        $data['yuan'] ?? ''
-    );
+    $yuan = trim($data["yuan"] ?? "");
 
-    firma(
-        $xin,
-        $yuan
-    );
+    firma($xin, $yuan);
 
     /* ======================================
        COD_USU
     ====================================== */
 
-    $cod_usu = trim(
-        $data['cod_usu'] ?? ''
-    );
+    $cod_usu = trim($data["cod_usu"] ?? "");
 
     /* ======================================
        VALIDAR
     ====================================== */
 
-    if(!$cod_usu){
+    if (!$cod_usu) {
+        Flight::json(
+            [
+                "ok" => false,
 
-        Flight::json([
-
-            'ok' => false,
-
-            'msg' => 'cod_usu requerido'
-
-        ], 400);
+                "msg" => "cod_usu requerido",
+            ],
+            400
+        );
 
         return;
     }
@@ -753,7 +606,8 @@ Flight::route('POST /GbaX/buscarCodigo', function(){
        CONSULTA
     ====================================== */
 
-    $row = DB::queryFirstRow("
+    $row = DB::queryFirstRow(
+        "
 
         SELECT 
 
@@ -801,30 +655,34 @@ Flight::route('POST /GbaX/buscarCodigo', function(){
         LEFT JOIN reg_negxusu nxu
             ON nxu.usu_id = u.usu_id
             AND nxu.is_activo = 1
+            AND nxu.borrado_el IS NULL
 
         LEFT JOIN reg_neg n
             ON n.neg_id = nxu.neg_id
+            AND n.borrado_el IS NULL
 
         WHERE u.cod_usu = %s
         AND u.borrado_el IS NULL
 
         LIMIT 1
 
-    ", $cod_usu);
+    ",
+        $cod_usu
+    );
 
     /* ======================================
        NO ENCONTRADO
     ====================================== */
 
-    if(!$row){
+    if (!$row) {
+        Flight::json(
+            [
+                "ok" => false,
 
-        Flight::json([
-
-            'ok' => false,
-
-            'msg' => 'Usuario no encontrado'
-
-        ], 404);
+                "msg" => "Usuario no encontrado",
+            ],
+            404
+        );
 
         return;
     }
@@ -834,81 +692,63 @@ Flight::route('POST /GbaX/buscarCodigo', function(){
     ====================================== */
 
     Flight::json([
+        "ok" => true,
 
-        'ok' => true,
-
-        'usuario' => $row
-
+        "usuario" => $row,
     ]);
-
 });
 
-Flight::route('POST /Ko3d/agregarTrabajador', function(){
-
+Flight::route("POST /Ko3d/agregarTrabajador", function () {
     include DEFINITION;
 
     DB::query("SET NAMES 'utf8mb4'");
 
-    $d = json_decode(
-        Flight::request()->getBody(),
-        true
-    ) ?: [];
+    $d = json_decode(Flight::request()->getBody(), true) ?: [];
 
     /* ======================================
        FIRMA
     ====================================== */
 
-    $xin = trim(
-        $d['xin'] ?? ''
-    );
+    $xin = trim($d["xin"] ?? "");
 
-    $yuan = trim(
-        $d['yuan'] ?? ''
-    );
+    $yuan = trim($d["yuan"] ?? "");
 
-    firma(
-        $xin,
-        $yuan
-    );
+    firma($xin, $yuan);
 
     /* ======================================
        CAMPOS
     ====================================== */
 
-    $usu_id = intval(
-        $d['usu_id'] ?? 0
-    );
+    $usu_id = intval($d["usu_id"] ?? 0);
 
-    $neg_id = intval(
-        $d['neg_id'] ?? 0
-    );
+    $neg_id = intval($d["neg_id"] ?? 0);
 
     /* ======================================
        VALIDAR
     ====================================== */
 
-    if($usu_id <= 0){
+    if ($usu_id <= 0) {
+        Flight::json(
+            [
+                "status" => "error",
 
-        Flight::json([
-
-            'status' => 'error',
-
-            'msg' => 'usu_id requerido'
-
-        ], 400);
+                "msg" => "usu_id requerido",
+            ],
+            400
+        );
 
         return;
     }
 
-    if($neg_id <= 0){
+    if ($neg_id <= 0) {
+        Flight::json(
+            [
+                "status" => "error",
 
-        Flight::json([
-
-            'status' => 'error',
-
-            'msg' => 'neg_id requerido'
-
-        ], 400);
+                "msg" => "neg_id requerido",
+            ],
+            400
+        );
 
         return;
     }
@@ -917,7 +757,8 @@ Flight::route('POST /Ko3d/agregarTrabajador', function(){
        USUARIO
     ====================================== */
 
-    $usuario = DB::queryFirstRow("
+    $usuario = DB::queryFirstRow(
+        "
 
         SELECT
             usu_id,
@@ -931,17 +772,19 @@ Flight::route('POST /Ko3d/agregarTrabajador', function(){
 
         LIMIT 1
 
-    ", $usu_id);
+    ",
+        $usu_id
+    );
 
-    if(!$usuario){
+    if (!$usuario) {
+        Flight::json(
+            [
+                "status" => "error",
 
-        Flight::json([
-
-            'status' => 'error',
-
-            'msg' => 'Usuario no encontrado'
-
-        ], 404);
+                "msg" => "Usuario no encontrado",
+            ],
+            404
+        );
 
         return;
     }
@@ -950,20 +793,15 @@ Flight::route('POST /Ko3d/agregarTrabajador', function(){
        VALIDAR TIPO USUARIO
     ====================================== */
 
-    if(
-        intval(
-            $usuario['tipoxusu_id']
-        ) !== 1
-    ){
+    if (intval($usuario["tipoxusu_id"]) !== 1) {
+        Flight::json(
+            [
+                "status" => "error",
 
-        Flight::json([
-
-            'status' => 'error',
-
-            'msg' =>
-                'El usuario ya pertenece a otro tipo de cuenta'
-
-        ], 400);
+                "msg" => "El usuario ya pertenece a otro tipo de cuenta",
+            ],
+            400
+        );
 
         return;
     }
@@ -972,7 +810,8 @@ Flight::route('POST /Ko3d/agregarTrabajador', function(){
        NEGOCIO
     ====================================== */
 
-    $negocio = DB::queryFirstRow("
+    $negocio = DB::queryFirstRow(
+        "
 
         SELECT
             neg_id,
@@ -985,17 +824,19 @@ Flight::route('POST /Ko3d/agregarTrabajador', function(){
 
         LIMIT 1
 
-    ", $neg_id);
+    ",
+        $neg_id
+    );
 
-    if(!$negocio){
+    if (!$negocio) {
+        Flight::json(
+            [
+                "status" => "error",
 
-        Flight::json([
-
-            'status' => 'error',
-
-            'msg' => 'Negocio no encontrado'
-
-        ], 404);
+                "msg" => "Negocio no encontrado",
+            ],
+            404
+        );
 
         return;
     }
@@ -1003,25 +844,20 @@ Flight::route('POST /Ko3d/agregarTrabajador', function(){
     DB::startTransaction();
 
     try {
-
         /* ======================================
            DESACTIVAR RELACIONES ANTERIORES
         ====================================== */
 
         DB::update(
-
-            'reg_negxusu',
+            "reg_negxusu",
 
             [
-
-                'is_activo' => 0
-
+                "is_activo" => 0,
             ],
 
             "usu_id=%i",
 
             $usu_id
-
         );
 
         /* ======================================
@@ -1029,24 +865,17 @@ Flight::route('POST /Ko3d/agregarTrabajador', function(){
         ====================================== */
 
         DB::insert(
-
-            'reg_negxusu',
+            "reg_negxusu",
 
             [
+                "usu_id" => $usu_id,
 
-                'usu_id' =>
-                    $usu_id,
+                "neg_id" => $neg_id,
 
-                'neg_id' =>
-                    $neg_id,
+                "is_activo" => 1,
 
-                'is_activo' => 1,
-
-                'fecha_creacion' =>
-                    date('Y-m-d H:i:s')
-
+                "fecha_creacion" => date("Y-m-d H:i:s"),
             ]
-
         );
 
         $negxusu_id = DB::insertId();
@@ -1056,19 +885,15 @@ Flight::route('POST /Ko3d/agregarTrabajador', function(){
         ====================================== */
 
         DB::update(
-
-            'reg_usu',
+            "reg_usu",
 
             [
-
-                'tipoxusu_id' => 2
-
+                "tipoxusu_id" => 2,
             ],
 
             "usu_id=%i",
 
             $usu_id
-
         );
 
         DB::commit();
@@ -1078,39 +903,29 @@ Flight::route('POST /Ko3d/agregarTrabajador', function(){
         ====================================== */
 
         Flight::json([
+            "status" => "ok",
 
-            'status' => 'ok',
+            "msg" => "Trabajador agregado correctamente",
 
-            'msg' =>
-                'Trabajador agregado correctamente',
+            "negxusu_id" => $negxusu_id,
 
-            'negxusu_id' =>
-                $negxusu_id,
-
-            'tipoxusu_id' => 4
-
+            "tipoxusu_id" => 4,
         ]);
-
-    } catch(Exception $e){
-
+    } catch (Exception $e) {
         DB::rollback();
 
-        Flight::json([
+        Flight::json(
+            [
+                "status" => "error",
 
-            'status' => 'error',
-
-            'msg' =>
-                $e->getMessage()
-
-        ], 500);
-
+                "msg" => $e->getMessage(),
+            ],
+            500
+        );
     }
-
 });
 
-
-Flight::route('POST /RhM4/editarCuentaUsu', function(){
-
+Flight::route("POST /RhM4/editarCuentaUsu", function () {
     include DEFINITION;
 
     $json = Flight::request()->getBody();
@@ -1131,42 +946,27 @@ Flight::route('POST /RhM4/editarCuentaUsu', function(){
        PAYLOAD
     ====================================== */
 
-    $usu_id = intval(
-        $data->usu_id ?? 0
-    );
+    $usu_id = intval($data->usu_id ?? 0);
 
-    $nombres_apellidos = trim(
-        $data->nombres_apellidos ?? ''
-    );
+    $nombres_apellidos = trim($data->nombres_apellidos ?? "");
 
-    $email = trim(
-        $data->email ?? ''
-    );
+    $email = trim($data->email ?? "");
 
-    $celular = trim(
-        $data->celular ?? ''
-    );
+    $celular = trim($data->celular ?? "");
 
-    $fecha_nacimiento = trim(
-        $data->fecha_nacimiento ?? ''
-    );
+    $fecha_nacimiento = trim($data->fecha_nacimiento ?? "");
 
-    $img_perfil = trim(
-        $data->img_perfil ?? ''
-    );
+    $img_perfil = trim($data->img_perfil ?? "");
 
     /* ======================================
        VALIDAR
     ====================================== */
 
-    if($usu_id <= 0){
-
+    if ($usu_id <= 0) {
         echo json_encode([
-
             "res" => "error",
 
-            "msg" => "usu_id inválido"
-
+            "msg" => "usu_id inválido",
         ]);
 
         return;
@@ -1176,7 +976,8 @@ Flight::route('POST /RhM4/editarCuentaUsu', function(){
        USUARIO
     ====================================== */
 
-    $info_usuario = DB::queryFirstRow("
+    $info_usuario = DB::queryFirstRow(
+        "
 
         SELECT *
 
@@ -1188,16 +989,15 @@ Flight::route('POST /RhM4/editarCuentaUsu', function(){
 
         LIMIT 1
 
-    ", $usu_id);
+    ",
+        $usu_id
+    );
 
-    if(!$info_usuario){
-
+    if (!$info_usuario) {
         echo json_encode([
-
             "res" => "error",
 
-            "msg" => "Usuario no encontrado"
-
+            "msg" => "Usuario no encontrado",
         ]);
 
         return;
@@ -1209,73 +1009,38 @@ Flight::route('POST /RhM4/editarCuentaUsu', function(){
 
     $update = [];
 
-    if(
-        $nombres_apellidos !== ''
-        &&
-        $nombres_apellidos !=
-        $info_usuario['nombres_apellidos']
-    ){
-
-        $update['nombres_apellidos']
-            = $nombres_apellidos;
-
+    if (
+        $nombres_apellidos !== "" &&
+        $nombres_apellidos != $info_usuario["nombres_apellidos"]
+    ) {
+        $update["nombres_apellidos"] = $nombres_apellidos;
     }
 
-    if(
-        $email !=
-        $info_usuario['email']
-    ){
-
-        $update['email']
-            = $email;
-
+    if ($email != $info_usuario["email"]) {
+        $update["email"] = $email;
     }
 
-    if(
-        $celular !=
-        $info_usuario['celular']
-    ){
-
-        $update['celular']
-            = $celular;
-
+    if ($celular != $info_usuario["celular"]) {
+        $update["celular"] = $celular;
     }
 
-    if(
-        $fecha_nacimiento !=
-        $info_usuario['fecha_nacimiento']
-    ){
-
-        $update['fecha_nacimiento']
-            = $fecha_nacimiento;
+    if ($fecha_nacimiento != $info_usuario["fecha_nacimiento"]) {
+        $update["fecha_nacimiento"] = $fecha_nacimiento;
     }
 
-    if(
-        $img_perfil !== ''
-        &&
-        $img_perfil !=
-        $info_usuario['img_perfil']
-    ){
-
-        $update['img_perfil']
-            = $img_perfil;
-
+    if ($img_perfil !== "" && $img_perfil != $info_usuario["img_perfil"]) {
+        $update["img_perfil"] = $img_perfil;
     }
 
     /* ======================================
        SIN CAMBIOS
     ====================================== */
 
-    if(
-        empty($update)
-    ){
-
+    if (empty($update)) {
         echo json_encode([
-
             "res" => "ok",
 
-            "msg" => "Sin cambios"
-
+            "msg" => "Sin cambios",
         ]);
 
         return;
@@ -1286,15 +1051,13 @@ Flight::route('POST /RhM4/editarCuentaUsu', function(){
     ====================================== */
 
     DB::update(
-
-        'reg_usu',
+        "reg_usu",
 
         $update,
 
-        'usu_id=%i',
+        "usu_id=%i",
 
         $usu_id
-
     );
 
     /* ======================================
@@ -1302,47 +1065,37 @@ Flight::route('POST /RhM4/editarCuentaUsu', function(){
     ====================================== */
 
     echo json_encode([
-
         "res" => "ok",
 
-        "msg" => "Cuenta actualizada"
-
+        "msg" => "Cuenta actualizada",
     ]);
-
 });
 
 function crear_pin_code($usu_id)
 {
-
     $usu_id = intval($usu_id);
 
-    if($usu_id <= 0){
-
+    if ($usu_id <= 0) {
         return [
+            "ok" => false,
 
-            'ok' => false,
-
-            'msg' => 'usu_id inválido'
-
+            "msg" => "usu_id inválido",
         ];
-
     }
 
-    do{
-
+    do {
         $pin_code = str_pad(
-
             mt_rand(0, 999999),
 
             6,
 
-            '0',
+            "0",
 
             STR_PAD_LEFT
-
         );
 
-        $existe = DB::queryFirstField("
+        $existe = DB::queryFirstField(
+            "
 
             SELECT COUNT(*)
 
@@ -1350,71 +1103,47 @@ function crear_pin_code($usu_id)
 
             WHERE pin_code = %s
 
-            AND pin_code_fecha_fin >= NOW()
-
             AND borrado_el IS NULL
 
-        ", $pin_code);
+        ",
+            $pin_code
+        );
+    } while ($existe > 0);
 
-    }
-    while($existe > 0);
-
-    $pin_code_fecha_fin = date(
-
-        'Y-m-d H:i:s',
-
-        strtotime('+4 minutes')
-
-    );
-
+    // Se elimina el manejo de fechas de expiración
     DB::update(
-
-        'reg_usu',
+        "reg_usu",
 
         [
-
-            'pin_code' => $pin_code,
-
-            'pin_code_fecha_fin' => $pin_code_fecha_fin
-
+            "pin_code" => $pin_code,
         ],
 
-        'usu_id=%i',
+        "usu_id=%i",
 
         $usu_id
-
     );
 
     return [
+        "ok" => true,
 
-        'ok' => true,
-
-        'pin_code' => $pin_code,
-
-        'pin_code_fecha_fin' => $pin_code_fecha_fin
-
+        "pin_code" => $pin_code,
     ];
-
 }
 
 function veri_pin_code($pin_code)
 {
-
     $pin_code = trim($pin_code);
 
-    if($pin_code === ''){
-
+    if ($pin_code === "") {
         return [
+            "ok" => false,
 
-            'ok' => false,
-
-            'msg' => 'pin_code requerido'
-
+            "msg" => "pin_code requerido",
         ];
-
     }
 
-    $usuario = DB::queryFirstRow("
+    $usuario = DB::queryFirstRow(
+        "
 
             SELECT *
 
@@ -1422,279 +1151,221 @@ function veri_pin_code($pin_code)
 
             WHERE pin_code = %s
 
-            AND pin_code_fecha_fin >= NOW()
-
             AND borrado_el IS NULL
 
             LIMIT 1
 
-        ", $pin_code);
+        ",
+        $pin_code
+    );
 
-        if(!$usuario){
-
-            return [
-
-                'ok' => false,
-
-                'msg' => 'PIN inválido o expirado'
-
-            ];
-
-        }
-
-        /* =====================================
-           INVALIDAR PIN
-        ===================================== */
-
-        DB::update(
-
-            'reg_usu',
-
-            [
-
-                'pin_code' => null,
-
-                'pin_code_fecha_fin' => null
-
-            ],
-
-            'usu_id=%i',
-
-            $usuario['usu_id']
-
-        );
-
-        /* =====================================
-           RESPONSE
-        ===================================== */
-
+    if (!$usuario) {
         return [
+            "ok" => false,
 
-            'ok' => true,
-
-            'usuario' => $usuario
-
+            "msg" => "PIN inválido",
         ];
+    }
 
+    return [
+        "ok" => true,
+
+        "usuario" => $usuario,
+    ];
 }
 
 /* =========================================================
-   🔑 VERIFICAR PIN ETERNO / PERSISTENTE
-   Permite múltiples accesos sin invalidar/destruir el PIN.
+   🔑 VERIFICAR PIN ETERNO / PERSISTENTE SIN EXPIRACIÓN
+   Valida el PIN sin considerar ningún campo de fecha límite.
 ========================================================= */
 function veri_pin_eterno($pin_code)
 {
     $pin_code = trim($pin_code);
 
-    if ($pin_code === '') {
+    if ($pin_code === "") {
         return [
-            'ok' => false,
-            'msg' => 'pin_code requerido'
+            "ok" => false,
+            "msg" => "pin_code requerido",
         ];
     }
 
-    // 1. Obtener fecha/hora exacta desde el servidor PHP (evita desajustes con NOW() de MySQL)
-    $now = date('Y-m-d H:i:s');
-
-    // 2. Buscar usuario con PIN coincidente y cuya fecha_fin sea mayor o igual a la actual
-    $usuario = DB::queryFirstRow("
-        SELECT *
-        FROM reg_usu
-        WHERE pin_code = %s
-          AND pin_code_fecha_fin >= %s
-          AND borrado_el IS NULL
+    // Buscar usuario con PIN coincidente y relación con negocio activa (sin verificar fecha de expiración)
+    $usuario = DB::queryFirstRow(
+        "
+        SELECT u.*
+        FROM reg_usu u
+        LEFT JOIN reg_negxusu nxu 
+            ON nxu.usu_id = u.usu_id 
+            AND nxu.is_activo = 1 
+            AND nxu.borrado_el IS NULL
+        WHERE u.pin_code = %s
+          AND u.borrado_el IS NULL
         LIMIT 1
-    ", $pin_code, $now);
+    ",
+        $pin_code
+    );
 
     if (!$usuario) {
         return [
-            'ok' => false,
-            'msg' => 'PIN inválido o expirado'
+            "ok" => false,
+            "msg" => "PIN inválido",
         ];
     }
 
-    // 3. Respuesta exitosa (Mantiene el PIN e intocado en la Base de Datos)
     return [
-        'ok' => true,
-        'usuario' => $usuario
+        "ok" => true,
+        "usuario" => $usuario,
     ];
 }
 
-Flight::route('POST /K5jX/ingresarConPinCode', function(){
-
-    try{
-
+Flight::route("POST /K5jX/ingresarConPinCode", function () {
+    try {
         include DEFINITION;
 
         DB::query("SET NAMES 'utf8mb4'");
 
-        $d = json_decode(
+        $d =
+            json_decode(
+                Flight::request()->getBody(),
 
-            Flight::request()->getBody(),
-
-            true
-
-        ) ?: [];
+                true
+            ) ?:
+            [];
 
         /* ======================================
            PIN CODE
         ====================================== */
 
-        $pin_code = trim(
+        $pin_code = trim($d["pin_code"] ?? "");
 
-            $d['pin_code'] ?? ''
+        if ($pin_code === "") {
+            Flight::json(
+                [
+                    "status" => "error",
 
-        );
-
-        if($pin_code === ''){
-
-            Flight::json([
-
-                'status' => 'error',
-
-                'msg' => 'pin_code requerido'
-
-            ], 400);
+                    "msg" => "pin_code requerido",
+                ],
+                400
+            );
 
             return;
-
         }
 
         /* ======================================
            VALIDAR PIN
         ====================================== */
 
-        $rPin = veri_pin_eterno(
-            $pin_code
-        );
+        $rPin = veri_pin_eterno($pin_code);
 
-        if(!$rPin['ok']){
+        if (!$rPin["ok"]) {
+            Flight::json(
+                [
+                    "status" => "error",
 
-            Flight::json([
-
-                'status' => 'error',
-
-                'msg' => $rPin['msg']
-
-            ], 401);
+                    "msg" => $rPin["msg"],
+                ],
+                401
+            );
 
             return;
-
         }
 
         /* ======================================
            LOGIN POR ID
         ====================================== */
 
-        $login = login_by_id(
+        $login = login_by_id($rPin["usuario"]["usu_id"]);
 
-            $rPin['usuario']['usu_id']
+        if (!$login["ok"]) {
+            Flight::json(
+                [
+                    "status" => "error",
 
-        );
-
-        if(!$login['ok']){
-
-            Flight::json([
-
-                'status' => 'error',
-
-                'msg' => $login['msg']
-
-            ], 401);
+                    "msg" => $login["msg"],
+                ],
+                401
+            );
 
             return;
-
         }
 
         /* ======================================
            RESPONSE
         ====================================== */
 
-        Flight::json([
+        Flight::json(
+            [
+                "status" => "ok",
 
-            'status'  => 'ok',
+                "data" => $login["data"],
 
-            'data'    => $login['data'],
+                "rubros" => $login["rubros"],
 
-            'rubros'  => $login['rubros'],
+                "screens" => $login["screens"],
+            ],
+            200,
+            JSON_UNESCAPED_UNICODE
+        );
+    } catch (Throwable $e) {
+        Flight::json(
+            [
+                "status" => "error",
 
-            'screens' => $login['screens']
+                "msg" => $e->getMessage(),
 
-        ], 200, JSON_UNESCAPED_UNICODE);
+                "line" => $e->getLine(),
 
+                "file" => $e->getFile(),
+            ],
+            500
+        );
     }
-    catch(Throwable $e){
-
-        Flight::json([
-
-            'status' => 'error',
-
-            'msg'    => $e->getMessage(),
-
-            'line'   => $e->getLine(),
-
-            'file'   => $e->getFile()
-
-        ], 500);
-
-    }
-
 });
 
-Flight::route('POST /Sp07/crearPinCode', function(){
-
+Flight::route("POST /Sp07/crearPinCode", function () {
     include DEFINITION;
 
     DB::query("SET NAMES 'utf8mb4'");
 
-    $d = json_decode(
+    $d =
+        json_decode(
+            Flight::request()->getBody(),
 
-        Flight::request()->getBody(),
-
-        true
-
-    ) ?: [];
+            true
+        ) ?:
+        [];
 
     /* ======================================
        FIRMA
     ====================================== */
 
-    $xin = trim(
-        $d['xin'] ?? ''
-    );
+    $xin = trim($d["xin"] ?? "");
 
-    $yuan = trim(
-        $d['yuan'] ?? ''
-    );
+    $yuan = trim($d["yuan"] ?? "");
 
-    firma(
-        $xin,
-        $yuan
-    );
+    firma($xin, $yuan);
 
     /* ======================================
        USUARIO
     ====================================== */
 
-    $usu_id = intval(
-        $d['usu_id'] ?? 0
-    );
+    $usu_id = intval($d["usu_id"] ?? 0);
 
-    if($usu_id <= 0){
+    if ($usu_id <= 0) {
+        Flight::json(
+            [
+                "status" => "error",
 
-        Flight::json([
-
-            'status' => 'error',
-
-            'msg' => 'usu_id requerido'
-
-        ], 400);
+                "msg" => "usu_id requerido",
+            ],
+            400
+        );
 
         return;
-
     }
 
-    $usuario = DB::queryFirstRow("
+    $usuario = DB::queryFirstRow(
+        "
 
         SELECT
 
@@ -1711,42 +1382,40 @@ Flight::route('POST /Sp07/crearPinCode', function(){
 
         LIMIT 1
 
-    ", $usu_id);
+    ",
+        $usu_id
+    );
 
-    if(!$usuario){
+    if (!$usuario) {
+        Flight::json(
+            [
+                "status" => "error",
 
-        Flight::json([
-
-            'status' => 'error',
-
-            'msg' => 'Usuario no encontrado'
-
-        ], 404);
+                "msg" => "Usuario no encontrado",
+            ],
+            404
+        );
 
         return;
-
     }
 
     /* ======================================
        CREAR PIN
     ====================================== */
 
-    $r = crear_pin_code(
-        $usu_id
-    );
+    $r = crear_pin_code($usu_id);
 
-    if(!$r['ok']){
+    if (!$r["ok"]) {
+        Flight::json(
+            [
+                "status" => "error",
 
-        Flight::json([
-
-            'status' => 'error',
-
-            'msg' => $r['msg']
-
-        ], 400);
+                "msg" => $r["msg"],
+            ],
+            400
+        );
 
         return;
-
     }
 
     /* ======================================
@@ -1754,96 +1423,70 @@ Flight::route('POST /Sp07/crearPinCode', function(){
     ====================================== */
 
     Flight::json([
+        "status" => "ok",
 
-        'status' => 'ok',
+        "usuario" => $usuario,
 
-        'usuario' => $usuario,
-
-        'pin_code' => $r['pin_code'],
-
-        'pin_code_fecha_fin' =>
-            $r['pin_code_fecha_fin']
-
+        "pin_code" => $r["pin_code"],
     ]);
-
 });
 
-
-Flight::route('POST /Vke6/crearTrabajadorDelivery', function(){
-
-    try{
-
+Flight::route("POST /Vke6/crearTrabajadorDelivery", function () {
+    try {
         include DEFINITION;
 
         DB::query("SET NAMES 'utf8mb4'");
 
-        $d = json_decode(
+        $d =
+            json_decode(
+                Flight::request()->getBody(),
 
-            Flight::request()->getBody(),
-
-            true
-
-        ) ?: [];
+                true
+            ) ?:
+            [];
 
         /* ======================================
            FIRMA
         ====================================== */
 
-        $xin = trim(
-            $d['xin'] ?? ''
-        );
+        $xin = trim($d["xin"] ?? "");
 
-        $yuan = trim(
-            $d['yuan'] ?? ''
-        );
+        $yuan = trim($d["yuan"] ?? "");
 
-        firma(
-            $xin,
-            $yuan
-        );
+        firma($xin, $yuan);
 
         /* ======================================
            PARAMETROS
         ====================================== */
 
-        $nombres_apellidos = trim(
+        $nombres_apellidos = trim($d["nombres_apellidos"] ?? "");
 
-            $d['nombres_apellidos'] ?? ''
+        $neg_id = intval($d["neg_id"] ?? 0);
 
-        );
+        if ($nombres_apellidos === "") {
+            Flight::json(
+                [
+                    "status" => "error",
 
-        $neg_id = intval(
-
-            $d['neg_id'] ?? 0
-
-        );
-
-        if($nombres_apellidos === ''){
-
-            Flight::json([
-
-                'status' => 'error',
-
-                'msg' => 'nombres_apellidos requerido'
-
-            ], 400);
+                    "msg" => "nombres_apellidos requerido",
+                ],
+                400
+            );
 
             return;
-
         }
 
-        if($neg_id <= 0){
+        if ($neg_id <= 0) {
+            Flight::json(
+                [
+                    "status" => "error",
 
-            Flight::json([
-
-                'status' => 'error',
-
-                'msg' => 'neg_id requerido'
-
-            ], 400);
+                    "msg" => "neg_id requerido",
+                ],
+                400
+            );
 
             return;
-
         }
 
         /* ======================================
@@ -1851,58 +1494,53 @@ Flight::route('POST /Vke6/crearTrabajadorDelivery', function(){
         ====================================== */
 
         $r = crear_usuario_negocio(
-
             $nombres_apellidos,
 
             $neg_id
-
         );
 
-        if(!$r['ok']){
+        if (!$r["ok"]) {
+            Flight::json(
+                [
+                    "status" => "error",
 
-            Flight::json([
-
-                'status' => 'error',
-
-                'msg' => $r['msg']
-
-            ], 400);
+                    "msg" => $r["msg"],
+                ],
+                400
+            );
 
             return;
-
         }
 
         /* ======================================
            RESPONSE
         ====================================== */
 
-        Flight::json([
+        Flight::json(
+            [
+                "status" => "ok",
 
-            'status' => 'ok',
+                "data" => $r["data"],
 
-            'data' => $r['data'],
+                "rubros" => $r["rubros"],
 
-            'rubros' => $r['rubros'],
+                "screens" => $r["screens"],
+            ],
+            200,
+            JSON_UNESCAPED_UNICODE
+        );
+    } catch (Throwable $e) {
+        Flight::json(
+            [
+                "status" => "error",
 
-            'screens' => $r['screens']
+                "msg" => $e->getMessage(),
 
-        ], 200, JSON_UNESCAPED_UNICODE);
+                "line" => $e->getLine(),
 
+                "file" => $e->getFile(),
+            ],
+            500
+        );
     }
-    catch(Throwable $e){
-
-        Flight::json([
-
-            'status' => 'error',
-
-            'msg' => $e->getMessage(),
-
-            'line' => $e->getLine(),
-
-            'file' => $e->getFile()
-
-        ], 500);
-
-    }
-
 });
