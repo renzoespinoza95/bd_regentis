@@ -80,26 +80,29 @@ Flight::route('POST /U9bTtemaxnegCrear', function(){
             return;
         }
 
-        $existe = DB::queryFirstField("
-            SELECT temaxneg_id FROM reg_temaxneg WHERE tema_id = %i AND neg_id = %i LIMIT 1
-        ", $tema_id, $neg_id);
+        DB::startTransaction();
+        try {
+            DB::delete('reg_temaxneg', 'neg_id=%i', $neg_id);
 
-        if($existe){
-            Flight::json(['status'=>'error', 'msg'=>'La relación ya existe']);
-            return;
+            DB::insert('reg_temaxneg', [
+                'tema_id' => $tema_id,
+                'neg_id'  => $neg_id
+            ]);
+
+            $nuevoId = DB::insertId();
+            DB::commit();
+
+            Flight::json([
+                'status'=>'ok',
+                'temaxneg_id'=> $nuevoId,
+                'tema_id'=> $tema_id,
+                'neg_id'=> $neg_id
+            ]);
+        } catch(Exception $ex){
+            DB::rollback();
+            throw $ex;
         }
 
-        DB::insert('reg_temaxneg', [
-            'tema_id' => $tema_id,
-            'neg_id'  => $neg_id
-        ]);
-
-        Flight::json([
-            'status'=>'ok',
-            'temaxneg_id'=> DB::insertId(),
-            'tema_id'=> $tema_id,
-            'neg_id'=> $neg_id
-        ]);
     }catch(Exception $e){
         Flight::json([
             'status'=>'error',
@@ -113,16 +116,30 @@ Flight::route('POST /U9bTtemaxnegEditar', function(){
         DB::query("SET NAMES 'utf8mb4'");
         $data = Flight::request()->data->getData();
         $temaxneg_id = intval($data['temaxneg_id'] ?? 0);
+        $tema_id = intval($data['tema_id'] ?? 0);
+        $neg_id = intval($data['neg_id'] ?? 0);
 
         if($temaxneg_id<=0){
             Flight::json(['status'=>'error', 'msg'=>'temaxneg_id inválido'],400);
             return;
         }
 
-        DB::update('reg_temaxneg', [
-            'tema_id'=> intval($data['tema_id'] ?? 0),
-            'neg_id'=> intval($data['neg_id'] ?? 0)
-        ], 'temaxneg_id=%i', $temaxneg_id);
+        DB::startTransaction();
+        try {
+            if($neg_id > 0){
+                DB::delete('reg_temaxneg', 'neg_id=%i AND temaxneg_id != %i', $neg_id, $temaxneg_id);
+            }
+
+            DB::update('reg_temaxneg', [
+                'tema_id'=> $tema_id,
+                'neg_id'=> $neg_id
+            ], 'temaxneg_id=%i', $temaxneg_id);
+
+            DB::commit();
+        } catch(Exception $ex){
+            DB::rollback();
+            throw $ex;
+        }
 
         Flight::json([
             'status'=>'ok'
@@ -142,7 +159,10 @@ Flight::route('POST /U9bTtemaxnegEliminar', function(){
         $temaxneg_id = intval($data['temaxneg_id'] ?? 0);
 
         if($temaxneg_id<=0){
-            Flight::json(['status'=>'error', 'msg'=>'temaxneg_id inválido'],400);
+            Flight::json([
+                'status'=>'error',
+                'msg'=>'temaxneg_id inválido'
+            ],400);
             return;
         }
 
