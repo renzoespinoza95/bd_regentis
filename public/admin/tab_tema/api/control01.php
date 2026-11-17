@@ -143,7 +143,10 @@ Flight::route('POST /U9bTtemaImportarJson', function(){
 
         DB::startTransaction();
         try {
+            DB::query("SET FOREIGN_KEY_CHECKS = 0");
             DB::query("TRUNCATE TABLE reg_tema");
+            DB::query("SET FOREIGN_KEY_CHECKS = 1");
+
             foreach($jsonData as $row){
                 DB::insert('reg_tema', [
                     'tema_id'     => isset($row['tema_id']) ? intval($row['tema_id']) : null,
@@ -154,13 +157,14 @@ Flight::route('POST /U9bTtemaImportarJson', function(){
                     'fondo_card'  => $row['fondo_card'] ?? null,
                     'subtitulo'   => $row['subtitulo'] ?? null,
                     'base_css'    => $row['base_css'] ?? null,
-                    'estilo_css'  => $row['estilo_css'] ?? null,
+                    'estilo_css'  => $row['es0tilo_css'] ?? null,
                     'miniatura'   => $row['miniatura'] ?? null,
                     'vista_app'   => $row['vista_app'] ?? null
                 ]);
             }
             DB::commit();
         } catch(Exception $ex){
+            DB::query("SET FOREIGN_KEY_CHECKS = 1");
             DB::rollback();
             throw $ex;
         }
