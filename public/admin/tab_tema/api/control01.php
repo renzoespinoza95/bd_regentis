@@ -47,6 +47,83 @@ Flight::route('GET /U9bTtemaListar', function(){
     }
 });
 
+Flight::route('GET /U9bTtemaExportarUno', function(){
+    try{
+        DB::query("SET NAMES 'utf8mb4'");
+        global $administrador_actual;
+        $neg_id = isset($administrador_actual['neg_id']) ? intval($administrador_actual['neg_id']) : 0;
+
+        $tema_id = intval(Flight::request()->query->tema_id ?? 0);
+        if($tema_id <= 0){
+            Flight::json(['status'=>'error', 'msg'=>'tema_id inválido'], 400);
+            return;
+        }
+        $row = DB::queryFirstRow("SELECT * FROM reg_tema WHERE tema_id = %i", $tema_id);
+        if(!$row){
+            Flight::json(['status'=>'error', 'msg'=>'Registro no encontrado'], 404);
+            return;
+        }
+        header('Content-Type: application/json; charset=utf-8');
+        header('Content-Disposition: attachment; filename="registro_tema_' . $neg_id . '_' . $tema_id . '.json"');
+        echo json_encode($row, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+        exit;
+    }catch(Exception $e){
+        Flight::json([
+            'status'=>'error',
+            'msg'=>$e->getMessage()
+        ],500);
+    }
+});
+
+Flight::route('POST /U9bTtemaImportarUno', function(){
+    try{
+        DB::query("SET NAMES 'utf8mb4'");
+        $request = Flight::request();
+        $tema_id = intval($request->data->tema_id ?? 0);
+        $jsonData = null;
+
+        if($tema_id <= 0){
+            Flight::json(['status'=>'error', 'msg'=>'tema_id inválido'], 400);
+            return;
+        }
+
+        if(isset($_FILES['json_file']) && $_FILES['json_file']['error'] === UPLOAD_ERR_OK){
+            $content = file_get_contents($_FILES['json_file']['tmp_name']);
+            $jsonData = json_decode($content, true);
+        } else {
+            $data = $request->data->getData();
+            if(!empty($data['json_text'])){
+                $jsonData = json_decode($data['json_text'], true);
+            }
+        }
+
+        if(!is_array($jsonData)){
+            Flight::json(['status'=>'error', 'msg'=>'JSON inválido o archivo no proporcionado'], 400);
+            return;
+        }
+
+        DB::update('reg_tema', [
+            'nombre_tema' => $jsonData['nombre_tema'] ?? null,
+            'topnavbar'   => $jsonData['topnavbar'] ?? null,
+            'fondo'       => $jsonData['fondo'] ?? null,
+            'boton'       => $jsonData['boton'] ?? null,
+            'fondo_card'  => $jsonData['fondo_card'] ?? null,
+            'subtitulo'   => $jsonData['subtitulo'] ?? null,
+            'base_css'    => $jsonData['base_css'] ?? null,
+            'estilo_css'  => $jsonData['estilo_css'] ?? null,
+            'miniatura'   => $jsonData['miniatura'] ?? null,
+            'vista_app'   => $jsonData['vista_app'] ?? null
+        ], 'tema_id=%i', $tema_id);
+
+        Flight::json(['status'=>'ok', 'msg'=>'Registro importado y reemplazado con éxito']);
+    }catch(Exception $e){
+        Flight::json([
+            'status'=>'error',
+            'msg'=>$e->getMessage()
+        ],500);
+    }
+});
+
 Flight::route('POST /U9bTtemaCrear', function(){
     try{
         DB::query("SET NAMES 'utf8mb4'");
@@ -107,9 +184,12 @@ Flight::route('POST /U9bTtemaEditar', function(){
 Flight::route('GET /U9bTtemaExportarJson', function(){
     try{
         DB::query("SET NAMES 'utf8mb4'");
+        global $administrador_actual;
+        $neg_id = isset($administrador_actual['neg_id']) ? intval($administrador_actual['neg_id']) : 0;
+
         $rows = DB::query("SELECT * FROM reg_tema ORDER BY tema_id ASC");
         header('Content-Type: application/json; charset=utf-8');
-        header('Content-Disposition: attachment; filename="reg_tema_' . date('Y-m-d_H-i-s') . '.json"');
+        header('Content-Disposition: attachment; filename="total_temas_' . $neg_id . '.json"');
         echo json_encode($rows, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         exit;
     }catch(Exception $e){
@@ -157,7 +237,7 @@ Flight::route('POST /U9bTtemaImportarJson', function(){
                     'fondo_card'  => $row['fondo_card'] ?? null,
                     'subtitulo'   => $row['subtitulo'] ?? null,
                     'base_css'    => $row['base_css'] ?? null,
-                    'estilo_css'  => $row['es0tilo_css'] ?? null,
+                    'estilo_css'  => $row['estilo_css'] ?? null,
                     'miniatura'   => $row['miniatura'] ?? null,
                     'vista_app'   => $row['vista_app'] ?? null
                 ]);
@@ -170,6 +250,58 @@ Flight::route('POST /U9bTtemaImportarJson', function(){
         }
 
         Flight::json(['status'=>'ok', 'msg'=>'Importación completada con éxito']);
+    }catch(Exception $e){
+        Flight::json([
+            'status'=>'error',
+            'msg'=>$e->getMessage()
+        ],500);
+    }
+});
+
+Flight::route('POST /U9bTtemaImportarAdicionalesJson', function(){
+    try{
+        DB::query("SET NAMES 'utf8mb4'");
+        $request = Flight::request();
+        $jsonData = null;
+
+        if(isset($_FILES['json_file']) && $_FILES['json_file']['error'] === UPLOAD_ERR_OK){
+            $content = file_get_contents($_FILES['json_file']['tmp_name']);
+            $jsonData = json_decode($content, true);
+        } else {
+            $data = $request->data->getData();
+            if(!empty($data['json_text'])){
+                $jsonData = json_decode($data['json_text'], true);
+            }
+        }
+
+        if(!is_array($jsonData)){
+            Flight::json(['status'=>'error', 'msg'=>'JSON inválido o archivo no proporcionado'], 400);
+            return;
+        }
+
+        DB::startTransaction();
+        try {
+            foreach($jsonData as $row){
+                DB::insert('reg_tema', [
+                    'nombre_tema' => $row['nombre_tema'] ?? null,
+                    'topnavbar'   => $row['topnavbar'] ?? null,
+                    'fondo'       => $row['fondo'] ?? null,
+                    'boton'       => $row['boton'] ?? null,
+                    'fondo_card'  => $row['fondo_card'] ?? null,
+                    'subtitulo'   => $row['subtitulo'] ?? null,
+                    'base_css'    => $row['base_css'] ?? null,
+                    'estilo_css'  => $row['estilo_css'] ?? null,
+                    'miniatura'   => $row['miniatura'] ?? null,
+                    'vista_app'   => $row['vista_app'] ?? null
+                ]);
+            }
+            DB::commit();
+        } catch(Exception $ex){
+            DB::rollback();
+            throw $ex;
+        }
+
+        Flight::json(['status'=>'ok', 'msg'=>'Importación adicional completada con éxito']);
     }catch(Exception $e){
         Flight::json([
             'status'=>'error',

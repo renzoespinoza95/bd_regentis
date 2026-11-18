@@ -18,6 +18,7 @@ const sliderState = {
     fecha_creacion: '',
     fecha_fin: '',
     neg_id: 0,
+    titulo_superior: '',
     descripcion: '',
     grupo: ''
   },
@@ -36,6 +37,7 @@ const sliderState = {
     fecha_creacion: '',
     fecha_fin: '',
     neg_id: 0,
+    titulo_superior: '',
     descripcion: '',
     grupo: ''
   },

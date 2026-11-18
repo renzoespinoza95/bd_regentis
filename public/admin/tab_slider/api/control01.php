@@ -107,6 +107,7 @@ Flight::route('GET /slider/listar', function () {
             orden,
             is_visible,
             fecha_creacion,
+            titulo_superior,
             descripcion,            
             fecha_fin,
             grupo,
@@ -162,12 +163,13 @@ Flight::route('POST /slider/crear', function () {
     include DEFINITION;
     autentificar_administrador();
 
-    $img            = $_POST['img'] ?? '';
-    $orden          = $_POST['orden'] ?? 0;
-    $is_visible     = $_POST['is_visible'] ?? 1;
-    $fecha_fin      = $_POST['fecha_fin'] ?? null;
-    $descripcion    = $_POST['descripcion'] ?? '';
-    $neg_id         = $administrador_actual['neg_id'];
+    $img             = $_POST['img'] ?? '';
+    $orden           = $_POST['orden'] ?? 0;
+    $is_visible      = $_POST['is_visible'] ?? 1;
+    $fecha_fin       = $_POST['fecha_fin'] ?? null;
+    $titulo_superior = $_POST['titulo_superior'] ?? '';
+    $descripcion     = $_POST['descripcion'] ?? '';
+    $neg_id          = $administrador_actual['neg_id'];
 
     if (empty($img)) {
         Flight::json(['success' => false, 'error' => 'URL de imagen requerida']);
@@ -175,12 +177,13 @@ Flight::route('POST /slider/crear', function () {
     }
 
     DB::insert('reg_slider', [
-        'img'            => $img,
-        'orden'          => $orden,
-        'is_visible'     => $is_visible,
-        'fecha_fin'      => $fecha_fin,
-        'descripcion'    => $descripcion,
-        'neg_id'         => $neg_id
+        'img'             => $img,
+        'orden'           => $orden,
+        'is_visible'      => $is_visible,
+        'fecha_fin'       => $fecha_fin,
+        'titulo_superior' => $titulo_superior,
+        'descripcion'     => $descripcion,
+        'neg_id'          => $neg_id
     ]);
 
     Flight::json([
@@ -199,6 +202,7 @@ Flight::route('POST /slider/editar', function () {
     $orden            = $_POST['orden'] ?? 0;
     $is_visible       = $_POST['is_visible'] ?? 1;
     $fecha_fin        = $_POST['fecha_fin'] ?? null;
+    $titulo_superior  = $_POST['titulo_superior'] ?? '';
     $descripcion      = $_POST['descripcion'] ?? '';    
     $neg_id           = $administrador_actual['neg_id'];
     $imagen_eliminada = $_POST['imagen_eliminada'] ?? '0';
@@ -209,10 +213,11 @@ Flight::route('POST /slider/editar', function () {
     }    
 
     $update = [
-        'orden'       => $orden,
-        'is_visible'  => $is_visible,
-        'fecha_fin'   => $fecha_fin,
-        'descripcion' => $descripcion
+        'orden'           => $orden,
+        'is_visible'      => $is_visible,
+        'fecha_fin'       => $fecha_fin,
+        'titulo_superior' => $titulo_superior,
+        'descripcion'     => $descripcion
     ];
 
     if (!empty($img)) {

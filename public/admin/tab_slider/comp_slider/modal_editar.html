@@ -13,10 +13,15 @@
                @dragleave.prevent="zonaDragLeave('editar')"
                @drop.prevent="zonaDrop($event, 'editar')">
 
-            <div v-if="formulario.imgPreview" class="zona-img-thumb">
-              <img :src="formulario.imgPreview" alt="">
-              <button type="button" class="zona-img-quitar" title="Quitar imagen" @click="quitarImagen('editar')">
-                <i class="fa fa-times"></i>
+            <div v-if="formulario.imgPreview" class="zona-img-preview-box">
+              <div class="zona-img-thumb">
+                <img :src="formulario.imgPreview" alt="">
+                <button type="button" class="zona-img-quitar" title="Quitar imagen" @click="quitarImagen('editar')">
+                  <i class="fa fa-times"></i>
+                </button>
+              </div>
+              <button type="button" class="btn btn-warning btn-mini zona-img-btn-url" title="Ver URL de la imagen" @click="mostrarUrlImagen('editar')">
+                <i class="fa fa-pencil"></i>
               </button>
             </div>
 
@@ -34,6 +39,12 @@
               <button type="button" class="btn btn-warning btn-small" @click="usarUrl('editar')">Usar URL</button>
             </div>
           </div>
+        </div>
+      </div>
+      <div class="control-group">
+        <label class="control-label">Título Superior</label>
+        <div class="controls">
+          <input type="text" v-model.trim="formulario.titulo_superior" class="input-xxlarge" placeholder="Ingrese título superior">
         </div>
       </div>
       <div class="control-group">

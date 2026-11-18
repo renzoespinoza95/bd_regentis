@@ -1,0 +1,99 @@
+<div class="row-fluid" id="appProd" style="width: 100%;">
+  
+  <!-- TITULO GENERAL -->
+  <div class="span12" style="margin-bottom: 20px;">
+    <div class="titulo-fijo clearfix">
+      <div style="float:left;">
+        <h2 style="margin:0;">Productos PlazaVea</h2>
+      </div>
+
+      <div class="btn-group pull-right">
+        <button class="btn btn-info dropdown-toggle" data-toggle="dropdown">
+          <i class="fa fa-cubes"></i> Opciones <span class="caret"></span>
+        </button>
+
+        <ul class="dropdown-menu pull-right">
+          <li>
+            <a href="#" @click.prevent="abrirModalCategorias">
+              Gestionar categorías globales
+            </a>
+          </li>
+          <li>
+            <a href="#" @click.prevent="abrirModalCrear">
+              Nuevo item
+            </a>
+          </li>
+          <li>
+            <a href="#" @click.prevent="abrirBuscarGlobal">
+              Buscar global
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTENEDOR DE DOS COLUMNAS LADO A LADO -->
+  <div class="row-fluid">
+    
+    <!-- COLUMNA IZQUIERDA: CATEGORÍAS GLOBALES (SPAN 3) -->
+    <div class="span3">
+      <div class="well" style="padding: 8px; background-color: #fcfcfc;">
+        <h4 style="margin-top: 0; padding-bottom: 8px; border-bottom: 1px solid #ddd;">
+          <i class="fa fa-list"></i> Categorías
+        </h4>
+        
+        <div style="max-height: 500px; overflow-y: auto;">
+          <!-- Card: Todos -->
+          <div @click="limpiarFiltro()" 
+               :style="{'background-color': categoriaFiltro === null ? '#3498db' : '#fff', 'color': categoriaFiltro === null ? '#fff' : '#333'}"
+               style="padding: 10px 12px; margin-bottom: 6px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; transition: all 0.2s;">
+            <strong><i class="fa fa-globe"></i> Todos</strong>
+          </div>
+
+          <!-- Cards: Dinámicas -->
+          <div v-for="cat in categorias" :key="cat.categoria_global_id"
+               @click="verProductosPorCategoria(cat.categoria_global_id)"
+               :style="{'background-color': categoriaFiltro === cat.categoria_global_id ? '#3498db' : '#fff', 'color': categoriaFiltro === cat.categoria_global_id ? '#fff' : '#333'}"
+               style="padding: 10px 12px; margin-bottom: 6px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; transition: all 0.2s;">
+            <strong v-text="cat.nombre"></strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLUMNA DERECHA: TABLA DE PRODUCTOS (SPAN 9) -->
+    <div class="span9">
+      <table id="tablaProd" class="table table-bordered table-condensed" style="width: 100%;">
+        <thead>
+          <tr>
+            <th style="width: 40px; text-align: center;"></th>
+            <th>Cod</th>
+            <th>Imagen</th> <!-- Columna Imagen ubicada justo después de Cod -->
+            <th>Nombre</th>
+            <th>Marca</th>
+            <th>Precio</th>
+            <th>Categoría</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- MODAL PARA VER IMAGEN GRANDE -->
+  <div id="modalVerImagen" class="modal hide fade" tabindex="-1" role="dialog">
+    <div class="modal-header">
+      <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+      <h3>Vista previa de imagen</h3>
+    </div>
+    <div class="modal-body" style="text-align: center;">
+      <img :src="imagenModalUrl" style="max-width: 100%; height: auto; border-radius: 4px;" />
+    </div>
+    <div class="modal-footer">
+      <button class="btn" data-dismiss="modal">Cerrar</button>
+    </div>
+  </div>
+
+</div>

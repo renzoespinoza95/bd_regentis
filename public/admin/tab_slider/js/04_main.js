@@ -3,7 +3,9 @@ new Vue({
   data: sliderState,
   delimiters: ['[[', ']]'],
   methods: {
-    ...sliderMethods
+    ...sliderCoreMethods,
+    ...sliderImagenMethods,
+    ...sliderCrudMethods
   },
   mounted() {
     this.obtenerUsuarioInfo();

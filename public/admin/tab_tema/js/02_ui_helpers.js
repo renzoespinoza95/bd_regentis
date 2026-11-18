@@ -32,7 +32,7 @@ const uiHelpers = {
         });
         return obj;
     },
-    miniaturaPreview(url, tipo = 'miniatura', temaId = 0) {
+    miniaturaPreview(url) {
         if (!url || url.trim() === '') {
             return '—';
         }

@@ -1,0 +1,12 @@
+<div id="modalImagen" class="modal hide fade">
+  <div class="modal-body">
+    <img v-if="imgPreview" :src="imgPreview" style="width:150px">
+
+    <input type="file" id="fileImg" @change="previewImg">
+
+  </div>
+
+  <div class="modal-footer">
+    <button class="btn btn-success" @click="subirImagen">Subir imagen</button>
+  </div>
+</div>

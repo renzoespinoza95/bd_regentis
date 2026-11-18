@@ -13,6 +13,7 @@ Flight::route('GET /slider/detalle/@id', function ($id) {
             orden,
             is_visible,
             fecha_creacion,
+            titulo_superior,
             descripcion,            
             fecha_fin,
             grupo,
@@ -128,21 +129,23 @@ Flight::route('POST /GcVL/slider/automatico', function () {
         $descripcion = 'Lorem ipsum dolor sit amet consectetur';
 
         DB::insert('reg_slider', [
-            'img'            => $img,
-            'orden'          => $ultimoOrden + 1,
-            'is_visible'     => 1,
-            'fecha_creacion' => date('Y-m-d H:i:s'),
-            'fecha_fin'      => date('Y-m-d H:i:s', strtotime('+30 days')),
-            'descripcion'    => $descripcion,
-            'grupo'          => 'A',
-            'neg_id'         => $neg_id
+            'img'             => $img,
+            'orden'           => $ultimoOrden + 1,
+            'is_visible'      => 1,
+            'fecha_creacion'  => date('Y-m-d H:i:s'),
+            'fecha_fin'       => date('Y-m-d H:i:s', strtotime('+30 days')),
+            'titulo_superior' => 'Título superior',
+            'descripcion'     => $descripcion,
+            'grupo'           => 'A',
+            'neg_id'          => $neg_id
         ]);
 
         Flight::json([
-            'success'     => true,
-            'slider_id'   => DB::insertId(),
-            'img'         => $img,
-            'descripcion' => $descripcion
+            'success'         => true,
+            'slider_id'       => DB::insertId(),
+            'img'             => $img,
+            'titulo_superior' => 'Título superior',
+            'descripcion'     => $descripcion
         ]);
     } catch(Exception $e) {
         Flight::json(['success' => false, 'error' => $e->getMessage()], 500);

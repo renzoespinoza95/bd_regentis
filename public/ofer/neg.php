@@ -16,6 +16,7 @@ Flight::route("GET /Cuvg/neg/listar", function () {
     }
 });
 
+
 Flight::route("POST /app/principal", function () {
     try {
         DB::query("SET NAMES 'utf8mb4'");
@@ -38,6 +39,72 @@ Flight::route("POST /app/principal", function () {
         $mercado_id = intval($d["mercado_id"] ?? 0);
 
         $neg_id = intval($d["neg_id"] ?? 0);
+
+        /* tema del mercado (VITE_PUBLIC_MERCADO_TEMA_ID) */
+        $tema_id = intval($d["tema_id"] ?? 0);
+
+        /* true = devolver SOLO el tema (sin negocios, rubros, etc.) */
+        $solo_tema = !empty($d["solo_tema"]);
+
+        /* =========================
+           🎨 TEMA
+        ========================== */
+
+        $tema = null;
+
+        if ($tema_id > 0) {
+            $tema = DB::queryFirstRow(
+                "
+
+                SELECT
+
+                    tema_id,
+                    nombre_tema,
+                    base_css,
+                    estilo_css
+
+                FROM reg_tema
+
+                WHERE tema_id = %i
+
+                LIMIT 1
+
+            ",
+                $tema_id
+            );
+        }
+
+        /* =========================
+           🎨 RESPUESTA LIVIANA: SOLO TEMA
+        ========================== */
+
+        if ($solo_tema) {
+            if (!$tema) {
+                Flight::json(
+                    [
+                        "status" => "error",
+                        "msg" => "Tema no encontrado",
+                    ],
+                    404
+                );
+
+                return;
+            }
+
+            Flight::json(
+                [
+                    "status" => "ok",
+
+                    "data" => [
+                        "tema" => $tema,
+                    ],
+                ],
+                200,
+                JSON_UNESCAPED_UNICODE
+            );
+
+            return;
+        }
 
         /* =========================
            🔥 SI mercado_id = 0
@@ -236,6 +303,9 @@ Flight::route("POST /app/principal", function () {
                     "version" => $version,
 
                     "playstore" => $playstore,
+
+                    /* null si no se envió tema_id */
+                    "tema" => $tema,
                 ],
             ],
             200,

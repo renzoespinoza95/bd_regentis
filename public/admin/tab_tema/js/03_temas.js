@@ -27,6 +27,63 @@ const temaMethods = {
         if (fileInput) fileInput.value = '';
         $('#modalImportarTema').modal('show');
     },
+    abrirModalImportarAdicionales() {
+        const fileInput = document.getElementById('archivoJsonImportarAdicionales');
+        if (fileInput) fileInput.value = '';
+        $('#modalImportarAdicionalesTema').modal('show');
+    },
+    abrirModalExportarUno(t) {
+        this.exportItem = {
+            tema_id: parseInt(t.tema_id),
+            nombre_tema: t.nombre_tema || '',
+            miniatura: t.miniatura || ''
+        };
+        $('#modalExportarUno').modal('show');
+    },
+    abrirModalImportarUno(t) {
+        this.importItem = {
+            tema_id: parseInt(t.tema_id),
+            nombre_tema: t.nombre_tema || '',
+            miniatura: t.miniatura || ''
+        };
+        const fileInput = document.getElementById('archivoJsonImportarUno');
+        if (fileInput) fileInput.value = '';
+        $('#modalImportarUno').modal('show');
+    },
+    ejecutarImportacionUno() {
+        const fileInput = document.getElementById('archivoJsonImportarUno');
+        if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+            apprise('Selecciona un archivo JSON');
+            return;
+        }
+        const file = fileInput.files[0];
+        const formData = new FormData();
+        formData.append('tema_id', this.importItem.tema_id);
+        formData.append('json_file', file);
+
+        this.bloquear('Importando registro...');
+        axios.post(this.apphost + '/U9bTtemaImportarUno', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        })
+        .then(r => {
+            if (r.data.status === 'ok') {
+                apprise('Registro importado con éxito');
+                $('#modalImportarUno').modal('hide');
+                this.listarTemas();
+            } else {
+                apprise('Error: ' + (r.data.msg || 'Desconocido'));
+            }
+        })
+        .catch(e => {
+            console.error(e);
+            apprise('Error en la importación');
+        })
+        .finally(() => {
+            this.desbloquear();
+        });
+    },
     onDropCrear(e) {
         const text = e.dataTransfer.getData('text') || e.dataTransfer.getData('URL');
         if (text) {
@@ -96,6 +153,39 @@ const temaMethods = {
             this.desbloquear();
         });
     },
+    ejecutarImportacionAdicionales() {
+        const fileInput = document.getElementById('archivoJsonImportarAdicionales');
+        if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+            apprise('Selecciona un archivo JSON');
+            return;
+        }
+        const file = fileInput.files[0];
+        const formData = new FormData();
+        formData.append('json_file', file);
+
+        this.bloquear('Importando adicionales...');
+        axios.post(this.apphost + '/U9bTtemaImportarAdicionalesJson', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        })
+        .then(r => {
+            if (r.data.status === 'ok') {
+                apprise('Importación adicional exitosa');
+                $('#modalImportarAdicionalesTema').modal('hide');
+                this.listarTemas();
+            } else {
+                apprise('Error: ' + (r.data.msg || 'Desconocido'));
+            }
+        })
+        .catch(e => {
+            console.error(e);
+            apprise('Error en la importación adicional');
+        })
+        .finally(() => {
+            this.desbloquear();
+        });
+    },
     cargarTemas() {
         return axios.get(this.apphost + '/U9bTtemaListar')
             .then(r => {
@@ -121,7 +211,7 @@ const temaMethods = {
                             language: typeof dt_language !== 'undefined' ? dt_language : undefined,
                             scrollX: true,
                             dom: 'frtip',
-                            order: [[0, 'desc']]
+                            order: [[1, 'desc']]
                         });
                         const self = this;
                         $('#tablaTema tbody')
@@ -139,6 +229,22 @@ const temaMethods = {
                                 const row = self.temas.find(x => parseInt(x.tema_id) === parseInt(id));
                                 if (row) {
                                     self.abrirModalEditarTema(row);
+                                }
+                            })
+                            .on('click', 'a.exportar-tema-uno', function(e) {
+                                e.preventDefault();
+                                const id = $(this).data('id');
+                                const row = self.temas.find(x => parseInt(x.tema_id) === parseInt(id));
+                                if (row) {
+                                    self.abrirModalExportarUno(row);
+                                }
+                            })
+                            .on('click', 'a.importar-tema-uno', function(e) {
+                                e.preventDefault();
+                                const id = $(this).data('id');
+                                const row = self.temas.find(x => parseInt(x.tema_id) === parseInt(id));
+                                if (row) {
+                                    self.abrirModalImportarUno(row);
                                 }
                             })
                             .on('click', 'a.eliminar-tema', function(e) {
@@ -159,16 +265,18 @@ const temaMethods = {
                             </button>
                             <ul class="dropdown-menu">
                                 <li><a href="#" class="editar-tema" data-id="${t.tema_id}">Editar</a></li>
+                                <li><a href="#" class="exportar-tema-uno" data-id="${t.tema_id}">Exportar registro</a></li>
+                                <li><a href="#" class="importar-tema-uno" data-id="${t.tema_id}">Importar registro</a></li>
                                 <li><a href="#" class="eliminar-tema" data-id="${t.tema_id}">Eliminar</a></li>
                             </ul>
                         </div>
                         `;
                         this.dtTema.row.add([
+                            acciones,
                             t.tema_id,
                             this.miniaturaPreview(t.miniatura),
                             this.miniaturaPreview(t.vista_app),
-                            t.nombre_tema || '',
-                            acciones
+                            t.nombre_tema || ''
                         ]);
                     });
                     this.dtTema.draw(false);

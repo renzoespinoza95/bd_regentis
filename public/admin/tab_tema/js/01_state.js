@@ -6,6 +6,8 @@ const temaState = {
     inputUrlsCrear: '',
     inputUrlsEditar: '',
     imagenVisorUrl: '',
+    exportItem: { tema_id: 0, nombre_tema: '', miniatura: '' },
+    importItem: { tema_id: 0, nombre_tema: '', miniatura: '' },
     nuevoTema: {
         nombre_tema: '',
         miniatura: '',

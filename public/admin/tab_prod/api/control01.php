@@ -164,6 +164,7 @@ Flight::route('GET /product/listar_categorias', function(){
                     c.name,
                     c.name AS descripcion,
                     c.brief,
+                    c.clave_txt,
                     c.icon,
                     c.color,
                     c.img,

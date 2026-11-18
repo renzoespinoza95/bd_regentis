@@ -1,0 +1,23 @@
+<div id="modalProd" class="modal hide fade">
+  <div class="modal-header">
+    <h3>Producto</h3>
+  </div>
+  <div class="modal-body">
+
+    <input v-model="form.nombre" class="input-xxlarge" placeholder="Nombre">
+    <input v-model="form.marca" class="input-large" placeholder="Marca">
+    <input v-model="form.precio" class="input-small" placeholder="Precio">
+
+    <v-select
+      :options="categorias"
+      label="nombre"
+      :reduce="x=>x.categoria_global_id"
+      v-model="form.categoria_global_id"
+    ></v-select>
+
+  </div>
+
+  <div class="modal-footer">
+    <button class="btn btn-primary" @click="guardar">Guardar</button>
+  </div>
+</div>

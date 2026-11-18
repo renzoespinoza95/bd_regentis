@@ -11,6 +11,7 @@ const categoriasMethods = {
         name: (c.name || c.descripcion || '').trim(),
         descripcion: (c.descripcion || c.name || '').trim(),
         brief: c.brief || '',
+        clave_txt: c.clave_txt || '',
         icon: c.icon || '',
         color: c.color || '#999999',
         img: c.img || '',
@@ -39,6 +40,7 @@ const categoriasMethods = {
       icon: '',
       color: '#999999',
       brief: '',
+      clave_txt: '',
       img: '',
       is_activo: 1,
       file: null,
@@ -63,6 +65,7 @@ const categoriasMethods = {
       icon: cat.icon || '',
       color: cat.color || '#999999',
       brief: (cat.brief || '').trim(),
+      clave_txt: (cat.clave_txt || '').trim(),
       img: cat.img || '',
       is_activo: (cat.is_activo === 0 || cat.is_activo === false) ? 0 : 1
     };
@@ -111,6 +114,7 @@ const categoriasMethods = {
       icon: c.icon || '',
       color: c.color || '#999999',
       brief: c.brief || '',
+      clave_txt: c.clave_txt || '',
       img: c.img || '',
       is_activo: c.is_activo === 0 ? 0 : 1
     });

@@ -9,11 +9,12 @@ if (!defined('IMG_CATEGORIA_DEFECTO')) {
 
 if (!function_exists('cat_normalizar')) {
     function cat_normalizar($d){
-        $name  = trim($d['name'] ?? '');
-        $icon  = trim($d['icon'] ?? '');
-        $brief = trim($d['brief'] ?? '');
-        $color = trim($d['color'] ?? '');
-        $img   = trim($d['img'] ?? '');
+        $name      = trim($d['name'] ?? '');
+        $icon      = trim($d['icon'] ?? '');
+        $brief     = trim($d['brief'] ?? '');
+        $clave_txt = trim($d['clave_txt'] ?? '');
+        $color     = trim($d['color'] ?? '');
+        $img       = trim($d['img'] ?? '');
 
         if (!preg_match('/^#[0-9a-fA-F]{6}$/', $color)) {
             $color = '#999999';
@@ -29,10 +30,11 @@ if (!function_exists('cat_normalizar')) {
 
         return [
             'name'      => mb_substr($name, 0, 50),
-            'icon'      => $icon !== ''  ? mb_substr($icon, 0, 400)  : null,
-            'brief'     => $brief !== '' ? mb_substr($brief, 0, 100) : null,
+            'icon'      => $icon !== ''      ? mb_substr($icon, 0, 400)      : null,
+            'brief'     => $brief !== ''     ? mb_substr($brief, 0, 100)     : null,
+            'clave_txt' => $clave_txt !== '' ? mb_substr($clave_txt, 0, 100) : null,
             'color'     => $color,
-            'img'       => $img !== ''   ? mb_substr($img, 0, 300)   : null,
+            'img'       => $img !== ''       ? mb_substr($img, 0, 300)       : null,
             'is_activo' => $is_activo
         ];
     }
@@ -66,6 +68,7 @@ Flight::route('POST /product/categoria_crear', function () {
             'name'      => $c['name'],
             'icon'      => $c['icon'],
             'brief'     => $c['brief'],
+            'clave_txt' => $c['clave_txt'],
             'color'     => $c['color'],
             'img'       => $c['img'],
             'is_activo' => $c['is_activo'],
@@ -112,6 +115,7 @@ Flight::route('POST /product/categoria_editar', function () {
             'name'      => $c['name'],
             'icon'      => $c['icon'],
             'brief'     => $c['brief'],
+            'clave_txt' => $c['clave_txt'],
             'color'     => $c['color'],
             'img'       => $c['img'],
             'is_activo' => $c['is_activo']

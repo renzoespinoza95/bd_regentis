@@ -1,0 +1,20 @@
+<div id="modalCrearCategoria" class="modal hide fade">
+
+  <div class="modal-header">
+    <h3>Crear Categoría</h3>
+  </div>
+
+  <div class="modal-body">
+
+    <input v-model="formCategoria.nombre" 
+           class="input-xxlarge" 
+           placeholder="Nombre de categoría">
+
+  </div>
+
+  <div class="modal-footer">
+    <button class="btn btn-primary" @click="guardarCategoria">Guardar</button>
+    <button class="btn" data-dismiss="modal">Cancelar</button>
+  </div>
+
+</div>

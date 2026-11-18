@@ -43,6 +43,7 @@
                 <div class="cat-title">
                   <span v-if="esEmoji(c.icon)" v-text="c.icon + ' '"></span><span v-text="c.descripcion"></span>
                 </div>
+                <div v-if="c.clave_txt" class="cat-clave" v-text="c.clave_txt"></div>
                 <div class="cat-brief" v-text="c.brief || 'Sin descripción'"></div>
               </div>
             </div>
