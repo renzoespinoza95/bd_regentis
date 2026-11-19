@@ -11,3 +11,14 @@ function bloquearUI(mensaje = 'Procesando...') {
 function desbloquearUI() {
     $.unblockUI();
 }
+
+let toastTimer = null;
+function mostrarToastCopia(campo, valor) {
+    const $toast = $('#toastCopia');
+    $toast.text('Copiado exitosamente — ' + campo + ': ' + (valor || '(vacío)'));
+    $toast.stop(true, true).fadeIn(200);
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+        $toast.fadeOut(300);
+    }, 2500);
+}

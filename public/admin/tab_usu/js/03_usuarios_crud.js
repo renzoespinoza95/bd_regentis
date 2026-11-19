@@ -16,7 +16,6 @@ const usuariosCrudMixin = {
     },
     initDataTable(sel) {
       this.$nextTick(() => {
-        // Destruir instancia previa si existe para forzar re-renderizado del nuevo DOM de Vue
         if ($.fn.DataTable.isDataTable(sel)) { 
           $(sel).DataTable().destroy(); 
         }
@@ -25,16 +24,17 @@ const usuariosCrudMixin = {
           destroy: true,
           scrollX: true,
           dom: 'frtip',
-          order: [[1,'desc']], // Mantiene el usuario recién creado con mayor ID arriba
+          order: [[2, 'desc']],
+          columnDefs: [
+            { orderable: false, targets: [0, 1] }
+          ],
           rowCallback: (row, data) => {
-            // Vincular evento de copia dinámicamente en cada renderizado de fila
-            $(row).find('.btn-copiar-pin').off('click').on('click', function() {
-              const textoACopiar = $(this).data('copiar');
+            $(row).find('.btn-copiar-dato').off('click').on('click', function() {
+              const textoACopiar = String($(this).attr('data-copiar') || '');
+              const campo = $(this).attr('data-campo') || 'Dato';
               if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(textoACopiar).then(() => {
-                  if (typeof apprise === 'function') {
-                    apprise(textoACopiar);
-                  }
+                  mostrarToastCopia(campo, textoACopiar);
                 });
               } else {
                 const aux = document.createElement('textarea');
@@ -43,9 +43,7 @@ const usuariosCrudMixin = {
                 aux.select();
                 document.execCommand('copy');
                 document.body.removeChild(aux);
-                if (typeof apprise === 'function') {
-                  apprise(textoACopiar);
-                }
+                mostrarToastCopia(campo, textoACopiar);
               }
             });
           }
@@ -57,7 +55,19 @@ const usuariosCrudMixin = {
       });
     },
     abrirModalEditar(u) {
-      this.formulario = { usu_id: u.usu_id, cod_usuario: u.cod_usu, dni: u.dni || '', sobrenombre: u.sobrenombre || '', nombres_apellidos: u.nombres_apellidos || '' };
+      this.formulario = {
+        usu_id: u.usu_id,
+        cod_usuario: u.cod_usu || '',
+        google_uid: u.google_uid || '',
+        dni: u.dni || '',
+        img_perfil: u.img_perfil || '',
+        sobrenombre: u.sobrenombre || '',
+        nombres_apellidos: u.nombres_apellidos || '',
+        celular: u.celular || '',
+        provincia: u.provincia || '',
+        tipoxusu_id: u.tipoxusu_id ? parseInt(u.tipoxusu_id) : null,
+        is_activo: u.is_activo !== undefined ? parseInt(u.is_activo) : 1
+      };
       $('#modalEditarUsuario').modal('show');
     },
     guardarEdicion() {

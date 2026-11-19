@@ -49,7 +49,7 @@ Flight::route('GET /usuario/listar', function(){
 
 Flight::route('GET /tipoxusu/listar', function(){
     include DEFINITION;
-    $rows = DB::query('SELECT * FROM reg_tipoxusu ORDER BY 1 DESC');
+    $rows = DB::query('SELECT * FROM reg_tipoxusu WHERE borrado_el IS NULL ORDER BY 1 DESC');
     Flight::json($rows);
 });
 
@@ -121,6 +121,23 @@ Flight::route('POST /usuario/clave12', function() {
             'nuevo_sobrenombre' => $nuevo_sobrenombre
         ]);
 
+    } catch (Exception $e) {
+        Flight::json(['status' => 'error', 'msg' => $e->getMessage()], 500);
+    }
+});
+
+Flight::route('GET /usuario/randomSobrenombre', function () {
+    include DEFINITION;
+    try {
+        DB::query("SET NAMES 'utf8mb4'");
+        $nick = DB::queryFirstField("SELECT nick FROM tt_nick ORDER BY RAND() LIMIT 1");
+        $random_sobrenombre = substr(str_shuffle('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'), 0, 6);
+        $sobrenombre_final = ($nick ? $nick : 'user') . '_' . $random_sobrenombre;
+
+        Flight::json([
+            'status'      => 'ok',
+            'sobrenombre' => $sobrenombre_final
+        ]);
     } catch (Exception $e) {
         Flight::json(['status' => 'error', 'msg' => $e->getMessage()], 500);
     }

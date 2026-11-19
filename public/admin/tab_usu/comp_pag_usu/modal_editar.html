@@ -4,12 +4,28 @@
     <form class="form-horizontal">
       <div class="control-group">
         <label class="control-label">Sobrenombre</label>
-        <div class="controls"><input v-model="formulario.sobrenombre" class="input-xxlarge"></div>
+        <div class="controls" style="display:flex; align-items:center; gap:6px;">
+          <input v-model="formulario.sobrenombre" class="input-xxlarge">
+          <button type="button" class="btn btn-warning btn-mini" @click="generarSobrenombreEditar" title="Generar sobrenombre aleatorio">🎲</button>
+        </div>
       </div>
       <div class="control-group">
         <label class="control-label">Nombres y Apellidos</label>
         <div class="controls"><input v-model="formulario.nombres_apellidos" class="input-xxlarge"></div>
-      </div>   
+      </div>
+      <div class="control-group">
+        <label class="control-label">Tipo de Usuario</label>
+        <div class="controls">
+          <v-select
+            :options="tipousuarios"
+            label="descripcion"
+            :reduce="t => Number(t.tipoxusu_id)"
+            v-model="formulario.tipoxusu_id"
+            placeholder="Seleccione tipo de usuario..."
+            style="width: 350px; background: #fff;">
+          </v-select>
+        </div>
+      </div>
     </form>
   </div>
   <div class="modal-footer" style="text-align: left;">

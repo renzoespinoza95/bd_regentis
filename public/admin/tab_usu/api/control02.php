@@ -32,22 +32,33 @@ Flight::route('POST /xico/usu/editar', function () {
     try {
         DB::query("SET NAMES 'utf8mb4' COLLATE 'utf8mb4_unicode_ci'");
         $d = json_decode(Flight::request()->getBody(), true) ?: [];
-        $usu_id = $d['usu_id'] ?? null;
+        $usu_id = intval($d['usu_id'] ?? 0);
 
-        if (empty($usu_id)) {
+        if ($usu_id <= 0) {
             Flight::json(['success' => false, 'msg' => 'usu_id requerido'], 400);
             return;
+        }
+
+        $actual = DB::queryFirstRow("SELECT img_perfil FROM reg_usu WHERE usu_id = %i LIMIT 1", $usu_id);
+        if (!$actual) {
+            Flight::json(['success' => false, 'msg' => 'Usuario no encontrado'], 404);
+            return;
+        }
+
+        $img_perfil = $d['img_perfil'] ?? $actual['img_perfil'];
+        if (empty($img_perfil)) {
+            $img_perfil = 'https://barsi-img.b-cdn.net/regx/lUT1EQ.jpg';
         }
 
         DB::update('reg_usu', [
             'cod_usu'           => $d['cod_usuario'] ?? null,
             'google_uid'        => $d['google_uid'] ?? null,
             'dni'               => $d['dni'] ?? null,
-            'img_perfil'        => $d['img_perfil'] ?? null,
+            'img_perfil'        => $img_perfil,
             'sobrenombre'       => $d['sobrenombre'] ?? null,
             'celular'           => $d['celular'] ?? null,
             'provincia'         => $d['provincia'] ?? null,
-            'tipoxusu_id'       => $d['tipoxusu_id'] ?? null,
+            'tipoxusu_id'       => !empty($d['tipoxusu_id']) ? intval($d['tipoxusu_id']) : null,
             'nombres_apellidos' => $d['nombres_apellidos'] ?? null,
             'is_activo'         => isset($d['is_activo']) ? (int)$d['is_activo'] : 1
         ], "usu_id=%i", $usu_id);
